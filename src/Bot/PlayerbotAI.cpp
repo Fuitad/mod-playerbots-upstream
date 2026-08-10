@@ -2829,59 +2829,50 @@ bool PlayerbotAI::SayToWorld(const std::string& msg)
     return false;
 }
 
+bool PlayerbotAI::IsOnChannel(ChatChannelId const& chanId)
+{
+    Channel* const channel = FindZoneChannel(chanId);
+    return channel != nullptr && channel->IsOn(bot->GetGUID());
+}
+
+Channel* PlayerbotAI::FindZoneChannel(ChatChannelId const& chanId)
+{
+    ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
+    if (!cMgr)
+        return nullptr;
+
+    AreaTableEntry const* currentZone = GetCurrentZone();
+    if (!currentZone)
+        return nullptr;
+
+    std::string const currentZoneName = GetLocalizedAreaName(currentZone);
+    for (auto const& [key, channel] : cMgr->GetChannels())
+    {
+        if (!channel || channel->GetChannelId() != chanId || channel->GetName().empty())
+            continue;
+
+        bool const isGlobalZoneChannel =
+            chanId == ChatChannelId::LOOKING_FOR_GROUP || chanId == ChatChannelId::WORLD_DEFENSE;
+        if (!isGlobalZoneChannel && channel->GetName().find(currentZoneName) == std::string::npos)
+            continue;
+
+        return channel;
+    }
+
+    return nullptr;
+}
+
 bool PlayerbotAI::SayToChannel(const std::string& msg, const ChatChannelId& chanId)
 {
-    // Checks whether the message or ChannelMgr is valid
     if (msg.empty())
         return false;
 
-    ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
-    if (!cMgr)
+    Channel* const channel = FindZoneChannel(chanId);
+    if (!channel)
         return false;
 
-    AreaTableEntry const* current_zone = GetCurrentZone();
-    if (!current_zone)
-        return false;
-
-    const auto current_str_zone = GetLocalizedAreaName(current_zone);
-
-    std::mutex socialMutex;
-    std::lock_guard<std::mutex> lock(socialMutex);  // Blocking for thread safety when accessing SocialMgr
-
-    for (auto const& [key, channel] : cMgr->GetChannels())
-    {
-        // Checks if the channel pointer is valid
-        if (!channel)
-            continue;
-
-        // Checks if the channel matches the specified ChatChannelId
-        if (channel->GetChannelId() == chanId)
-        {
-            // If the channel name is empty, skip it to avoid access problems
-            if (channel->GetName().empty())
-                continue;
-
-            // Checks if the channel name contains the current zone
-            const auto does_contains = channel->GetName().find(current_str_zone) != std::string::npos;
-            if (chanId != ChatChannelId::LOOKING_FOR_GROUP && chanId != ChatChannelId::WORLD_DEFENSE && !does_contains)
-            {
-                continue;
-            }
-            else if (chanId == ChatChannelId::LOOKING_FOR_GROUP || chanId == ChatChannelId::WORLD_DEFENSE)
-            {
-                // Here you can add the capital check if necessary
-            }
-
-            // Final check to ensure the channel is correct before trying to say something
-            if (channel)
-            {
-                channel->Say(bot->GetGUID(), msg.c_str(), LANG_UNIVERSAL);
-                return true;
-            }
-        }
-    }
-
-    return false;
+    channel->Say(bot->GetGUID(), msg.c_str(), LANG_UNIVERSAL);
+    return true;
 }
 
 bool PlayerbotAI::SayToParty(const std::string& msg)
@@ -6470,10 +6461,12 @@ ChatChannelSource PlayerbotAI::GetChatChannelSource(Player* bot, uint32 type, st
                 return ChatChannelSource::SRC_GUILD;
             }
             case CHAT_MSG_PARTY:
+            case CHAT_MSG_PARTY_LEADER:
             {
                 return ChatChannelSource::SRC_PARTY;
             }
             case CHAT_MSG_RAID:
+            case CHAT_MSG_RAID_LEADER:
             {
                 return ChatChannelSource::SRC_RAID;
             }

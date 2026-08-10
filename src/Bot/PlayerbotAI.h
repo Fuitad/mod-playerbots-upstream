@@ -29,6 +29,7 @@ class Creature;
 class Engine;
 class ExternalEventHelper;
 class Group;
+class Channel;
 class Gameobject;
 class Item;
 class ObjectGuid;
@@ -468,11 +469,14 @@ public:
     bool SayToGuild(const std::string& msg);
     bool SayToWorld(const std::string& msg);
     bool SayToChannel(const std::string& msg, const ChatChannelId& chanId);
+    bool IsOnChannel(ChatChannelId const& chanId);
     bool SayToParty(const std::string& msg);
     bool SayToRaid(const std::string& msg);
     bool Yell(const std::string& msg);
     bool Say(const std::string& msg);
     bool Whisper(const std::string& msg, const std::string& receiverName);
+
+    Channel* FindZoneChannel(ChatChannelId const& chanId);
 
     void SpellInterrupted(uint32 spellid);
     int32 CalculateGlobalCooldown(uint32 spellid);

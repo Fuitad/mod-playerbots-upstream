@@ -7,6 +7,8 @@
 #ifndef PLAYERBOTS_PLAYERBOTEXTENSION_H
 #define PLAYERBOTS_PLAYERBOTEXTENSION_H
 
+#include <cstdint>
+#include <string>
 #include <vector>
 
 class Action;
@@ -19,6 +21,26 @@ class UntypedValue;
 
 template <class T>
 class SharedNamedObjectContextList;
+
+enum class PlayerbotEventType
+{
+    Loot,
+    QuestAccepted,
+    QuestObjectiveProgress,
+    QuestObjectiveCompleted,
+    QuestFailed,
+    QuestCompleted,
+    QuestTurnedIn,
+    Kill,
+    Level
+};
+
+struct PlayerbotEvent
+{
+    PlayerbotEventType type;
+    std::uint32_t subjectId = 0;
+    std::string subject;
+};
 
 class PlayerbotExtension
 {
@@ -35,6 +57,7 @@ public:
     virtual void AddDefaultDeadStrategies(Player*, PlayerbotAI*, Engine&) {}
 
     virtual bool InitializeTradeSkills(Player*) { return false; }
+    virtual bool HandleBotEvent(PlayerbotAI*, PlayerbotEvent const&) { return false; }
 };
 
 class PlayerbotExtensionRegistry
@@ -43,6 +66,7 @@ public:
     bool Register(PlayerbotExtension& extension);
     bool Unregister(PlayerbotExtension& extension);
     bool InitializeTradeSkills(Player* player);
+    bool HandleBotEvent(PlayerbotAI* botAI, PlayerbotEvent const& event);
 
     template <class Visitor>
     void ForEach(Visitor&& visitor)

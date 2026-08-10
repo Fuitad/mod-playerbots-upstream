@@ -24,6 +24,11 @@ public:
     void HandlePacket(std::map<uint16, std::string>& handlers, WorldPacket const& packet, Player* owner = nullptr);
     bool HandleCommand(std::string const name, std::string const param, Player* owner = nullptr);
 
+    // Non-executing mirror of ParseChatCommand: true when the text would be consumed
+    // as a chat command (trigger lookup or item-link auto trade), without firing any
+    // trigger. Must stay in sync with ParseChatCommand's resolution order.
+    bool IsChatCommand(std::string const& command);
+
 private:
     AiObjectContext* aiObjectContext;
 };

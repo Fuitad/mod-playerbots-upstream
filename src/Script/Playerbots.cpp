@@ -11,6 +11,7 @@
 #include "DatabaseEnv.h"
 #include "DatabaseLoader.h"
 #include "GuildTaskMgr.h"
+#include "ModuleMgr.h"
 #include "PlayerScript.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotGuildMgr.h"
@@ -22,6 +23,22 @@
 #include "cmath"
 #include "BattleGroundTactics.h"
 
+#include <string>
+
+namespace
+{
+std::string EnabledModulesList()
+{
+    std::string modules;
+    for (std::string_view const name : Acore::Module::GetEnableModulesList())
+    {
+        modules += name;
+        modules += ',';
+    }
+    return modules;
+}
+}
+
 class PlayerbotsDatabaseScript : public DatabaseScript
 {
 public:
@@ -29,10 +46,11 @@ public:
 
     bool OnDatabasesLoading() override
     {
+        std::string const modules = EnabledModulesList();
         DatabaseLoader playerbotLoader(
             "server.playerbots",
             DatabaseLoader::DATABASE_LOGIN | DatabaseLoader::DATABASE_CHARACTER | DatabaseLoader::DATABASE_WORLD,
-            AC_MODULES_LIST);
+            modules);
         playerbotLoader.SetUpdateFlags(sConfigMgr->GetOption<bool>("Playerbots.Updates.EnableDatabases", true)
                                            ? DatabaseLoader::DATABASE_PLAYERBOTS
                                            : 0);

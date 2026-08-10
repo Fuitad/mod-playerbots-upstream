@@ -43,6 +43,31 @@ bool ExternalEventHelper::ParseChatCommand(std::string const command, Player* ow
     return true;
 }
 
+bool ExternalEventHelper::IsChatCommand(std::string const& command)
+{
+    if (aiObjectContext->GetTrigger(command))
+        return true;
+
+    size_t i = std::string::npos;
+    while (true)
+    {
+        size_t found = command.rfind(" ", i);
+        if (found == std::string::npos || !found)
+            break;
+
+        if (aiObjectContext->GetTrigger(command.substr(0, found)))
+            return true;
+
+        i = found - 1;
+    }
+
+    // Item-mention text only counts as a command when the auto trade feature is
+    // enabled; otherwise ParseChatCommand consumes it without any action, so for
+    // routing purposes it is ordinary conversation. parseableItem substring-matches
+    // everyday words ("guild", "epic", skill names), so this gate matters.
+    return sPlayerbotAIConfig.enableAutoTradeOnItemMention && ChatHelper::parseableItem(command);
+}
+
 void ExternalEventHelper::HandlePacket(std::map<uint16, std::string>& handlers, WorldPacket const& packet,
                                        Player* owner)
 {

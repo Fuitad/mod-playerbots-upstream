@@ -2771,7 +2771,7 @@ void PlayerbotFactory::InitTradeSkills()
 
     if (professionRollType != ProfessionRollType::Class && professionRollType != ProfessionRollType::Random)
     {
-        professionRollType = urand(1, 100) <= sPlayerbotAIConfig.classMatchingProfessionChance
+        professionRollType = urand(1, 100) <= 30u
                                  ? ProfessionRollType::Class
                                  : ProfessionRollType::Random;
         sRandomPlayerbotMgr.SetValue(bot, "professionRollType", static_cast<uint32>(professionRollType));

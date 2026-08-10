@@ -5,6 +5,7 @@
  */
 
 #include "Playerbots.h"
+#include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
 #include "ServerFacade.h"
 #include "Channel.h"
@@ -173,6 +174,11 @@ bool BroadcastHelper::BroadcastToChannelWithGlobalChance(PlayerbotAI* ai, std::s
 
 bool BroadcastHelper::BroadcastLootingItem(PlayerbotAI* ai, Player* bot, ItemTemplate const* proto)
 {
+    if (proto->Quality <= ITEM_QUALITY_ARTIFACT &&
+        GetPlayerbotExtensionRegistry().HandleBotEvent(
+            ai, {PlayerbotEventType::Loot, proto->ItemId, proto->Name1}))
+        return false;
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
     std::map<std::string, std::string> placeholders;
@@ -266,6 +272,10 @@ bool BroadcastHelper::BroadcastLootingItem(PlayerbotAI* ai, Player* bot, ItemTem
 
 bool BroadcastHelper::BroadcastQuestAccepted(PlayerbotAI* ai, Player* bot, const Quest* quest)
 {
+    if (GetPlayerbotExtensionRegistry().HandleBotEvent(
+            ai, {PlayerbotEventType::QuestAccepted, quest->GetQuestId(), quest->GetTitle()}))
+        return false;
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
     if (urand(1, sPlayerbotAIConfig.broadcastChanceMaxValue) <= sPlayerbotAIConfig.broadcastChanceQuestAccepted)
@@ -292,6 +302,14 @@ bool BroadcastHelper::BroadcastQuestAccepted(PlayerbotAI* ai, Player* bot, const
 
 bool BroadcastHelper::BroadcastQuestUpdateAddKill(PlayerbotAI* ai, Player* bot, Quest const* quest, uint32 availableCount, uint32 requiredCount, std::string obectiveName)
 {
+    if (availableCount <= requiredCount)
+    {
+        PlayerbotEventType const type = availableCount == requiredCount ? PlayerbotEventType::QuestObjectiveCompleted
+                                                                        : PlayerbotEventType::QuestObjectiveProgress;
+        if (GetPlayerbotExtensionRegistry().HandleBotEvent(ai, {type, quest->GetQuestId(), quest->GetTitle()}))
+            return false;
+    }
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
     std::map<std::string, std::string> placeholders;
@@ -333,6 +351,14 @@ bool BroadcastHelper::BroadcastQuestUpdateAddKill(PlayerbotAI* ai, Player* bot, 
 
 bool BroadcastHelper::BroadcastQuestUpdateAddItem(PlayerbotAI* ai, Player* bot, Quest const* quest, uint32 availableCount, uint32 requiredCount, const ItemTemplate* proto)
 {
+    if (availableCount <= requiredCount)
+    {
+        PlayerbotEventType const type = availableCount == requiredCount ? PlayerbotEventType::QuestObjectiveCompleted
+                                                                        : PlayerbotEventType::QuestObjectiveProgress;
+        if (GetPlayerbotExtensionRegistry().HandleBotEvent(ai, {type, quest->GetQuestId(), quest->GetTitle()}))
+            return false;
+    }
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
     std::map<std::string, std::string> placeholders;
@@ -375,6 +401,10 @@ bool BroadcastHelper::BroadcastQuestUpdateAddItem(PlayerbotAI* ai, Player* bot, 
 
 bool BroadcastHelper::BroadcastQuestUpdateFailedTimer(PlayerbotAI* ai, Player* bot, Quest const* quest)
 {
+    if (GetPlayerbotExtensionRegistry().HandleBotEvent(
+            ai, {PlayerbotEventType::QuestFailed, quest->GetQuestId(), quest->GetTitle()}))
+        return false;
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
     if (urand(1, sPlayerbotAIConfig.broadcastChanceMaxValue) <= sPlayerbotAIConfig.broadcastChanceQuestUpdateFailedTimer)
@@ -401,6 +431,10 @@ bool BroadcastHelper::BroadcastQuestUpdateFailedTimer(PlayerbotAI* ai, Player* b
 
 bool BroadcastHelper::BroadcastQuestUpdateComplete(PlayerbotAI* ai, Player* bot, Quest const* quest)
 {
+    if (GetPlayerbotExtensionRegistry().HandleBotEvent(
+            ai, {PlayerbotEventType::QuestCompleted, quest->GetQuestId(), quest->GetTitle()}))
+        return false;
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
     if (urand(1, sPlayerbotAIConfig.broadcastChanceMaxValue) <= sPlayerbotAIConfig.broadcastChanceQuestUpdateComplete)
@@ -427,6 +461,10 @@ bool BroadcastHelper::BroadcastQuestUpdateComplete(PlayerbotAI* ai, Player* bot,
 
 bool BroadcastHelper::BroadcastQuestTurnedIn(PlayerbotAI* ai, Player* bot, Quest const* quest)
 {
+    if (GetPlayerbotExtensionRegistry().HandleBotEvent(
+            ai, {PlayerbotEventType::QuestTurnedIn, quest->GetQuestId(), quest->GetTitle()}))
+        return false;
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
     if (urand(1, sPlayerbotAIConfig.broadcastChanceMaxValue) <= sPlayerbotAIConfig.broadcastChanceQuestTurnedIn)
@@ -453,6 +491,10 @@ bool BroadcastHelper::BroadcastQuestTurnedIn(PlayerbotAI* ai, Player* bot, Quest
 
 bool BroadcastHelper::BroadcastKill(PlayerbotAI* ai, Player* bot, Creature *creature)
 {
+    if (GetPlayerbotExtensionRegistry().HandleBotEvent(
+            ai, {PlayerbotEventType::Kill, creature->GetEntry(), creature->GetName()}))
+        return false;
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
     std::map<std::string, std::string> placeholders;
@@ -569,9 +611,13 @@ bool BroadcastHelper::BroadcastKill(PlayerbotAI* ai, Player* bot, Creature *crea
 
 bool BroadcastHelper::BroadcastLevelup(PlayerbotAI* ai, Player* bot)
 {
+    uint32 level = bot->GetLevel();
+    if (GetPlayerbotExtensionRegistry().HandleBotEvent(
+            ai, {PlayerbotEventType::Level, level, "level " + std::to_string(level)}))
+        return false;
+
     if (!sPlayerbotAIConfig.enableBroadcasts)
         return false;
-    uint32 level = bot->GetLevel();
 
     std::map<std::string, std::string> placeholders;
     AreaTableEntry const* current_area = ai->GetCurrentArea();

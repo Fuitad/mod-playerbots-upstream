@@ -31,7 +31,7 @@ void RpgHelper::BeforeExecute()
 {
     OnExecute();
 
-    bot->SetTarget(guidP());
+    bot->SetSelection(guid());
 
     setFacingTo(guidP());
 }
@@ -40,7 +40,7 @@ void RpgHelper::AfterExecute(bool doDelay, bool waitForGroup)
 {
     OnExecute();
 
-    bot->SetTarget(guidP());
+    bot->SetSelection(guid());
 
     setFacingTo(guidP());
 

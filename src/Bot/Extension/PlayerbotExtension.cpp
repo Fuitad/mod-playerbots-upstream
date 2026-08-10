@@ -38,6 +38,17 @@ bool PlayerbotExtensionRegistry::InitializeTradeSkills(Player* player)
     return false;
 }
 
+bool PlayerbotExtensionRegistry::HandleBotEvent(PlayerbotAI* botAI, PlayerbotEvent const& event)
+{
+    for (PlayerbotExtension* extension : extensions)
+    {
+        if (extension->HandleBotEvent(botAI, event))
+            return true;
+    }
+
+    return false;
+}
+
 PlayerbotExtensionRegistry& GetPlayerbotExtensionRegistry()
 {
     static PlayerbotExtensionRegistry registry;
