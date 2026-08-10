@@ -11,6 +11,7 @@
 #include "HunterAiObjectContext.h"
 #include "MageAiObjectContext.h"
 #include "PaladinAiObjectContext.h"
+#include "Bot/Extension/PlayerbotExtension.h"
 #include "PriestAiObjectContext.h"
 #include "RogueAiObjectContext.h"
 #include "ShamanAiObjectContext.h"
@@ -55,6 +56,14 @@ void AiObjectContext::BuildSharedContexts()
     BuildSharedActionContexts(sharedActionContexts);
     BuildSharedTriggerContexts(sharedTriggerContexts);
     BuildSharedValueContexts(sharedValueContexts);
+
+    GetPlayerbotExtensionRegistry().ForEach([](PlayerbotExtension& extension)
+    {
+        extension.AddStrategyContexts(sharedStrategyContexts);
+        extension.AddActionContexts(sharedActionContexts);
+        extension.AddTriggerContexts(sharedTriggerContexts);
+        extension.AddValueContexts(sharedValueContexts);
+    });
 }
 
 std::vector<std::string> AiObjectContext::Save()

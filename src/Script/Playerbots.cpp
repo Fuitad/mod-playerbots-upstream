@@ -29,7 +29,10 @@ public:
 
     bool OnDatabasesLoading() override
     {
-        DatabaseLoader playerbotLoader("server.playerbots");
+        DatabaseLoader playerbotLoader(
+            "server.playerbots",
+            DatabaseLoader::DATABASE_LOGIN | DatabaseLoader::DATABASE_CHARACTER | DatabaseLoader::DATABASE_WORLD,
+            AC_MODULES_LIST);
         playerbotLoader.SetUpdateFlags(sConfigMgr->GetOption<bool>("Playerbots.Updates.EnableDatabases", true)
                                            ? DatabaseLoader::DATABASE_PLAYERBOTS
                                            : 0);

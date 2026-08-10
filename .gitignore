@@ -50,3 +50,7 @@ local.properties
 .cproject
 .vscode
 .idea
+
+# Local analysis and standalone build output
+/build*/
+/graphify-out/

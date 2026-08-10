@@ -7,6 +7,7 @@
 #include "AiFactory.h"
 
 #include "BattlegroundMgr.h"
+#include "Bot/Extension/PlayerbotExtension.h"
 #include "DKAiObjectContext.h"
 #include "DruidAiObjectContext.h"
 #include "Engine.h"
@@ -493,6 +494,11 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
         engine->removeStrategy("threat", false);
         engine->addStrategy("boost", false);
     }
+
+    GetPlayerbotExtensionRegistry().ForEach([player, facade, engine](PlayerbotExtension& extension)
+    {
+        extension.AddDefaultCombatStrategies(player, facade, *engine);
+    });
 }
 
 Engine* AiFactory::createCombatEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* aiObjectContext)
@@ -710,6 +716,11 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
             nonCombatEngine->removeStrategy("mount", false);
         }
     }
+
+    GetPlayerbotExtensionRegistry().ForEach([player, facade, nonCombatEngine](PlayerbotExtension& extension)
+    {
+        extension.AddDefaultNonCombatStrategies(player, facade, *nonCombatEngine);
+    });
 }
 
 Engine* AiFactory::createNonCombatEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* aiObjectContext)
@@ -728,6 +739,11 @@ void AiFactory::AddDefaultDeadStrategies(Player* player, PlayerbotAI* const faca
 
     if (sRandomPlayerbotMgr.IsRandomBot(player) && !player->GetGroup())
         deadEngine->removeStrategy("follow", false);
+
+    GetPlayerbotExtensionRegistry().ForEach([player, facade, deadEngine](PlayerbotExtension& extension)
+    {
+        extension.AddDefaultDeadStrategies(player, facade, *deadEngine);
+    });
 }
 
 Engine* AiFactory::createDeadEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* AiObjectContext)

@@ -33,6 +33,7 @@
 #include "QuestDef.h"
 #include "RandomItemMgr.h"
 #include "RandomPlayerbotFactory.h"
+#include "Bot/Extension/PlayerbotExtension.h"
 #include "ReputationMgr.h"
 #include "SharedDefines.h"
 #include "StatsWeightCalculator.h"
@@ -2754,6 +2755,9 @@ bool PlayerbotFactory::CanEquipUnseenItem(uint8 slot, uint16& dest, uint32 item)
 
 void PlayerbotFactory::InitTradeSkills()
 {
+    if (GetPlayerbotExtensionRegistry().InitializeTradeSkills(bot))
+        return;
+
     if (!sRandomPlayerbotMgr.IsRandomBot(bot))
         return;
 
