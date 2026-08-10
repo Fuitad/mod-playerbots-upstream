@@ -14,6 +14,11 @@ git diff --name-status upstream/master...9b17934e875e65e408a7122f4ea9d0fb59a65da
 That command returns 228 paths. Every returned path is classified by the ordered rules below. The first
 matching rule is authoritative.
 
+Applying those rules produces 12 retained seam paths, 91 extracted implementation paths, and 125 documented
+compatibility change paths. Rules 8 and 9 classify removed portions of mixed files. At path level, those mixed
+files belong to the compatibility class because their surviving content is either upstream code or retained
+custom compatibility work.
+
 ## Classification rules
 
 1. A path in the retained seam list is a retained seam.
@@ -120,9 +125,14 @@ The retained fork inventory is checked with these commands.
 ```bash
 git diff --name-only upstream/master
 git diff --name-only upstream/master | wc -l
-git grep -nE 'Playerbot(Personality|Career|Economy|Social|LLM)' -- ':!docs/extraction-report.md'
+git grep -nE \
+  'Playerbot(Personality|Career|Economy|Social|LLM)|Playerbot(FictionalIdentity|ProfessionCapability)|EconomyAction|Bot/(Economy|Personality|Social)' \
+  -- ':!docs/extraction-report.md'
+git grep -nEi \
+  'classMatchingProfessionChance|economyLifecycle|economyMarketMaking|socialChat|RpgStatusProbWeight\.DoProfession' \
+  -- ':!docs/extraction-report.md'
 if rg -n 'AiPlayerbot\.(ClassMatchingProfessionChance|Economy|SocialChat)|RpgStatusProbWeight\.DoProfession' \
   conf/playerbots.conf.dist; then exit 1; fi
 ```
 
-The expected path count is 20. The feature symbol scan must return no extracted implementation from this fork.
+The expected path count is 20. Both feature scans must return no extracted implementation from this fork.
