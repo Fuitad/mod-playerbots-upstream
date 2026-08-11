@@ -24,6 +24,23 @@ SharedNamedObjectContextList<Action> AiObjectContext::sharedActionContexts;
 SharedNamedObjectContextList<Trigger> AiObjectContext::sharedTriggerContexts;
 SharedNamedObjectContextList<UntypedValue> AiObjectContext::sharedValueContexts;
 
+namespace
+{
+template <class Context>
+void BuildClassSharedContexts()
+{
+    Context::BuildSharedContexts();
+    GetPlayerbotExtensionRegistry().ForEach(
+        [](PlayerbotExtension& extension)
+        {
+            extension.AddStrategyContexts(Context::sharedStrategyContexts);
+            extension.AddActionContexts(Context::sharedActionContexts);
+            extension.AddTriggerContexts(Context::sharedTriggerContexts);
+            extension.AddValueContexts(Context::sharedValueContexts);
+        });
+}
+}  // namespace
+
 AiObjectContext::AiObjectContext(PlayerbotAI* botAI, SharedNamedObjectContextList<Strategy>& sharedStrategyContext,
                                  SharedNamedObjectContextList<Action>& sharedActionContext,
                                  SharedNamedObjectContextList<Trigger>& sharedTriggerContext,
@@ -39,16 +56,16 @@ AiObjectContext::AiObjectContext(PlayerbotAI* botAI, SharedNamedObjectContextLis
 void AiObjectContext::BuildAllSharedContexts()
 {
     AiObjectContext::BuildSharedContexts();
-    PriestAiObjectContext::BuildSharedContexts();
-    MageAiObjectContext::BuildSharedContexts();
-    WarlockAiObjectContext::BuildSharedContexts();
-    WarriorAiObjectContext::BuildSharedContexts();
-    ShamanAiObjectContext::BuildSharedContexts();
-    PaladinAiObjectContext::BuildSharedContexts();
-    DruidAiObjectContext::BuildSharedContexts();
-    HunterAiObjectContext::BuildSharedContexts();
-    RogueAiObjectContext::BuildSharedContexts();
-    DKAiObjectContext::BuildSharedContexts();
+    BuildClassSharedContexts<PriestAiObjectContext>();
+    BuildClassSharedContexts<MageAiObjectContext>();
+    BuildClassSharedContexts<WarlockAiObjectContext>();
+    BuildClassSharedContexts<WarriorAiObjectContext>();
+    BuildClassSharedContexts<ShamanAiObjectContext>();
+    BuildClassSharedContexts<PaladinAiObjectContext>();
+    BuildClassSharedContexts<DruidAiObjectContext>();
+    BuildClassSharedContexts<HunterAiObjectContext>();
+    BuildClassSharedContexts<RogueAiObjectContext>();
+    BuildClassSharedContexts<DKAiObjectContext>();
 }
 
 void AiObjectContext::BuildSharedContexts()
