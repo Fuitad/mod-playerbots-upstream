@@ -4,12 +4,13 @@
  * or (at your option) any later version.
  */
 
-#include "Playerbots.h"
-#include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
-#include "ServerFacade.h"
-#include "Channel.h"
+
 #include "AiFactory.h"
+#include "Bot/Extension/PlayerbotExtension.h"
+#include "Channel.h"
+#include "Playerbots.h"
+#include "ServerFacade.h"
 
 BroadcastHelper::BroadcastHelper() {}
 
@@ -175,8 +176,7 @@ bool BroadcastHelper::BroadcastToChannelWithGlobalChance(PlayerbotAI* ai, std::s
 bool BroadcastHelper::BroadcastLootingItem(PlayerbotAI* ai, Player* bot, ItemTemplate const* proto)
 {
     if (proto->Quality <= ITEM_QUALITY_ARTIFACT &&
-        GetPlayerbotExtensionRegistry().HandleBotEvent(
-            ai, {PlayerbotEventType::Loot, proto->ItemId, proto->Name1}))
+        GetPlayerbotExtensionRegistry().HandleBotEvent(ai, {PlayerbotEventType::Loot, proto->ItemId, proto->Name1}))
         return false;
 
     if (!sPlayerbotAIConfig.enableBroadcasts)

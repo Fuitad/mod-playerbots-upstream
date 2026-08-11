@@ -8,38 +8,16 @@
 
 #include "AccountMgr.h"
 #include "ArenaTeamMgr.h"
+#include "Bot/Extension/PlayerbotExtension.h"
+#include "Bot/Factory/RandomPlayerbotFactionBalance.h"
 #include "DatabaseEnv.h"
+#include "Log.h"
 #include "PlayerbotAI.h"
 #include "RaceMgr.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "SocialMgr.h"
 #include "Timer.h"
-#include "Log.h"
-
-constexpr RandomPlayerbotFactory::NameRaceAndGender RandomPlayerbotFactory::CombineRaceAndGender(uint8 race,
-                                                                                                uint8 gender)
-{
-    NameRaceAndGender baseIndex;
-    switch (race)
-    {
-        case RACE_ORC:        baseIndex = NameRaceAndGender::OrcMale; break;
-        case RACE_DWARF:      baseIndex = NameRaceAndGender::DwarfMale; break;
-        case RACE_NIGHTELF:   baseIndex = NameRaceAndGender::NightelfMale; break;
-        case RACE_TAUREN:     baseIndex = NameRaceAndGender::TaurenMale; break;
-        case RACE_GNOME:      baseIndex = NameRaceAndGender::GnomeMale; break;
-        case RACE_TROLL:      baseIndex = NameRaceAndGender::TrollMale; break;
-        case RACE_BLOODELF:   baseIndex = NameRaceAndGender::BloodelfMale; break;
-        case RACE_DRAENEI:    baseIndex = NameRaceAndGender::DraeneiMale; break;
-        case RACE_HUMAN:
-        case RACE_UNDEAD_PLAYER:
-        default:
-            baseIndex = NameRaceAndGender::GenericMale;
-            break;
-    }
-
-    return static_cast<NameRaceAndGender>(static_cast<uint8>(baseIndex) + ((gender >= GENDER_NONE) ? GENDER_MALE : gender));
-}
 
 bool RandomPlayerbotFactory::IsValidRaceClassCombination(uint8 race, uint8 cls, uint32 expansion)
 {
@@ -55,27 +33,42 @@ bool RandomPlayerbotFactory::IsValidRaceClassCombination(uint8 race, uint8 cls, 
     return info != nullptr;
 }
 
-Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls, std::unordered_map<NameRaceAndGender, std::vector<std::string>>& nameCache)
+std::vector<uint8> RandomPlayerbotFactory::GetAvailableRaces(uint8 cls, bool alliance)
+{
+    std::vector<uint8> races;
+    for (uint8 race = RACE_HUMAN; race < sRaceMgr->GetMaxRaces(); ++race)
+    {
+        if ((1 << (race - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK))
+            continue;
+        if (alliance == IsAlliance(race) &&
+            IsValidRaceClassCombination(race, cls, sWorld->getIntConfig(CONFIG_EXPANSION)))
+            races.push_back(race);
+    }
+    return races;
+}
+
+std::vector<uint8> RandomPlayerbotFactory::GetAvailableClasses(bool alliance)
+{
+    std::vector<uint8> classes;
+    for (uint8 cls = CLASS_WARRIOR; cls < MAX_CLASSES; ++cls)
+    {
+        if (!((1 << (cls - 1)) & CLASSMASK_ALL_PLAYABLE) || !sChrClassesStore.LookupEntry(cls))
+            continue;
+        if ((1 << (cls - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK))
+            continue;
+        if (!GetAvailableRaces(cls, alliance).empty())
+            classes.push_back(cls);
+    }
+    return classes;
+}
+
+Player* RandomPlayerbotFactory::CreateRandomBot(
+    WorldSession* session, uint8 cls, bool alliance,
+    std::unordered_map<NameRaceAndGender, std::vector<std::string>>& nameCache)
 {
     LOG_DEBUG("playerbots", "Creating a new random bot for class: {}", cls);
 
-    const bool alliance = static_cast<bool>(urand(0, 1));
-
-    std::vector<uint8> raceOptions;
-    for (uint8 race = RACE_HUMAN; race < sRaceMgr->GetMaxRaces(); ++race)
-    {
-        // skip disabled with config races
-        if ((1 << (race - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK))
-            continue;
-
-        // Try to get 50/50 faction distribution for random bot population balance.
-        // Without this check, races from the faction with more class options would dominate.
-        if (alliance == IsAlliance(race))
-        {
-            if (IsValidRaceClassCombination(race, cls, sWorld->getIntConfig(CONFIG_EXPANSION)))
-                raceOptions.push_back(race);
-        }
-    }
+    std::vector<uint8> const raceOptions = GetAvailableRaces(cls, alliance);
 
     if (raceOptions.empty())
     {
@@ -92,8 +85,7 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
     {
         if (nameCache[raceAndGender].empty())
         {
-            LOG_ERROR("playerbots", "No names found for the specified race: {} and gender: {}",
-                    race, gender);
+            LOG_ERROR("playerbots", "No names found in the global pool for gender: {}", gender);
             return nullptr;
         }
 
@@ -449,143 +441,8 @@ void RandomPlayerbotFactory::CreateRandomBots()
 {
     /* multi-thread here is meaningless? since the async db operations */
 
-    if (sPlayerbotAIConfig.deleteRandomBotAccounts)
-    {
-        std::vector<uint32> botAccounts;
-        std::vector<uint32> botFriends;
-
-        // Calculates the total number of required accounts.
-        uint32 totalAccountCount = CalculateTotalAccountCount();
-
-        for (uint32 accountNumber = 0; accountNumber < totalAccountCount; ++accountNumber)
-        {
-            std::ostringstream out;
-            out << sPlayerbotAIConfig.randomBotAccountPrefix << accountNumber;
-            std::string const accountName = out.str();
-
-            if (uint32 accountId = AccountMgr::GetId(accountName))
-                botAccounts.push_back(accountId);
-        }
-
-        LOG_INFO("playerbots", "Deleting all random bot characters and accounts...");
-
-        // First execute all the cleanup SQL commands
-        // Clear playerbots_random_bots and playerbots_account_type
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_random_bots");
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_account_type");
-
-        // Get the database names dynamically
-        std::string loginDBName = LoginDatabase.GetConnectionInfo()->database;
-        std::string characterDBName = CharacterDatabase.GetConnectionInfo()->database;
-
-        // Delete all characters from bot accounts
-        CharacterDatabase.Execute("DELETE FROM characters WHERE account IN (SELECT id FROM " + loginDBName + ".account WHERE username LIKE '{}%%')",
-            sPlayerbotAIConfig.randomBotAccountPrefix.c_str());
-
-        // Wait for the characters to be deleted before proceeding to dependent deletes
-        while (CharacterDatabase.QueueSize())
-        {
-            std::this_thread::sleep_for(1s);
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));    // Extra 100ms fixed delay for safety.
-
-        // Clean up orphaned entries in playerbots_guild_tasks
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_guild_tasks WHERE owner NOT IN (SELECT guid FROM " + characterDBName + ".characters)");
-
-        // Clean up orphaned entries in playerbots_db_store
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_db_store WHERE guid NOT IN (SELECT guid FROM " + characterDBName + ".characters WHERE account IN (SELECT id FROM " + loginDBName + ".account WHERE username NOT LIKE '{}%%'))",
-            sPlayerbotAIConfig.randomBotAccountPrefix.c_str());
-
-        // Clean up orphaned records in character-related tables
-        CharacterDatabase.Execute("DELETE FROM arena_team_member WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM arena_team WHERE arenaTeamId NOT IN (SELECT arenaTeamId FROM arena_team_member)");
-        CharacterDatabase.Execute("DELETE FROM character_account_data WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_achievement WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_achievement_progress WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_action WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_arena_stats WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_aura WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_entry_point WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_glyphs WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_homebind WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_inventory WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM item_instance WHERE owner_guid NOT IN (SELECT guid FROM characters) AND owner_guid > 0");
-
-        // Clean up pet data
-        CharacterDatabase.Execute("DELETE FROM character_pet WHERE owner NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM pet_aura WHERE guid NOT IN (SELECT id FROM character_pet)");
-        CharacterDatabase.Execute("DELETE FROM pet_spell WHERE guid NOT IN (SELECT id FROM character_pet)");
-        CharacterDatabase.Execute("DELETE FROM pet_spell_cooldown WHERE guid NOT IN (SELECT id FROM character_pet)");
-
-        // Clean up character data
-        CharacterDatabase.Execute("DELETE FROM character_queststatus WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_queststatus_rewarded WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_reputation WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_skills WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_social WHERE friend NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_spell WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_spell_cooldown WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM character_talent WHERE guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM corpse WHERE guid NOT IN (SELECT guid FROM characters)");
-
-        // Clean up group data
-        CharacterDatabase.Execute("DELETE FROM `groups` WHERE leaderGuid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM group_member WHERE memberGuid NOT IN (SELECT guid FROM characters)");
-
-        // Clean up mail
-        CharacterDatabase.Execute("DELETE FROM mail WHERE receiver NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM mail_items WHERE receiver NOT IN (SELECT guid FROM characters)");
-
-        // Clean up guild data
-        CharacterDatabase.Execute("DELETE FROM guild WHERE leaderguid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM guild_bank_eventlog WHERE guildid NOT IN (SELECT guildid FROM guild)");
-        CharacterDatabase.Execute("DELETE FROM guild_member WHERE guildid NOT IN (SELECT guildid FROM guild) OR guid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM guild_rank WHERE guildid NOT IN (SELECT guildid FROM guild)");
-
-        // Clean up petition data
-        CharacterDatabase.Execute("DELETE FROM petition WHERE ownerguid NOT IN (SELECT guid FROM characters)");
-        CharacterDatabase.Execute("DELETE FROM petition_sign WHERE ownerguid NOT IN (SELECT guid FROM characters) OR playerguid NOT IN (SELECT guid FROM characters)");
-
-        // Finally, delete the bot accounts themselves
-        LOG_INFO("playerbots", "Deleting random bot accounts...");
-        QueryResult results = LoginDatabase.Query("SELECT id FROM account WHERE username LIKE '{}%%'",
-                                             sPlayerbotAIConfig.randomBotAccountPrefix.c_str());
-        int32 deletion_count = 0;
-        if (results)
-        {
-            do
-            {
-                Field* fields = results->Fetch();
-                uint32 accId = fields[0].Get<uint32>();
-                LOG_DEBUG("playerbots", "Deleting account accID: {}({})...", accId, ++deletion_count);
-                AccountMgr::DeleteAccount(accId);
-            } while (results->NextRow());
-        }
-
-        uint32 timer = getMSTime();
-
-        // After ALL deletions, make sure data is commited to DB
-        LoginDatabase.Execute("COMMIT");
-        CharacterDatabase.Execute("COMMIT");
-        PlayerbotsDatabase.Execute("COMMIT");
-
-        // Wait for all pending database operations to complete
-        while (LoginDatabase.QueueSize() || CharacterDatabase.QueueSize() || PlayerbotsDatabase.QueueSize())
-        {
-            std::this_thread::sleep_for(1s);
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));    // Extra 100ms fixed delay for safety.
-
-        // Flush tables to ensure all data in memory are written to disk
-        LoginDatabase.Execute("FLUSH TABLES");
-        CharacterDatabase.Execute("FLUSH TABLES");
-        PlayerbotsDatabase.Execute("FLUSH TABLES");
-
-        LOG_INFO("playerbots", ">> Random bot accounts and data deleted in {} ms", GetMSTimeDiffToNow(timer));
-        LOG_INFO("playerbots", "Please reset the AiPlayerbot.DeleteRandomBotAccounts to 0 and restart the server...");
-        World::StopNow(SHUTDOWN_EXIT_CODE);
+    if (GetPlayerbotExtensionRegistry().HandleRandomBotAccountCleanup())
         return;
-    }
 
     LOG_INFO("playerbots", "Creating random bot accounts...");
     std::unordered_map<NameRaceAndGender, std::vector<std::string>> nameCache;
@@ -642,6 +499,15 @@ void RandomPlayerbotFactory::CreateRandomBots()
     std::vector<std::pair<Player*, uint32>> playerBots;
     std::vector<WorldSession*> sessionBots;
     int bot_creation = 0;
+    RandomPlayerbotFactory factory;
+    RandomPlayerbotFactionBalance factionBalance;
+    std::vector<uint8> const allianceClasses = GetAvailableClasses(true);
+    std::vector<uint8> const hordeClasses = GetAvailableClasses(false);
+    if (allianceClasses.empty() || hordeClasses.empty())
+    {
+        LOG_ERROR("playerbots", "No playable classes are available for one or both factions");
+        return;
+    }
     timer = getMSTime();
     bool nameCached = false;
     for (uint32 accountNumber = 0; accountNumber < totalAccountCount; ++accountNumber)
@@ -662,6 +528,19 @@ void RandomPlayerbotFactory::CreateRandomBots()
         sPlayerbotAIConfig.randomBotAccounts.push_back(accountId);
 
         uint32 count = AccountMgr::GetCharactersCount(accountId);
+        CharacterDatabasePreparedStatement* charactersStmt =
+            CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARS_BY_ACCOUNT_ID);
+        charactersStmt->SetData(0, accountId);
+        if (PreparedQueryResult characters = CharacterDatabase.Query(charactersStmt))
+        {
+            do
+            {
+                Field* characterFields = characters->Fetch();
+                factionBalance.RecordExisting(IsAlliance(characterFields[2].Get<uint8>()),
+                                              characterFields[1].Get<uint8>());
+            } while (characters->NextRow());
+        }
+
         if (count >= 10)
         {
             continue;
@@ -670,7 +549,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
         if (!nameCached)
         {
             nameCached = true;
-            LOG_INFO("playerbots", "Creating cache for names per gender and race...");
+            LOG_INFO("playerbots", "Creating cache for global names per gender...");
             QueryResult result = CharacterDatabase.Query("SELECT name, gender FROM playerbots_names");
             if (!result)
             {
@@ -696,24 +575,19 @@ void RandomPlayerbotFactory::CreateRandomBots()
             } while (result->NextRow());
         }
 
-        LOG_DEBUG("playerbots", "Creating random bot characters for account: [{}/{}]", accountNumber + 1, totalAccountCount);
-        RandomPlayerbotFactory factory;
-
+        LOG_DEBUG("playerbots", "Creating random bot characters for account: [{}/{}]", accountNumber + 1,
+                  totalAccountCount);
         WorldSession* session = new WorldSession(accountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING,
                                                 time_t(0), LOCALE_enUS, 0, false, false, 0, true);
         sessionBots.push_back(session);
 
-        for (uint8 cls = CLASS_WARRIOR; cls < MAX_CLASSES - count; ++cls)
+        uint32 const remainingSlots = RandomPlayerbotRemainingCharacterSlots(count);
+        for (uint32 slot = 0; slot < remainingSlots; ++slot)
         {
-            // skip nonexistent classes
-            if (!((1 << (cls - 1)) & CLASSMASK_ALL_PLAYABLE) || !sChrClassesStore.LookupEntry(cls))
-                continue;
-
-            // skip disabled with config classes
-            if ((1 << (cls - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK))
-                continue;
-
-            Player* playerBot = factory.CreateRandomBot(session, cls, nameCache);
+            bool const alliance = factionBalance.ShouldCreateAlliance();
+            std::vector<uint8> const& availableClasses = alliance ? allianceClasses : hordeClasses;
+            uint8 const cls = factionBalance.SelectLeastRepresentedClass(alliance, availableClasses);
+            Player* playerBot = factory.CreateRandomBot(session, cls, alliance, nameCache);
             if (!playerBot)
             {
                 LOG_ERROR("playerbots", "Fail to create character for account {}", accountId);
@@ -726,6 +600,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
                                                     playerBot->getClass(), playerBot->GetLevel());
             playerBot->CleanupsBeforeDelete();
             delete playerBot;
+            factionBalance.RecordCreated(alliance, cls);
             bot_creation++;
         }
     }

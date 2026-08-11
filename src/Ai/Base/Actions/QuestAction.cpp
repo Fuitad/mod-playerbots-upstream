@@ -196,7 +196,8 @@ bool QuestAction::ProcessQuests(WorldObject* questGiver)
     if (!bot->HasInArc(CAST_ANGLE_IN_FRONT, questGiver, sPlayerbotAIConfig.sightDistance))
         bot->SetFacingToObject(questGiver);
 
-    bot->SetTarget(guid);
+    // Player::SetTarget is an empty override. The selection is the authoritative NPC target.
+    bot->SetSelection(guid);
     bot->PrepareQuestMenu(guid);
 
     QuestMenu& questMenu = bot->PlayerTalkClass->GetQuestMenu();

@@ -50,6 +50,9 @@ public:
             return false;
         }
 
+        if (target->GetGroupInvite())
+            target->UninviteFromGroup();
+
         Group* group = bot->GetGroup();
 
         // Create group if bot doesn't have one

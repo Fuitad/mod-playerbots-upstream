@@ -23,4 +23,15 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   add_test(NAME playerbots_extension_registry_tests
     COMMAND playerbots_extension_registry_tests)
+
+  add_executable(playerbots_faction_balance_tests
+    tests/cpp/PlayerbotFactionBalanceTests.cpp)
+  target_include_directories(playerbots_faction_balance_tests PRIVATE
+    tests/standalone
+    src)
+  target_compile_options(playerbots_faction_balance_tests PRIVATE
+    -Wall -Wextra -Wpedantic -Werror)
+
+  add_test(NAME playerbots_faction_balance_tests
+    COMMAND playerbots_faction_balance_tests)
 endif()

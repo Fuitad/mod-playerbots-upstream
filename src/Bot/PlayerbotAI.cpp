@@ -11,6 +11,7 @@
 #include <string>
 
 #include "AiFactory.h"
+#include "Bot/Extension/PlayerbotExtension.h"
 #include "BudgetValues.h"
 #include "ChannelMgr.h"
 #include "CharacterPackets.h"
@@ -38,10 +39,10 @@
 #include "ObjectMgr.h"
 #include "PerfMonitor.h"
 #include "Player.h"
-#include "PlayerbotTextMgr.h"
 #include "PlayerbotAIConfig.h"
-#include "PlayerbotMgr.h"
 #include "PlayerbotGuildMgr.h"
+#include "PlayerbotMgr.h"
+#include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "PositionValue.h"
 #include "RBAC.h"
@@ -224,6 +225,8 @@ PlayerbotAI::PlayerbotAI(Player* bot)
 
 PlayerbotAI::~PlayerbotAI()
 {
+    GetPlayerbotExtensionRegistry().OnBotRemoved(this);
+
     for (uint8 i = 0; i < BOT_STATE_MAX; i++)
     {
         if (engines[i])
@@ -237,8 +240,19 @@ PlayerbotAI::~PlayerbotAI()
         PlayerbotsMgr::instance().RemovePlayerBotData(bot->GetGUID(), true);
 }
 
+void PlayerbotAI::HandleCombatStart()
+{
+    AllowActivity(ALL_ACTIVITY, true);
+
+    uint32 const reactDelay = GetReactDelay();
+    if (nextAICheckDelay > reactDelay)
+        SetNextCheckDelay(reactDelay);
+}
+
 void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 {
+    uint32 const dueLatenessMs = elapsed > nextAICheckDelay ? elapsed - nextAICheckDelay : 0;
+
     // Handle the AI check delay
     if (nextAICheckDelay > elapsed)
         nextAICheckDelay -= elapsed;
@@ -265,6 +279,13 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     }
 
     AllowActivity();
+
+    if (bot->GetGroupInvite())
+    {
+        HandlePendingGroupInvite();
+        if (CanUpdateAI())
+            DoSpecificAction("accept invitation", Event(), true);
+    }
 
     if (!CanUpdateAI())
         return;
@@ -399,7 +420,9 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     UpdateAIGroupMaster();
 
     // Update internal AI
+    uint32 const updateStartedAt = getMSTime();
     UpdateAIInternal(elapsed, minimal);
+    GetPlayerbotExtensionRegistry().OnBotUpdate(this, {elapsed, dueLatenessMs, GetMSTimeDiffToNow(updateStartedAt)});
     YieldThread(bot, GetReactDelay());
 }
 
@@ -1118,6 +1141,9 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
     if (!bot || !bot->IsInWorld() || bot->IsDuringRemoveFromWorld())
         return;
 
+    if (packet.GetOpcode() == SMSG_GROUP_INVITE)
+        HandlePendingGroupInvite();
+
     switch (packet.GetOpcode())
     {
         case SMSG_SPELL_FAILURE:
@@ -1385,6 +1411,14 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
     }
 }
 
+void PlayerbotAI::HandlePendingGroupInvite()
+{
+    if (!bot || !bot->GetGroupInvite())
+        return;
+
+    HandleCombatStart();
+}
+
 void PlayerbotAI::SpellInterrupted(uint32 spellid)
 {
     for (uint8 type = CURRENT_MELEE_SPELL; type <= CURRENT_CHANNELED_SPELL; type++)
@@ -1481,6 +1515,8 @@ void PlayerbotAI::DoNextAction(bool min)
     bool isBotAlive = bot->IsAlive();
     if (currentEngine != engines[BOT_STATE_DEAD] && !isBotAlive)
     {
+        GetPlayerbotExtensionRegistry().OnBotDeath(this, GetTimeMS().count());
+
         // Death Count to prevent skeleton piles
         // Player* master = GetMaster();  // warning here - whipowill
         if (!HasActivePlayerMaster() && !bot->InBattleground())
@@ -2832,7 +2868,7 @@ bool PlayerbotAI::SayToWorld(const std::string& msg)
 bool PlayerbotAI::IsOnChannel(ChatChannelId const& chanId)
 {
     Channel* const channel = FindZoneChannel(chanId);
-    return channel != nullptr && channel->IsOn(bot->GetGUID());
+    return channel != nullptr && bot->IsInChannel(channel);
 }
 
 Channel* PlayerbotAI::FindZoneChannel(ChatChannelId const& chanId)

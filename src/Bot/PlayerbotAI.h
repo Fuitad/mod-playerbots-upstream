@@ -398,6 +398,7 @@ public:
     void HandleMasterIncomingPacket(WorldPacket const& packet);
     void HandleMasterOutgoingPacket(WorldPacket const& packet);
     void HandleTeleportAck();
+    void HandleCombatStart();
     void ChangeEngine(BotState type);
     void ChangeEngineOnCombat();
     void ChangeEngineOnNonCombat();
@@ -623,6 +624,7 @@ private:
     Item* FindItemInInventory(std::function<bool(ItemTemplate const*)> checkItem) const;
     void HandleCommands();
     void HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang = LANG_UNIVERSAL);
+    void HandlePendingGroupInvite();
     inline bool IsValidUnit(const Unit* unit) const
     {
         return unit && unit->IsInWorld() && !unit->IsDuringRemoveFromWorld();

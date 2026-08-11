@@ -1,138 +1,214 @@
 # Playerbots extraction report
 
-## Compared repositories
+## Scope and immutable source
 
-The extraction source is `Fuitad/mod-playerbots` at `9b17934e875e65e408a7122f4ea9d0fb59a65da0`.
-The comparison base is `mod-playerbots/mod-playerbots:master` as fetched on 2026 08 10.
+The preserved custom source is `Fuitad/mod-playerbots` at
+`9b17934e875e65e408a7122f4ea9d0fb59a65da0`.
 
-The source inventory is reproducible with this command in the preserved source repository.
+The exact upstream comparison commit is
+`a7b885d27134466dbc1c91d39b8241ea725a1bbb` from `mod-playerbots/mod-playerbots`.
+
+The comparison is intentionally commit based. It does not depend on a moving branch name.
 
 ```bash
-git diff --name-status upstream/master...9b17934e875e65e408a7122f4ea9d0fb59a65da0
+git -C ../mod-playerbots diff --name-status \
+  a7b885d27134466dbc1c91d39b8241ea725a1bbb...9b17934e875e65e408a7122f4ea9d0fb59a65da0
+python3 tools/check_extraction_manifest.py
 ```
 
-That command returns 228 paths. Every returned path is classified by the ordered rules below. The first
-matching rule is authoritative.
+The diff contains exactly 228 paths. `docs/extraction-manifest.tsv` records the Git status, path,
+classification, destination, and evidence for every one. The checker compares the complete status and path set
+against Git, rejects duplicate or unsafe paths, and fails when either side has an unmatched entry.
 
-Applying those rules produces 12 retained seam paths, 91 extracted implementation paths, and 125 documented
-compatibility change paths. Rules 8 and 9 classify removed portions of mixed files. At path level, those mixed
-files belong to the compatibility class because their surviving content is either upstream code or retained
-custom compatibility work.
+## Source classification result
 
-## Classification rules
+The exact source inventory contains these classes.
 
-1. A path in the retained seam list is a retained seam.
-2. A path in an extracted feature root, or a path named by an extracted feature pattern, is an extracted
-   implementation.
-3. Every remaining path is a documented compatibility change.
+1. 183 paths are `extracted_implementation`.
+2. 34 paths are `irreducible_compatibility`.
+3. 10 paths are `retained_seam`.
+4. 1 path is `retired_vanilla`.
 
-The third rule is deliberately exhaustive. It covers verification services, movement recovery, bot cleanup,
-vanilla realm defaults, development files, and other custom work that is not owned by Personality, Economy,
-Social, or LLM. Those changes remain recoverable from the source bundle. They are not part of this public seam
-fork.
+No catchall rule is used. Every row carries an explicit destination and evidence value.
 
-## Retained seam list
+The 183 extracted paths are assigned as follows.
 
-The public fork differs from upstream on exactly these generic integration or repository contract paths.
+1. Personality owns 11 paths.
+2. Economy owns 62 paths.
+3. Social owns 54 paths.
+4. LLM owns 3 paths.
+5. Telemetry owns 11 paths.
+6. MCP owns 22 paths.
+7. Recovery owns 9 paths.
+8. Lifecycle owns 4 paths.
+9. Shared Economy and Recovery ownership covers 1 path.
+10. Shared Economy and Social ownership covers 4 paths.
+11. Shared Personality, Economy, and Lifecycle ownership covers 1 path.
+12. Shared Personality, Social, and LLM ownership covers 1 path.
 
-1. `.codegraph/.gitignore`
-2. `.gitignore`
-3. `CMakeLists.txt`
-4. `conf/playerbots.conf.dist`
-5. `docs/extraction-report.md`
-6. `src/Ai/World/Rpg/Action/RpgSubActions.cpp`
-7. `src/Bot/Engine/AiObjectContext.cpp`
-8. `src/Bot/Engine/ExternalEventHelper.cpp`
-9. `src/Bot/Engine/ExternalEventHelper.h`
-10. `src/Bot/Extension/PlayerbotExtension.cpp`
-11. `src/Bot/Extension/PlayerbotExtension.h`
-12. `src/Bot/Factory/AiFactory.cpp`
-13. `src/Bot/Factory/PlayerbotFactory.cpp`
-14. `src/Bot/PlayerbotAI.cpp`
-15. `src/Bot/PlayerbotAI.h`
-16. `src/PlayerbotAIConfig.cpp`
-17. `src/PlayerbotAIConfig.h`
-18. `src/Script/Playerbots.cpp`
-19. `src/Util/BroadcastHelper.cpp`
-20. `tests/cpp/PlayerbotExtensionRegistryTests.cpp`
+The extracted repositories own these implementations.
 
-The two ignore paths, the report, and the three configuration paths are repository compatibility changes.
-`CMakeLists.txt` supplies the standalone seam test contract. The remaining paths implement or exercise neutral extension registration, default strategy
-registration, first login trade skill initialization, database module discovery, command recognition without
-execution, channel membership inspection, authoritative bot event observation, and correct RPG target selection.
+1. `mod-playerbot-personality` owns traits, fictional identity, and personality persistence.
+2. `mod-playerbots-economy` owns careers, profession capability, economic policy, market execution, and economic
+   telemetry.
+3. `mod-playerbots-social` owns grounded conversation, relationships, biography, memory, privacy, routing, and
+   social controls.
+4. `mod-playerbot-llm` owns the C++ bridge and Python sidecar through one versioned provider neutral wire
+   protocol.
+5. `mod-playerbots-telemetry` owns read only inspection, action history, loop projection, and bounded payload
+   rendering.
+6. `mod-playerbots-mcp` owns the verification protocol, command server adapter, and Python MCP sidecar.
+7. `mod-playerbots-recovery` owns loop detection, objective quarantine, movement recovery, combat recovery, and
+   audited homebind recovery.
+8. `mod-playerbots-lifecycle` owns guarded random bot cleanup, exact cohort confirmation, protected character
+   enforcement, extension preparation, and durable completion checks.
 
-## Extracted feature roots and patterns
+## Generic seams retained in the fork
 
-The following rules classify source inventory paths as extracted implementations.
+The retained seams contain no type owned by an extracted module. They provide these neutral capabilities.
 
-1. `src/Bot/Economy/**`, `src/Bot/Personality/**`, and `src/Bot/Social/**`.
-2. `src/Ai/Base/Actions/EconomyAction.cpp` and `src/Ai/Base/Actions/EconomyAction.h`.
-3. `src/Bot/Telemetry/PlayerbotEconomyTelemetry.cpp`.
-4. SQL paths whose names contain `social`, `personality`, `llm`, `economy`, or `budget_lane`.
-5. Documentation paths whose names contain `economy`, `personality`, `social`, `claude_playerbot_chat`, or
-   `trainer_profession`.
-6. Test paths whose names contain `Career`, `Economy`, `FictionalIdentity`, `Gathering`, `Personality`,
-   `ProfessionCapability`, or `Social`.
-7. Integration paths whose names contain `economy` or `social`.
-8. The feature owned portions of `conf/playerbots.conf.dist`, `src/PlayerbotAIConfig.cpp`, and
-   `src/PlayerbotAIConfig.h`.
-9. The feature owned portions of mixed call sites that invoked Personality, Economy, Social, or LLM symbols.
+1. Registration of action, trigger, strategy, and value contexts.
+2. Registration of default combat, noncombat, and dead strategies.
+3. First handler trade skill initialization.
+4. Authoritative bot event delivery.
+5. World update, bot update, action outcome, death, and removal observation.
+6. Remote command dispatch without a feature specific command type.
+7. Objective availability vetoes using a neutral objective value.
+8. Guarded cleanup dispatch plus prepurge and postpurge notifications.
+9. Playerbots database update discovery for installed AzerothCore modules.
+10. Nonexecuting chat command recognition and channel membership inspection.
 
-All code selected by these rules now lives in `mod-playerbot-personality`, `mod-playerbots-economy`,
-`mod-playerbots-social`, or `mod-playerbot-llm`. None of those feature roots or feature named paths exists in
-this fork outside the retained seam list.
+## Irreducible Wrath compatibility
 
-## Configuration inventory
+Compatibility paths are individually listed in `docs/extraction-manifest.tsv` for the preserved source and in
+`docs/final-fork-inventory.tsv` for the final fork. The final compatibility set is intentionally limited to these
+behaviors.
 
-The following settings moved from `playerbots.conf.dist` into `mod_playerbots_economy.conf.dist`.
+1. DeepRun tram, boat, zeppelin, elevator, portal, taxi, and cross map travel execution.
+2. Group invitation wakeup and pending invitation cancellation.
+3. Quest target selection and acceptance using the authoritative object identity.
+4. Correct combat reset action selection.
+5. Correct RPG target identity.
+6. Balanced faction and class creation with a global gender based name pool.
 
-1. `AiPlayerbot.ClassMatchingProfessionChance` became `PlayerbotsEconomy.ClassMatchingProfessionChance`.
+Recovery specific movement and combat stuck triggers are not retained in the fork. They are registered by
+`mod-playerbots-recovery` through the generic trigger and strategy seams.
+
+The legacy bulk random bot deletion implementation is also absent from the fork. The factory only asks the generic
+cleanup handler. `mod-playerbots-lifecycle` owns the request switch and all deletion behavior. A missing module,
+an empty protected character list, an unresolved protected character, a changed cohort, or a missing confirmation
+therefore cannot fall through to the old deletion path.
+
+## Configuration ownership
+
+`conf/playerbots.conf.dist` contains no setting owned by an extracted module.
+
+Economy owns these nine settings in `conf/mod_playerbots_economy.conf.dist`.
+
+1. `AiPlayerbot.ClassMatchingProfessionChance` became
+   `PlayerbotsEconomy.ClassMatchingProfessionChance`.
 2. `AiPlayerbot.EconomyLifecycleEnabled` became `PlayerbotsEconomy.LifecycleEnabled`.
 3. `AiPlayerbot.EconomyMarketMakingEnabled` became `PlayerbotsEconomy.MarketMakingEnabled`.
 4. `AiPlayerbot.EconomyMarketMakingPerGroupExposurePercent` became
    `PlayerbotsEconomy.MarketMakingPerGroupExposurePercent`.
 5. `AiPlayerbot.EconomyMarketMakingTotalExposurePercent` became
    `PlayerbotsEconomy.MarketMakingTotalExposurePercent`.
-6. `AiPlayerbot.EconomyMarketMakingMinimumEvidence` became `PlayerbotsEconomy.MarketMakingMinimumEvidence`.
+6. `AiPlayerbot.EconomyMarketMakingMinimumEvidence` became
+   `PlayerbotsEconomy.MarketMakingMinimumEvidence`.
 7. `AiPlayerbot.EconomyMarketMakingHoldingHorizonSeconds` became
    `PlayerbotsEconomy.MarketMakingHoldingHorizonSeconds`.
 8. `AiPlayerbot.EconomyMarketMakingMaximumRelistAttempts` became
    `PlayerbotsEconomy.MarketMakingMaximumRelistAttempts`.
-9. `AiPlayerbot.EconomyMarketMakingCooldownSeconds` became `PlayerbotsEconomy.MarketMakingCooldownSeconds`.
+9. `AiPlayerbot.EconomyMarketMakingCooldownSeconds` became
+   `PlayerbotsEconomy.MarketMakingCooldownSeconds`.
 
-The following settings moved from `playerbots.conf.dist` into `mod_playerbots_social.conf.dist`.
+Social owns these nine settings in `conf/mod_playerbots_social.conf.dist`.
 
 1. `AiPlayerbot.SocialChat.Enable` became `PlayerbotsSocial.Enable`.
 2. `AiPlayerbot.SocialChat.Stage` became `PlayerbotsSocial.Stage`.
 3. `AiPlayerbot.SocialChat.Density` became `PlayerbotsSocial.Density`.
-4. `AiPlayerbot.SocialChat.DensityMultiplier.Quiet` became `PlayerbotsSocial.DensityMultiplier.Quiet`.
-5. `AiPlayerbot.SocialChat.DensityMultiplier.Normal` became `PlayerbotsSocial.DensityMultiplier.Normal`.
-6. `AiPlayerbot.SocialChat.DensityMultiplier.Lively` became `PlayerbotsSocial.DensityMultiplier.Lively`.
+4. `AiPlayerbot.SocialChat.DensityMultiplier.Quiet` became
+   `PlayerbotsSocial.DensityMultiplier.Quiet`.
+5. `AiPlayerbot.SocialChat.DensityMultiplier.Normal` became
+   `PlayerbotsSocial.DensityMultiplier.Normal`.
+6. `AiPlayerbot.SocialChat.DensityMultiplier.Lively` became
+   `PlayerbotsSocial.DensityMultiplier.Lively`.
 7. `AiPlayerbot.SocialChat.GeneralStarterPressureMultiplier` became
    `PlayerbotsSocial.GeneralStarterPressureMultiplier`.
-8. `AiPlayerbot.SocialChat.TelemetryRetentionHours` became `PlayerbotsSocial.TelemetryRetentionHours`.
+8. `AiPlayerbot.SocialChat.TelemetryRetentionHours` became
+   `PlayerbotsSocial.TelemetryRetentionHours`.
 9. `AiPlayerbot.SocialChat.ControlToken` became `PlayerbotsSocial.ControlToken`.
 
-Personality did not own a setting in `playerbots.conf.dist`. LLM settings were already in
-`mod_playerbot_llm.conf.dist` and remain there. The legacy `AiPlayerbot.RpgStatusProbWeight.DoProfession`
-setting is removed because Economy now schedules trainer travel through its own strategy and career engagement
-interval.
+Telemetry owns `PlayerbotsTelemetry.MaxPayloadBytes` in
+`conf/mod_playerbots_telemetry.conf.dist`. It replaces `AiPlayerbot.TelemetryMaxPayloadBytes`.
 
-## Verification commands
+MCP owns `PlayerbotsMCP.Port` in `conf/mod_playerbots_mcp.conf.dist`. It replaces
+`AiPlayerbot.VerificationServerPort`. The upstream `AiPlayerbot.CommandServerPort` remains an upstream Playerbots
+setting and is not owned by MCP.
 
-The retained fork inventory is checked with these commands.
+Lifecycle owns these three settings in `conf/mod_playerbots_lifecycle.conf.dist`.
+
+1. `AiPlayerbot.DeleteRandomBotAccounts` became `PlayerbotsLifecycle.CleanupRequested`.
+2. `AiPlayerbot.DeleteRandomBotAccountsConfirmation` became
+   `PlayerbotsLifecycle.CleanupConfirmation`.
+3. `AiPlayerbot.DeleteRandomBotProtectedCharacters` became
+   `PlayerbotsLifecycle.ProtectedCharacters`.
+
+Personality and Recovery own no configuration setting. LLM settings were already owned by
+`conf/mod_playerbot_llm.conf.dist` and remain there.
+
+Every moved setting has a behavioral configuration test that loads a nondefault value through the module config
+loader and asserts the resulting runtime value.
+
+## Final fork inventory
+
+`docs/final-fork-inventory.tsv` classifies every final path changed from the exact upstream commit. It contains 45
+paths.
+
+1. 18 paths are `retained_seam`.
+2. 16 paths are `irreducible_compatibility`.
+3. 11 paths are `repository_contract`.
+
+The inventory can be checked without a path rule or a path count assumption.
 
 ```bash
-git diff --name-only upstream/master
-git diff --name-only upstream/master | wc -l
-git grep -nE \
-  'Playerbot(Personality|Career|Economy|Social|LLM)|Playerbot(FictionalIdentity|ProfessionCapability)|EconomyAction|Bot/(Economy|Personality|Social)' \
-  -- ':!docs/extraction-report.md'
-git grep -nEi \
-  'classMatchingProfessionChance|economyLifecycle|economyMarketMaking|socialChat|RpgStatusProbWeight\.DoProfession' \
-  -- ':!docs/extraction-report.md'
-if rg -n 'AiPlayerbot\.(ClassMatchingProfessionChance|Economy|SocialChat)|RpgStatusProbWeight\.DoProfession' \
-  conf/playerbots.conf.dist; then exit 1; fi
+comm -3 \
+  <(git diff --name-status a7b885d27134466dbc1c91d39b8241ea725a1bbb | sort) \
+  <(tail -n +2 docs/final-fork-inventory.tsv | cut -f1,2 | sort)
 ```
 
-The expected path count is 20. Both feature scans must return no extracted implementation from this fork.
+The command must print nothing.
+
+## Vanilla only retirement
+
+`docs/vanilla-only-server-rules.md` is the one source path classified as `retired_vanilla`. Vanilla policy hunks
+inside mixed source paths were removed during extraction. They were not copied into another repository and are not
+compatibility requirements.
+
+The tested source and module set must contain no production reference to `VanillaOnlyRules`, no Vanilla only
+default, and no Vanilla enforcement for maps, races, classes, professions, recipes, reputation, or progression.
+Standard Wrath behavior is authoritative.
+
+## Verification
+
+The following checks are required in addition to repository quality, standalone build, and full integration tests.
+
+```bash
+python3 tools/check_extraction_manifest.py
+python3 -m unittest tests/python/test_check_extraction_manifest.py
+
+if rg -n \
+  'AiPlayerbot\.(ClassMatchingProfessionChance|Economy|SocialChat|TelemetryMaxPayloadBytes|VerificationServerPort|DeleteRandomBotAccounts)' \
+  conf/playerbots.conf.dist; then exit 1; fi
+
+if rg -n \
+  'Playerbot(Personality|Career|Economy|Social|LLM|Telemetry|MCP|Recovery|Lifecycle)|VanillaOnlyRules' \
+  src --glob '!Bot/Extension/PlayerbotExtension.*'; then exit 1; fi
+
+comm -3 \
+  <(git diff --name-status a7b885d27134466dbc1c91d39b8241ea725a1bbb | sort) \
+  <(tail -n +2 docs/final-fork-inventory.tsv | cut -f1,2 | sort)
+```
+
+The source manifest checker must report 228 exact paths. Both implementation scans and the final inventory
+comparison must print nothing.

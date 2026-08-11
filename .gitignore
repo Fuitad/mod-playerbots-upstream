@@ -15,6 +15,7 @@
 CMakeLists.txt.user
 *.bak
 *.patch
+!patches/azerothcore-playerbot-test-harness.patch
 *.diff
 *.REMOTE.*
 *.BACKUP.*
@@ -54,3 +55,4 @@ local.properties
 # Local analysis and standalone build output
 /build*/
 /graphify-out/
+__pycache__/

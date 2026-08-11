@@ -15,6 +15,8 @@
 
 class Player;
 class PlayerbotAI;
+class Map;
+class Transport;
 class Unit;
 class WorldObject;
 class Position;
@@ -61,6 +63,12 @@ protected:
     bool Move(float angle, float distance);
     bool MoveInside(uint32 mapId, float x, float y, float z, float distance = sPlayerbotAIConfig.followDistance,
                     MovementPriority priority = MovementPriority::MOVEMENT_NORMAL);
+    Transport* GetTransportForPosTolerant(Map* map, WorldObject* reference, uint32 phaseMask, float x, float y,
+                                          float z);
+    bool FindBoardingPointOnTransport(Map* map, Transport* expectedTransport, WorldObject* reference, float masterX,
+                                      float masterY, float masterZ, float botX, float botY, float botZ, float& outX,
+                                      float& outY, float& outZ);
+    bool MoveToTransport(uint32 mapId, float x, float y, float z, uint32 entry, MovementPriority priority);
     void CreateWp(Player* wpOwner, float x, float y, float z, float o, uint32 entry, bool important = false);
     Position BestPositionForMeleeToFlee(Position pos, float radius);
     Position BestPositionForRangedToFlee(Position pos, float radius);

@@ -18,6 +18,9 @@
 #include "AiFactory.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+#include "Bot/Extension/PlayerbotExtension.h"
+#include "Cell.h"
+#include "CellImpl.h"
 #include "ChannelMgr.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
@@ -25,6 +28,7 @@
 #include "Define.h"
 #include "FleeManager.h"
 #include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "LFGMgr.h"
 #include "MapMgr.h"
 #include "NewRpgInfo.h"
@@ -46,10 +50,6 @@
 #include "TravelMgr.h"
 #include "Unit.h"
 #include "World.h"
-#include "Cell.h"
-#include "GridNotifiers.h"
-#include "CellImpl.h"
-#include "GridNotifiersImpl.h"
 
 struct GuidClassRaceInfo
 {
@@ -2966,6 +2966,10 @@ uint32 RandomPlayerbotMgr::GetTradeDiscount(Player* bot, Player* master)
 
 std::string const RandomPlayerbotMgr::HandleRemoteCommand(std::string const request)
 {
+    std::string extensionResponse;
+    if (GetPlayerbotExtensionRegistry().HandleRemoteCommand(request, extensionResponse))
+        return extensionResponse;
+
     std::string::const_iterator pos = std::find(request.begin(), request.end(), ',');
     if (pos == request.end())
     {

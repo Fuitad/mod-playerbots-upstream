@@ -13,6 +13,7 @@
 
 #include "Common.h"
 #include "DBCEnums.h"
+#include "SharedDefines.h"
 
 class Player;
 class WorldSession;
@@ -24,7 +25,7 @@ class RandomPlayerbotFactory
 public:
     enum class NameRaceAndGender : uint8
     {
-        // Generic is the category used for human & undead
+        // Generic categories are global pools shared by every playable race.
         GenericMale = 0,
         GenericFemale,
         GnomeMale,
@@ -45,12 +46,16 @@ public:
         BloodelfFemale
     };
 
-    static constexpr NameRaceAndGender CombineRaceAndGender(uint8 race, uint8 gender);
+    static constexpr NameRaceAndGender CombineRaceAndGender(uint8 /*race*/, uint8 gender)
+    {
+        return gender == GENDER_FEMALE ? NameRaceAndGender::GenericFemale : NameRaceAndGender::GenericMale;
+    }
 
     RandomPlayerbotFactory() {};
     virtual ~RandomPlayerbotFactory() {}
 
-    Player* CreateRandomBot(WorldSession* session, uint8 cls, std::unordered_map<NameRaceAndGender, std::vector<std::string>>& names);
+    Player* CreateRandomBot(WorldSession* session, uint8 cls, bool alliance,
+                            std::unordered_map<NameRaceAndGender, std::vector<std::string>>& names);
     static void CreateRandomBots();
     static void CreateRandomArenaTeams(ArenaType slot, uint32 count);
     static std::string const CreateRandomGuildName();
@@ -59,6 +64,8 @@ public:
 
 private:
     static bool IsValidRaceClassCombination(uint8 race, uint8 class_, uint32 expansion);
+    static std::vector<uint8> GetAvailableClasses(bool alliance);
+    static std::vector<uint8> GetAvailableRaces(uint8 class_, bool alliance);
     std::string const CreateRandomBotName(NameRaceAndGender raceAndGender);
     static std::string const CreateRandomArenaTeamName();
 };

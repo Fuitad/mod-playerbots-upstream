@@ -5,7 +5,11 @@
 
 #include "Playerbots.h"
 
+#include <string>
+
+#include "BattleGroundTactics.h"
 #include "BattlefieldScript.h"
+#include "Bot/Extension/PlayerbotExtension.h"
 #include "Channel.h"
 #include "Config.h"
 #include "DatabaseEnv.h"
@@ -14,16 +18,13 @@
 #include "ModuleMgr.h"
 #include "PlayerScript.h"
 #include "PlayerbotAIConfig.h"
+#include "PlayerbotCommandScript.h"
 #include "PlayerbotGuildMgr.h"
 #include "PlayerbotSpellRepository.h"
 #include "PlayerbotWorldThreadProcessor.h"
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
-#include "PlayerbotCommandScript.h"
 #include "cmath"
-#include "BattleGroundTactics.h"
-
-#include <string>
 
 namespace
 {
@@ -37,7 +38,7 @@ std::string EnabledModulesList()
     }
     return modules;
 }
-}
+}  // namespace
 
 class PlayerbotsDatabaseScript : public DatabaseScript
 {
@@ -88,18 +89,15 @@ public:
 class PlayerbotsPlayerScript : public PlayerScript
 {
 public:
-    PlayerbotsPlayerScript() : PlayerScript("PlayerbotsPlayerScript", {
-        PLAYERHOOK_ON_LOGIN,
-        PLAYERHOOK_ON_AFTER_UPDATE,
-        PLAYERHOOK_ON_BEFORE_CRITERIA_PROGRESS,
-        PLAYERHOOK_ON_BEFORE_ACHI_COMPLETE,
-        PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
-        PLAYERHOOK_CAN_PLAYER_USE_GROUP_CHAT,
-        PLAYERHOOK_CAN_PLAYER_USE_GUILD_CHAT,
-        PLAYERHOOK_CAN_PLAYER_USE_CHANNEL_CHAT,
-        PLAYERHOOK_ON_GIVE_EXP,
-        PLAYERHOOK_ON_BEFORE_TELEPORT
-    }) {}
+    PlayerbotsPlayerScript()
+        : PlayerScript("PlayerbotsPlayerScript",
+                       {PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_AFTER_UPDATE, PLAYERHOOK_ON_BEFORE_CRITERIA_PROGRESS,
+                        PLAYERHOOK_ON_BEFORE_ACHI_COMPLETE, PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
+                        PLAYERHOOK_CAN_PLAYER_USE_GROUP_CHAT, PLAYERHOOK_CAN_PLAYER_USE_GUILD_CHAT,
+                        PLAYERHOOK_CAN_PLAYER_USE_CHANNEL_CHAT, PLAYERHOOK_ON_GIVE_EXP, PLAYERHOOK_ON_BEFORE_TELEPORT,
+                        PLAYERHOOK_ON_PLAYER_ENTER_COMBAT})
+    {
+    }
 
     void OnPlayerLogin(Player* player) override
     {
@@ -173,6 +171,13 @@ public:
         */
 
         return true;
+    }
+
+    void OnPlayerEnterCombat(Player* player, Unit* /*enemy*/) override
+    {
+        PlayerbotAI* const botAI = PlayerbotsMgr::instance().GetPlayerbotAI(player);
+        if (botAI)
+            botAI->HandleCombatStart();
     }
 
     void OnPlayerAfterUpdate(Player* player, uint32 diff) override
@@ -389,6 +394,7 @@ public:
     {
         PlayerbotWorldThreadProcessor::instance().Update(diff);
         sRandomPlayerbotMgr.UpdateAI(diff);  // World thread only
+        GetPlayerbotExtensionRegistry().OnWorldUpdate(diff);
     }
 };
 

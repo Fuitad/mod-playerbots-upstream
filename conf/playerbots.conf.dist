@@ -104,11 +104,6 @@ AiPlayerbot.AddClassAccountPoolSize = 50
 # Do not change this prefix while there are existing bot accounts.
 AiPlayerbot.RandomBotAccountPrefix = "rndbot"
 
-# Delete all randombot accounts
-# To apply this, set the number to 1 and run the Worldserver. Once deletion is complete, if you would
-# like to recreate randombots, set the number back to 0 and rerun the Worldserver.
-AiPlayerbot.DeleteRandomBotAccounts = 0
-
 # Disable randombots when no real players are logged in
 # Default: 0 (randombots will login when server starts)
 # If enabled, randombots will only log in 30 seconds (default) after a real player logs in, and will

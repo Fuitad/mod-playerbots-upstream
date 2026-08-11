@@ -14,19 +14,17 @@
 #include "Playerbots.h"
 #include "WorldPacket.h"
 
-bool AcceptInvitationAction::Execute(Event event)
+bool AcceptInvitationAction::Execute([[maybe_unused]] Event event)
 {
     Group* grp = bot->GetGroupInvite();
     if (!grp)
         return false;
-    WorldPacket packet = event.getPacket();
-    uint8 flag;
-    std::string name;
-    packet >> flag >> name;
-
-    Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID());
+    Player* inviter = ObjectAccessor::FindConnectedPlayer(grp->GetLeaderGUID());
     if (!inviter)
+    {
+        bot->UninviteFromGroup();
         return false;
+    }
 
     if (!botAI->GetSecurity()->CheckLevelFor(PLAYERBOT_SECURITY_INVITE, false, inviter))
     {

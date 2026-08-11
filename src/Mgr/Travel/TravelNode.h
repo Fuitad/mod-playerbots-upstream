@@ -410,6 +410,7 @@ public:
     void clear() { fullPath.clear(); }
 
     bool empty() { return fullPath.empty(); }
+    bool hasPathType(PathNodeType type) const;
     std::vector<PathNodePoint> getPath() { return fullPath; }
     WorldPosition getFront() { return fullPath.front().point; }
     WorldPosition getBack() { return fullPath.back().point; }
@@ -426,7 +427,8 @@ public:
     bool shouldMoveToNextPoint(WorldPosition startPos, std::vector<PathNodePoint>::iterator beg,
                                std::vector<PathNodePoint>::iterator ed, std::vector<PathNodePoint>::iterator p,
                                float& moveDist, float maxDist);
-    WorldPosition getNextPoint(WorldPosition startPos, float maxDist, TravelNodePathType& pathType, uint32& entry);
+    WorldPosition getNextPoint(WorldPosition startPos, float maxDist, TravelNodePathType& pathType, uint32& entry,
+                               uint32 currentTransportEntry = 0);
 
     std::ostringstream const print();
 

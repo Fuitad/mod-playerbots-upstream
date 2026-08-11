@@ -6,6 +6,8 @@
 
 #include "MovementActions.h"
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <iomanip>
@@ -37,6 +39,7 @@
 #include "SpellInfo.h"
 #include "Stances.h"
 #include "Timer.h"
+#include "Transport.h"
 #include "Unit.h"
 #include "Vehicle.h"
 #include "WaypointMovementGenerator.h"
@@ -44,6 +47,97 @@
 MovementAction::MovementAction(PlayerbotAI* botAI, std::string const name) : Action(botAI, name)
 {
     bot = botAI->GetBot();
+}
+
+Transport* MovementAction::GetTransportForPosTolerant(Map* map, WorldObject* reference, uint32 phaseMask, float x,
+                                                      float y, float z)
+{
+    if (!map || !reference)
+        return nullptr;
+
+    std::array<float, 4> const probes = {z, z + 0.5f, z + 1.5f, z - 0.5f};
+    for (float const probeZ : probes)
+        if (Transport* transport = map->GetTransportForPos(phaseMask, x, y, probeZ, reference))
+            return transport;
+
+    return nullptr;
+}
+
+bool MovementAction::FindBoardingPointOnTransport(Map* map, Transport* expectedTransport, WorldObject* reference,
+                                                  float masterX, float masterY, float masterZ, float botX, float botY,
+                                                  float botZ, float& outX, float& outY, float& outZ)
+{
+    if (!map || !expectedTransport || !reference)
+        return false;
+
+    uint32 const phaseMask = reference->GetPhaseMask();
+    if (GetTransportForPosTolerant(map, reference, phaseMask, masterX, masterY, masterZ) != expectedTransport)
+        return false;
+
+    float const probeZ = std::max(masterZ, botZ);
+    float const deltaX = botX - masterX;
+    float const deltaY = botY - masterY;
+    float const distance = std::sqrt(deltaX * deltaX + deltaY * deltaY);
+    int32 const steps = std::clamp(static_cast<int32>(distance / 0.75f), 10, 28);
+    float const stepX = deltaX / static_cast<float>(steps);
+    float const stepY = deltaY / static_cast<float>(steps);
+
+    float lastX = masterX;
+    float lastY = masterY;
+    bool found = false;
+    for (int32 i = 1; i <= steps; ++i)
+    {
+        float const probeX = masterX + stepX * i;
+        float const probeY = masterY + stepY * i;
+        if (GetTransportForPosTolerant(map, reference, phaseMask, probeX, probeY, probeZ) != expectedTransport)
+            break;
+
+        lastX = probeX;
+        lastY = probeY;
+        found = true;
+    }
+
+    if (!found)
+        return false;
+
+    outX = lastX;
+    outY = lastY;
+    outZ = masterZ;
+    return true;
+}
+
+bool MovementAction::MoveToTransport(uint32 mapId, float x, float y, float z, uint32 entry, MovementPriority priority)
+{
+    if (bot->GetTransport())
+        return true;
+    if (bot->GetMapId() != mapId)
+        return false;
+
+    if (bot->GetExactDist(x, y, z) > INTERACTION_DISTANCE)
+    {
+        MoveTo(mapId, x, y, z, false, false, false, true, priority, true);
+        return true;
+    }
+
+    Map* map = bot->GetMap();
+    Transport* transport =
+        GetTransportForPosTolerant(map, bot, bot->GetPhaseMask(), x, y, std::max(z, bot->GetPositionZ()));
+    if (!transport || transport->GetEntry() != entry)
+        return true;
+
+    float const botProbeZ = std::max(bot->GetPositionZ(), transport->GetPositionZ());
+    Transport* botSurface =
+        GetTransportForPosTolerant(map, bot, bot->GetPhaseMask(), bot->GetPositionX(), bot->GetPositionY(), botProbeZ);
+    if (botSurface == transport)
+    {
+        transport->AddPassenger(bot, true);
+        bot->StopMovingOnCurrentPos();
+        return true;
+    }
+
+    MoveTo(mapId, transport->GetPositionX(), transport->GetPositionY(), transport->GetPositionZ(), false, false, false,
+           true, priority, true);
+    return true;
 }
 
 void MovementAction::CreateWp(Player* wpOwner, float x, float y, float z, float o, uint32 entry, bool important)
@@ -2307,6 +2401,7 @@ bool CombatFormationMoveAction::Execute(Event /*event*/)
         if (FleePosition(playerToLeave->GetPosition(), dis))
         {
             lastMoveTimer = getMSTime();
+            return true;
         }
     }
     return false;

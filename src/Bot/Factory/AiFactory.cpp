@@ -496,9 +496,7 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
     }
 
     GetPlayerbotExtensionRegistry().ForEach([player, facade, engine](PlayerbotExtension& extension)
-    {
-        extension.AddDefaultCombatStrategies(player, facade, *engine);
-    });
+                                            { extension.AddDefaultCombatStrategies(player, facade, *engine); });
 }
 
 Engine* AiFactory::createCombatEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* aiObjectContext)
@@ -717,10 +715,9 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
         }
     }
 
-    GetPlayerbotExtensionRegistry().ForEach([player, facade, nonCombatEngine](PlayerbotExtension& extension)
-    {
-        extension.AddDefaultNonCombatStrategies(player, facade, *nonCombatEngine);
-    });
+    GetPlayerbotExtensionRegistry().ForEach(
+        [player, facade, nonCombatEngine](PlayerbotExtension& extension)
+        { extension.AddDefaultNonCombatStrategies(player, facade, *nonCombatEngine); });
 }
 
 Engine* AiFactory::createNonCombatEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* aiObjectContext)
@@ -741,9 +738,7 @@ void AiFactory::AddDefaultDeadStrategies(Player* player, PlayerbotAI* const faca
         deadEngine->removeStrategy("follow", false);
 
     GetPlayerbotExtensionRegistry().ForEach([player, facade, deadEngine](PlayerbotExtension& extension)
-    {
-        extension.AddDefaultDeadStrategies(player, facade, *deadEngine);
-    });
+                                            { extension.AddDefaultDeadStrategies(player, facade, *deadEngine); });
 }
 
 Engine* AiFactory::createDeadEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* AiObjectContext)

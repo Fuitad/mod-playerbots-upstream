@@ -49,6 +49,74 @@ bool PlayerbotExtensionRegistry::HandleBotEvent(PlayerbotAI* botAI, PlayerbotEve
     return false;
 }
 
+void PlayerbotExtensionRegistry::OnWorldUpdate(std::uint32_t diff)
+{
+    ForEach([diff](PlayerbotExtension& extension) { extension.OnWorldUpdate(diff); });
+}
+
+void PlayerbotExtensionRegistry::OnBotUpdate(PlayerbotAI* botAI, PlayerbotAIUpdate const& update)
+{
+    ForEach([botAI, &update](PlayerbotExtension& extension) { extension.OnBotUpdate(botAI, update); });
+}
+
+void PlayerbotExtensionRegistry::OnActionExecuted(PlayerbotAI* botAI, std::string_view name, bool success,
+                                                  std::uint64_t timestampMs)
+{
+    ForEach([botAI, name, success, timestampMs](PlayerbotExtension& extension)
+            { extension.OnActionExecuted(botAI, name, success, timestampMs); });
+}
+
+void PlayerbotExtensionRegistry::OnBotDeath(PlayerbotAI* botAI, std::uint64_t timestampMs)
+{
+    ForEach([botAI, timestampMs](PlayerbotExtension& extension) { extension.OnBotDeath(botAI, timestampMs); });
+}
+
+void PlayerbotExtensionRegistry::OnBotRemoved(PlayerbotAI* botAI)
+{
+    ForEach([botAI](PlayerbotExtension& extension) { extension.OnBotRemoved(botAI); });
+}
+
+bool PlayerbotExtensionRegistry::HandleRemoteCommand(std::string_view command, std::string& response)
+{
+    for (PlayerbotExtension* extension : extensions)
+        if (extension->HandleRemoteCommand(command, response))
+            return true;
+
+    return false;
+}
+
+bool PlayerbotExtensionRegistry::IsObjectiveAvailable(PlayerbotAI* botAI, PlayerbotObjective const& objective,
+                                                      std::uint64_t timestampMs)
+{
+    for (PlayerbotExtension* extension : extensions)
+        if (!extension->IsObjectiveAvailable(botAI, objective, timestampMs))
+            return false;
+
+    return true;
+}
+
+bool PlayerbotExtensionRegistry::HandleRandomBotAccountCleanup()
+{
+    for (PlayerbotExtension* extension : extensions)
+        if (extension->HandleRandomBotAccountCleanup())
+            return true;
+
+    return false;
+}
+
+bool PlayerbotExtensionRegistry::PrepareBotPurge(std::vector<std::uint32_t> const& botGuids)
+{
+    bool allowed = true;
+    for (PlayerbotExtension* extension : extensions)
+        allowed = extension->PrepareBotPurge(botGuids) && allowed;
+    return allowed;
+}
+
+void PlayerbotExtensionRegistry::OnBotPurge(std::vector<std::uint32_t> const& botGuids)
+{
+    ForEach([&botGuids](PlayerbotExtension& extension) { extension.OnBotPurge(botGuids); });
+}
+
 PlayerbotExtensionRegistry& GetPlayerbotExtensionRegistry()
 {
     static PlayerbotExtensionRegistry registry;

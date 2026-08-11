@@ -6,6 +6,7 @@
 
 #include "NewRpgBaseAction.h"
 
+#include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
 #include "Creature.h"
@@ -18,10 +19,10 @@
 #include "NewRpgStrategy.h"
 #include "Object.h"
 #include "ObjectAccessor.h"
-#include "OutdoorPvPMgr.h"
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
 #include "ObjectMgr.h"
+#include "OutdoorPvPMgr.h"
 #include "PathGenerator.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -848,6 +849,10 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
             if (qPoi.ObjectiveIndex != -1)
                 continue;
 
+            PlayerbotObjective const objective{PlayerbotObjectiveKind::Quest, questId, qPoi.ObjectiveIndex, qPoi.MapId};
+            if (!GetPlayerbotExtensionRegistry().IsObjectiveAvailable(botAI, objective, GetTimeMS().count()))
+                continue;
+
             if (qPoi.points.size() == 0)
                 continue;
 
@@ -921,6 +926,9 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
         }
         if (!inComplete)
             continue;
+        PlayerbotObjective const objective{PlayerbotObjectiveKind::Quest, questId, qPoi.ObjectiveIndex, qPoi.MapId};
+        if (!GetPlayerbotExtensionRegistry().IsObjectiveAvailable(botAI, objective, GetTimeMS().count()))
+            continue;
         if (qPoi.points.size() == 0)
             continue;
         float dx = 0, dy = 0;
@@ -957,6 +965,7 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
 
 WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
 {
+    PlayerbotAI* const botAI = GET_PLAYERBOT_AI(bot);
     const std::vector<WorldLocation>& locs = sTravelMgr.GetLocsPerLevelCache(bot->GetLevel());
     float hiRange = 500.0f;
     float loRange = 2500.0f;
@@ -984,6 +993,18 @@ WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
 
         if (!inCity && bot->GetMap()->GetZoneId(bot->GetPhaseMask(), loc.GetPositionX(), loc.GetPositionY(),
                                                 loc.GetPositionZ()) != bot->GetZoneId())
+            continue;
+
+        PlayerbotObjective const objective{
+            PlayerbotObjectiveKind::Grind,
+            0,
+            0,
+            loc.GetMapId(),
+            loc.GetPositionX(),
+            loc.GetPositionY(),
+            loc.GetPositionZ(),
+        };
+        if (!GetPlayerbotExtensionRegistry().IsObjectiveAvailable(botAI, objective, GetTimeMS().count()))
             continue;
 
         if (bot->GetExactDist(loc) < hiRange)

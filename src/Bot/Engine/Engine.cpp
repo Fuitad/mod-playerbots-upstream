@@ -7,6 +7,7 @@
 #include "Engine.h"
 
 #include "Action.h"
+#include "Bot/Extension/PlayerbotExtension.h"
 #include "Event.h"
 #include "PerfMonitor.h"
 #include "Playerbots.h"
@@ -602,6 +603,8 @@ bool Engine::ListenAndExecute(Action* action, Event event)
 
     actionExecuted = actionExecutionListeners.OverrideResult(action, actionExecuted, event);
     actionExecutionListeners.After(action, actionExecuted, event);
+    std::string const actionName = action->getName();
+    GetPlayerbotExtensionRegistry().OnActionExecuted(botAI, actionName, actionExecuted, GetTimeMS().count());
     return actionExecuted;
 }
 

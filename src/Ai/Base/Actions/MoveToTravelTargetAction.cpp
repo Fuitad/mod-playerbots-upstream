@@ -7,8 +7,20 @@
 #include "MoveToTravelTargetAction.h"
 
 #include "ChooseRpgTargetAction.h"
+#include "Creature.h"
+#include "DBCStores.h"
 #include "LootObjectStack.h"
 #include "Playerbots.h"
+#include "Transport.h"
+#include "TravelNode.h"
+
+namespace
+{
+bool IsSameTravelDestination(WorldPosition first, WorldPosition second)
+{
+    return first.GetMapId() == second.GetMapId() && first.distance(second) < 1.0f;
+}
+}  // namespace
 
 bool MoveToTravelTargetAction::Execute(Event /*event*/)
 {
@@ -99,6 +111,106 @@ bool MoveToTravelTargetAction::Execute(Event /*event*/)
     float y = location.GetPositionY();
     float z = location.GetPositionZ();
     float mapId = location.GetMapId();
+
+    MovementPriority const priority =
+        target->isForced() ? MovementPriority::MOVEMENT_FORCED : MovementPriority::MOVEMENT_NORMAL;
+
+    LastMovement& movement = AI_VALUE(LastMovement&, "last movement");
+    WorldPosition const destination(location);
+    TravelPath& travelPath = movement.lastPath;
+
+    if (!travelPath.empty() && !IsSameTravelDestination(travelPath.getBack(), destination))
+        travelPath.clear();
+
+    bool const needsRoute = botLocation.GetMapId() != destination.GetMapId() ||
+                            botLocation.distance(destination) > sPlayerbotAIConfig.targetPosRecalcDistance;
+    if (travelPath.empty() && needsRoute)
+    {
+        travelPath = TravelNodeMap::getFullPath(botLocation, destination, bot);
+        if (travelPath.empty())
+            travelPath.addPoint(destination);
+    }
+
+    if (!travelPath.empty() && (travelPath.hasPathType(NODE_TRANSPORT) || travelPath.hasPathType(NODE_PORTAL) ||
+                                travelPath.hasPathType(NODE_FLIGHTPATH)))
+    {
+        TravelNodePathType pathType = TravelNodePathType::none;
+        uint32 entry = 0;
+        Transport* currentTransport = bot->GetTransport();
+        uint32 const currentTransportEntry = currentTransport ? currentTransport->GetEntry() : 0;
+        WorldPosition const nextPoint = travelPath.getNextPoint(botLocation, sPlayerbotAIConfig.reactDistance, pathType,
+                                                                entry, currentTransportEntry);
+
+        if (pathType == TravelNodePathType::transport)
+        {
+            bool const progressing =
+                MoveToTransport(nextPoint.GetMapId(), nextPoint.GetPositionX(), nextPoint.GetPositionY(),
+                                nextPoint.GetPositionZ(), entry, priority);
+            target->setRetry(true);
+            return progressing;
+        }
+
+        if (pathType == TravelNodePathType::flightPath)
+        {
+            TaxiPathEntry const* taxiPath = sTaxiPathStore.LookupEntry(entry);
+            TravelMgr::FlightMasterInfo const* flightMasterInfo = sTravelMgr.GetNearestFlightMasterInfo(bot);
+            Creature* flightMaster = nullptr;
+            if (taxiPath && flightMasterInfo && flightMasterInfo->taxiNodeId == taxiPath->from)
+                flightMaster = bot->FindNearestCreature(flightMasterInfo->templateEntry, INTERACTION_DISTANCE * 3);
+
+            if (!taxiPath || !flightMaster || !flightMaster->IsAlive() ||
+                bot->GetDistance(flightMaster) > INTERACTION_DISTANCE)
+            {
+                travelPath.clear();
+                if (!target->isForced())
+                {
+                    target->incRetry(true);
+                    if (target->isMaxRetry(true))
+                        target->setStatus(TRAVEL_STATUS_COOLDOWN);
+                }
+                return false;
+            }
+
+            botAI->RemoveShapeshift();
+            if (bot->IsMounted())
+                bot->Dismount();
+
+            bot->GetSession()->SendLearnNewTaxiNode(flightMaster);
+            bool const boarded = bot->ActivateTaxiPathTo({taxiPath->from, taxiPath->to}, flightMaster, 0);
+            if (boarded)
+                target->setRetry(true);
+            else
+            {
+                travelPath.clear();
+                if (!target->isForced())
+                {
+                    target->incRetry(true);
+                    if (target->isMaxRetry(true))
+                        target->setStatus(TRAVEL_STATUS_COOLDOWN);
+                }
+            }
+            return boarded;
+        }
+
+        if (currentTransport && nextPoint && nextPoint.GetMapId() == bot->GetMapId())
+            currentTransport->RemovePassenger(bot, true);
+
+        if (nextPoint && nextPoint.GetMapId() == bot->GetMapId())
+        {
+            bool const canMove = MoveTo(nextPoint.GetMapId(), nextPoint.GetPositionX(), nextPoint.GetPositionY(),
+                                        nextPoint.GetPositionZ(), false, false, false, true, priority);
+            if (!canMove && pathType != TravelNodePathType::portal && !target->isForced())
+            {
+                target->incRetry(true);
+                if (target->isMaxRetry(true))
+                    target->setStatus(TRAVEL_STATUS_COOLDOWN);
+            }
+            else
+                target->setRetry(true);
+
+            return canMove || pathType == TravelNodePathType::portal;
+        }
+    }
 
     x += cos(angle) * maxDistance * mod;
     y += sin(angle) * maxDistance * mod;

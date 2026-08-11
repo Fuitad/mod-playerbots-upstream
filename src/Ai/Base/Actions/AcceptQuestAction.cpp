@@ -105,13 +105,19 @@ bool AcceptQuestShareAction::Execute(Event event)
     Player* master = GetMaster();
     Player* bot = botAI->GetBot();
 
+    if (!master || !bot || !bot->GetGroup() || bot->GetGroup() != master->GetGroup() || !bot->IsInMap(master))
+        return false;
+
     WorldPacket& p = event.getPacket();
     p.rpos(0);
     uint32 quest;
     p >> quest;
 
     Quest const* qInfo = sObjectMgr->GetQuestTemplate(quest);
-    if (!qInfo || !bot->GetDivider())
+    if (!qInfo)
+        return false;
+
+    if (!bot->GetDivider().IsEmpty() && bot->GetDivider() != master->GetGUID())
         return false;
 
     quest = qInfo->GetQuestId();
@@ -134,6 +140,12 @@ bool AcceptQuestShareAction::Execute(Event event)
         return false;
     }
 
+    if (!bot->CanAddQuest(qInfo, false))
+    {
+        bot->SetDivider(ObjectGuid::Empty);
+        return false;
+    }
+
     if (!bot->GetDivider().IsEmpty())
     {
         // send msg to quest giving player
@@ -141,28 +153,13 @@ bool AcceptQuestShareAction::Execute(Event event)
         bot->SetDivider(ObjectGuid::Empty);
     }
 
-    if (bot->CanAddQuest(qInfo, false))
-    {
-        bot->AddQuest(qInfo, master);
+    bot->AddQuestAndCheckCompletion(qInfo, master);
 
-        if (bot->CanCompleteQuest(quest))
-            bot->CompleteQuest(quest);
+    if (qInfo->GetSrcSpell() > 0)
+        bot->CastSpell(bot, qInfo->GetSrcSpell(), true);
 
-        // Runsttren: did not add typeid switch from WorldSession::HandleQuestgiverAcceptQuestOpcode!
-        // I think it's not needed, cause typeid should be TYPEID_PLAYER - and this one is not handled
-        // there and there is no default case also.
-
-        if (qInfo->GetSrcSpell() > 0)
-        {
-            bot->CastSpell(bot, qInfo->GetSrcSpell(), true);
-        }
-
-        botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "quest_accept", "Quest accepted", {}));
-        return true;
-    }
-
-    return false;
+    botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("quest_accept", "Quest accepted", {}));
+    return true;
 }
 
 bool ConfirmQuestAction::Execute(Event event)

@@ -102,7 +102,7 @@ bool FollowAction::Execute(Event /*event*/)
     Formation* formation = AI_VALUE(Formation*, "formation");
     std::string const target = formation->GetTargetName();
 
-    // Transport handling for moving transports only (boats/zeppelins).
+    // Transport handling for boats, zeppelins, elevators, and trams.
     Player* master = botAI->GetMaster();
     if (master && master->IsInWorld() && bot->IsInWorld() && bot->GetMapId() == master->GetMapId())
     {
@@ -122,10 +122,6 @@ bool FollowAction::Execute(Event /*event*/)
                 master->GetPositionX(), master->GetPositionY(), master->GetPositionZ());
             masterOnTransport = (transport != nullptr);
         }
-
-        // Ignore static transports (elevators/trams): only keep boats/zeppelins here.
-        if (transport && transport->IsStaticTransport())
-            transport = nullptr;
 
         if (transport && map && bot->GetTransport() != transport)
         {

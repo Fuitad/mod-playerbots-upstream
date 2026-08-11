@@ -6,6 +6,7 @@
 
 #include "TravelNode.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <regex>
 #include <unordered_set>
@@ -814,15 +815,53 @@ bool TravelPath::shouldMoveToNextPoint(WorldPosition startPos, std::vector<PathN
     return true;
 }
 
+bool TravelPath::hasPathType(PathNodeType type) const
+{
+    return std::any_of(fullPath.begin(), fullPath.end(),
+                       [type](PathNodePoint const& point) { return point.type == type; });
+}
+
 // Next position to move to
 WorldPosition TravelPath::getNextPoint(WorldPosition startPos, float maxDist, TravelNodePathType& pathType,
-                                       uint32& entry)
+                                       uint32& entry, uint32 currentTransportEntry)
 {
+    pathType = TravelNodePathType::none;
+    entry = 0;
+
     if (getPath().empty())
         return WorldPosition();
 
     auto beg = fullPath.begin();
     auto ed = fullPath.end();
+
+    if (currentTransportEntry)
+    {
+        for (auto departure = beg; departure != ed; ++departure)
+        {
+            auto arrival = std::next(departure);
+            if (arrival == ed)
+                break;
+
+            if (departure->type != NODE_TRANSPORT || arrival->type != NODE_TRANSPORT ||
+                departure->entry != currentTransportEntry || arrival->entry != currentTransportEntry)
+                continue;
+
+            if (startPos.GetMapId() == arrival->point.GetMapId() &&
+                startPos.distance(arrival->point) <= INTERACTION_DISTANCE)
+            {
+                auto afterArrival = std::next(arrival);
+                if (afterArrival != ed)
+                {
+                    pathType = TravelNodePathType::walk;
+                    return afterArrival->point;
+                }
+            }
+
+            pathType = TravelNodePathType::transport;
+            entry = currentTransportEntry;
+            return arrival->point;
+        }
+    }
 
     float minDist = 0.0f;
     auto startP = beg;
@@ -879,18 +918,20 @@ WorldPosition TravelPath::getNextPoint(WorldPosition startPos, float maxDist, Tr
         return startP->point;
     }
 
-    // We are moving towards transport. Teleport to next normal point instead.
+    // We are moving towards a transport. Return the physical departure point and wait for the matching transport.
     if (startP->type == NODE_TRANSPORT)
     {
-        for (auto p = startP + 1; p != ed; p++)
+        auto departure = startP;
+        if (departure != beg)
         {
-            if (p->type != NODE_TRANSPORT)
-            {
-                pathType = TravelNodePathType::portal;
-                entry = 0;
-                return p->point;
-            }
+            auto previous = std::prev(departure);
+            if (previous->type == NODE_TRANSPORT && previous->entry == departure->entry)
+                departure = previous;
         }
+
+        pathType = TravelNodePathType::transport;
+        entry = departure->entry;
+        return departure->point;
     }
 
     // We have to move far for next point. Try to make a cropped path.
@@ -1415,7 +1456,7 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
     //[[Node pathfinding system]]
     // We try to find nodes near the bot and near the end position that have a route between them.
     // Then bot has to move towards/along the route.
-    TravelNodeMap::instance().m_nMapMtx.lock_shared();
+    std::shared_lock lock(TravelNodeMap::instance().m_nMapMtx);
 
     // Find the route of nodes starting at a node closest to the start position and ending at a node closest to the
     // endposition. Also returns longPath: The path from the start position to the first node in the route.
@@ -1444,8 +1485,6 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
             sPlayerbotAIConfig.log("bot_pathfinding.csv", movePath.print().str().c_str());
         }
     }
-
-    TravelNodeMap::instance().m_nMapMtx.unlock_shared();
 
     return movePath;
 }
