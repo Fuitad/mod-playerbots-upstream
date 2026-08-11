@@ -3,6 +3,8 @@ A	.codegraph/.gitignore	repository_contract	codegraph_output_exclusion
 M	.gitignore	repository_contract	local_analysis_and_patch_contract
 A	CMakeLists.txt	repository_contract	standalone_seam_tests
 M	conf/playerbots.conf.dist	retained_seam	extracted_configuration_ownership
+A	data/sql/playerbots/updates/2026_08_11_00_playerbots_module_update_state.sql	irreducible_compatibility	module_database_update_state
+M	data/sql/playerbots/base/updates.sql	irreducible_compatibility	module_database_update_state
 A	docs/extraction-manifest.tsv	repository_contract	source_inventory
 A	docs/extraction-report.md	repository_contract	extraction_evidence
 A	docs/final-fork-inventory.tsv	repository_contract	final_inventory

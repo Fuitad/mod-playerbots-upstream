@@ -32,24 +32,42 @@ class CheckExtractionManifestTest(unittest.TestCase):
                 "M\tretained.txt\tretained_seam\tmod-playerbots\tneutral_hook\n",
                 encoding="utf-8",
             )
+            final_manifest = Path(temporary_directory) / "final-inventory.tsv"
+            final_manifest.write_text(
+                "status\tpath\tclassification\tevidence\n"
+                "M\tretained.txt\tretained_seam\tneutral_hook\n",
+                encoding="utf-8",
+            )
 
-            exact = self.run_checker(repository, manifest, base, source)
+            exact = self.run_checker(repository, manifest, final_manifest, base, source)
             self.assertEqual(exact.returncode, 0, exact.stderr)
             self.assertIn("1 source paths classified exactly", exact.stdout)
+            self.assertIn("1 final paths classified exactly", exact.stdout)
 
-            (repository / "missing.txt").write_text("unclassified\n", encoding="utf-8")
-            self.run_git(repository, "add", "missing.txt")
+            (repository / "final-only.txt").write_text("unclassified\n", encoding="utf-8")
+            self.run_git(repository, "add", "final-only.txt")
             self.commit(repository, "unclassified")
             source_with_extra_path = self.run_git(repository, "rev-parse", "HEAD").stdout.strip()
 
-            incomplete = self.run_checker(repository, manifest, base, source_with_extra_path)
+            final_drift = self.run_checker(repository, manifest, final_manifest, base, source)
+            self.assertNotEqual(final_drift.returncode, 0)
+            self.assertIn("missing from final inventory: A\tfinal-only.txt", final_drift.stderr)
+
+            final_manifest.write_text(
+                "status\tpath\tclassification\tevidence\n"
+                "M\tretained.txt\tretained_seam\tneutral_hook\n"
+                "A\tfinal-only.txt\trepository_contract\tchecker_fixture\n",
+                encoding="utf-8",
+            )
+            incomplete = self.run_checker(repository, manifest, final_manifest, base, source_with_extra_path)
             self.assertNotEqual(incomplete.returncode, 0)
-            self.assertIn("missing from manifest: A\tmissing.txt", incomplete.stderr)
+            self.assertIn("missing from manifest: A\tfinal-only.txt", incomplete.stderr)
 
     def run_checker(
         self,
         repository: Path,
         manifest: Path,
+        final_manifest: Path,
         base: str,
         source: str,
     ) -> subprocess.CompletedProcess[str]:
@@ -61,6 +79,12 @@ class CheckExtractionManifestTest(unittest.TestCase):
                 str(repository),
                 "--manifest",
                 str(manifest),
+                "--final-repository",
+                str(repository),
+                "--final-manifest",
+                str(final_manifest),
+                "--final-base",
+                base,
                 "--base",
                 base,
                 "--source",

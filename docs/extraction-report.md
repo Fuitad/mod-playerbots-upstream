@@ -16,9 +16,10 @@ git -C ../mod-playerbots diff --name-status \
 python3 tools/check_extraction_manifest.py
 ```
 
-The diff contains exactly 228 paths. `docs/extraction-manifest.tsv` records the Git status, path,
-classification, destination, and evidence for every one. The checker compares the complete status and path set
-against Git, rejects duplicate or unsafe paths, and fails when either side has an unmatched entry.
+The preserved source diff contains exactly 228 paths. `docs/extraction-manifest.tsv` records the Git status,
+path, classification, destination, and evidence for every one. The checker compares the complete status and path
+set against Git, rejects duplicate or unsafe paths, and fails when either side has an unmatched entry. The same
+checker validates the final fork inventory against the current fork diff.
 
 ## Source classification result
 
@@ -90,9 +91,15 @@ behaviors.
 4. Correct combat reset action selection.
 5. Correct RPG target identity.
 6. Balanced faction and class creation with a global gender based name pool.
+7. AzerothCore module database update state support in the Playerbots update ledger.
 
 Recovery specific movement and combat stuck triggers are not retained in the fork. They are registered by
 `mod-playerbots-recovery` through the generic trigger and strategy seams.
+
+The two update ledger SQL paths add the `MODULE` state required when AzerothCore records database migrations from
+installed modules. They contain no feature behavior, but the Playerbots update table must accept that generic state
+before any extracted module migration can be recorded. They are therefore compatibility paths rather than an
+extracted implementation.
 
 The legacy bulk random bot deletion implementation is also absent from the fork. The factory only asks the generic
 cleanup handler. `mod-playerbots-lifecycle` owns the request switch and all deletion behavior. A missing module,
@@ -162,16 +169,19 @@ loader and asserts the resulting runtime value.
 
 ## Final fork inventory
 
-`docs/final-fork-inventory.tsv` classifies every final path changed from the exact upstream commit. It contains 45
+`docs/final-fork-inventory.tsv` classifies every final path changed from the exact upstream commit. It contains 47
 paths.
 
 1. 18 paths are `retained_seam`.
-2. 16 paths are `irreducible_compatibility`.
+2. 18 paths are `irreducible_compatibility`.
 3. 11 paths are `repository_contract`.
 
-The inventory can be checked without a path rule or a path count assumption.
+The checker verifies both the preserved source manifest and this final inventory without a path rule or a path
+count assumption.
 
 ```bash
+python3 tools/check_extraction_manifest.py
+
 comm -3 \
   <(git diff --name-status a7b885d27134466dbc1c91d39b8241ea725a1bbb | sort) \
   <(tail -n +2 docs/final-fork-inventory.tsv | cut -f1,2 | sort)
@@ -210,5 +220,5 @@ comm -3 \
   <(tail -n +2 docs/final-fork-inventory.tsv | cut -f1,2 | sort)
 ```
 
-The source manifest checker must report 228 exact paths. Both implementation scans and the final inventory
-comparison must print nothing.
+The manifest checker must report 228 exact source paths and 47 exact final paths. Both implementation scans and
+the final inventory comparison must print nothing.
