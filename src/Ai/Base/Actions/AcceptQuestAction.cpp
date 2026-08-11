@@ -7,6 +7,7 @@
 #include "AcceptQuestAction.h"
 
 #include "Event.h"
+#include "ObjectAccessor.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 
@@ -102,11 +103,18 @@ bool AcceptQuestAction::Execute(Event event)
 
 bool AcceptQuestShareAction::Execute(Event event)
 {
-    Player* master = GetMaster();
     Player* bot = botAI->GetBot();
-
-    if (!master || !bot || !bot->GetGroup() || bot->GetGroup() != master->GetGroup() || !bot->IsInMap(master))
+    if (!bot)
         return false;
+
+    ObjectGuid divider = bot->GetDivider();
+    Player* master = divider.IsEmpty() ? GetMaster() : ObjectAccessor::GetPlayer(*bot, divider);
+
+    if (!master || !bot->GetGroup() || bot->GetGroup() != master->GetGroup() || !bot->IsInMap(master))
+    {
+        bot->SetDivider(ObjectGuid::Empty);
+        return false;
+    }
 
     WorldPacket& p = event.getPacket();
     p.rpos(0);
@@ -115,10 +123,10 @@ bool AcceptQuestShareAction::Execute(Event event)
 
     Quest const* qInfo = sObjectMgr->GetQuestTemplate(quest);
     if (!qInfo)
+    {
+        bot->SetDivider(ObjectGuid::Empty);
         return false;
-
-    if (!bot->GetDivider().IsEmpty() && bot->GetDivider() != master->GetGUID())
-        return false;
+    }
 
     quest = qInfo->GetQuestId();
 
