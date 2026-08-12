@@ -1536,6 +1536,27 @@ void PlayerbotMgr::HandleCommand(uint32 type, std::string const text)
 
 void PlayerbotMgr::HandleMasterIncomingPacket(WorldPacket const& packet)
 {
+    if (packet.GetOpcode() == CMSG_PUSHQUESTTOPARTY)
+    {
+        Player* const master = GetMaster();
+        Group* const group = master ? master->GetGroup() : nullptr;
+        if (group)
+        {
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                Player* const member = itr->GetSource();
+                if (!member || member == master)
+                    continue;
+
+                PlayerbotAI* const botAI = GET_PLAYERBOT_AI(member);
+                if (botAI)
+                    botAI->HandleMasterIncomingPacket(packet);
+            }
+        }
+
+        return;
+    }
+
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* const bot = it->second;
