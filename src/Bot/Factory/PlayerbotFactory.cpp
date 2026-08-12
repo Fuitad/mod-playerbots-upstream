@@ -14,6 +14,7 @@
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
 #include "Bot/Extension/PlayerbotExtension.h"
+#include "Bot/Factory/PlayerbotTrainerLearningPolicy.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
 #include "GuildMgr.h"
@@ -3222,8 +3223,7 @@ void PlayerbotFactory::InitAvailableSpells()
             if (!trainer)
                 continue;
 
-            if (trainer->GetTrainerType() != Trainer::Type::Tradeskill &&
-                trainer->GetTrainerType() != Trainer::Type::Class)
+            if (!playerbots::IsTrainerAutoLearned(trainer->GetTrainerType()))
                 continue;
 
             if (trainer->GetTrainerType() == Trainer::Type::Class &&
