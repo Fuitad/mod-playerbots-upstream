@@ -28,11 +28,5 @@ void TravelStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         )
     );
     triggers.push_back(
-        new TriggerNode(
-            "far from travel target",
-            {
-                NextAction("move to travel target", ACTION_DEFAULT + 1.0f)
-            }
-        )
-    );
+        new TriggerNode("far from travel target", {NextAction("move to travel target", ACTION_DEFAULT + 1.0f)}));
 }
