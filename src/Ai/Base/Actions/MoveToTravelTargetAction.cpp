@@ -131,7 +131,8 @@ bool MoveToTravelTargetAction::Execute(Event /*event*/)
             travelPath.addPoint(destination);
     }
 
-    if (!travelPath.empty() && (travelPath.hasPathType(NODE_TRANSPORT) || travelPath.hasPathType(NODE_PORTAL) ||
+    if (!travelPath.empty() && (!IsSameTravelDestination(travelPath.getFront(), travelPath.getBack()) ||
+                                travelPath.hasPathType(NODE_TRANSPORT) || travelPath.hasPathType(NODE_PORTAL) ||
                                 travelPath.hasPathType(NODE_FLIGHTPATH)))
     {
         TravelNodePathType pathType = TravelNodePathType::none;
