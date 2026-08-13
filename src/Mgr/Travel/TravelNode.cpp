@@ -1395,7 +1395,7 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
             // Check if the bot can actually walk to this start position.
             newStartPath = startPath;
             if (startNodePosition.cropPathTo(newStartPath, maxStartDistance) ||
-                startNode->getPosition()->isPathTo(newStartPath = startPos.getPathTo(startNodePosition, nullptr),
+                startNode->getPosition()->isPathTo(newStartPath = startPos.getPathTo(startNodePosition, bot),
                                                    maxStartDistance))
             {
                 startPath = newStartPath;
@@ -1448,7 +1448,7 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     std::vector<WorldPosition> beginPath, endPath;
 
-    beginPath = endPos.getPathFromPath({startPos}, nullptr, 40);
+    beginPath = endPos.getPathFromPath({startPos}, bot, 40);
 
     if (endPos.isPathTo(beginPath))
         return TravelPath(beginPath);
@@ -1474,7 +1474,7 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
         }
     }
 
-    endPath = route.getNodes().back()->getPosition()->getPathTo(endPos, nullptr);
+    endPath = route.getNodes().back()->getPosition()->getPathTo(endPos, bot);
     movePath = route.buildPath(beginPath, endPath);
 
     if (sPlayerbotAIConfig.hasLog("bot_pathfinding.csv"))

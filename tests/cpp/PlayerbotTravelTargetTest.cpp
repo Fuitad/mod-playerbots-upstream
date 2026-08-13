@@ -11,6 +11,7 @@
 #include "Bot/PlayerbotAI.h"
 #include "Bot/PlayerbotMgr.h"
 #include "IntegrationTestFixture.h"
+#include "PathGenerator.h"
 #include "PlayerbotAIConfig.h"
 
 namespace
@@ -81,5 +82,21 @@ TEST_F(PlayerbotTravelTargetTest, AllWalkTravelPathMovesToItsReachableWaypoint)
     EXPECT_FLOAT_EQ(movement.lastMoveToZ, waypoint.GetPositionZ());
 
     target->releaseVisitors();
+}
+
+TEST_F(PlayerbotTravelTargetTest, PathStepUsesRequestedStartAndDestination)
+{
+    WorldPosition start(bot->GetMapId(), 40.0f, 10.0f, 5.0f);
+    WorldPosition destination(bot->GetMapId(), 100.0f, 20.0f, 8.0f);
+    PathGenerator path(bot);
+
+    destination.getPathStepFrom(start, path);
+
+    EXPECT_FLOAT_EQ(path.GetStartPosition().x, start.GetPositionX());
+    EXPECT_FLOAT_EQ(path.GetStartPosition().y, start.GetPositionY());
+    EXPECT_FLOAT_EQ(path.GetStartPosition().z, start.GetPositionZ());
+    EXPECT_FLOAT_EQ(path.GetEndPosition().x, destination.GetPositionX());
+    EXPECT_FLOAT_EQ(path.GetEndPosition().y, destination.GetPositionY());
+    EXPECT_FLOAT_EQ(path.GetEndPosition().z, destination.GetPositionZ());
 }
 }  // namespace

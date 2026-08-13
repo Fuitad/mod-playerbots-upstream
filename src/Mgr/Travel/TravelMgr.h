@@ -20,6 +20,7 @@
 class Creature;
 class GuidPosition;
 class ObjectGuid;
+class PathGenerator;
 class Quest;
 class Player;
 class PlayerbotAI;
@@ -289,6 +290,7 @@ public:
 
     // Pathfinding
     std::vector<WorldPosition> getPathStepFrom(WorldPosition startPos, Unit* bot);
+    std::vector<WorldPosition> getPathStepFrom(WorldPosition startPos, PathGenerator& path);
     std::vector<WorldPosition> getPathFromPath(std::vector<WorldPosition> startPath, Unit* bot, uint8 maxAttempt = 40);
 
     std::vector<WorldPosition> getPathFrom(WorldPosition startPos, Unit* bot)
