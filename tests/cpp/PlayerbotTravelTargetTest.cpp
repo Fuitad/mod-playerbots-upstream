@@ -5,6 +5,7 @@
  */
 
 #include "Ai/Base/Actions/MoveToTravelTargetAction.h"
+#include "Ai/Base/Strategy/TravelStrategy.h"
 #include "Ai/Base/Value/LastMovementValue.h"
 #include "Bot/Engine/AiObjectContext.h"
 #include "Bot/Engine/WorldPacket/Event.h"
@@ -98,5 +99,28 @@ TEST_F(PlayerbotTravelTargetTest, PathStepUsesRequestedStartAndDestination)
     EXPECT_FLOAT_EQ(path.GetEndPosition().x, destination.GetPositionX());
     EXPECT_FLOAT_EQ(path.GetEndPosition().y, destination.GetPositionY());
     EXPECT_FLOAT_EQ(path.GetEndPosition().z, destination.GetPositionZ());
+}
+
+TEST_F(PlayerbotTravelTargetTest, TravelMovementOutranksAmbientNonCombatActions)
+{
+    TravelStrategy strategy(botAI);
+    std::vector<TriggerNode*> triggers;
+    strategy.InitTriggers(triggers);
+
+    float moveRelevance = -1.0f;
+    for (TriggerNode* trigger : triggers)
+    {
+        if (trigger->getName() != "far from travel target")
+            continue;
+
+        std::vector<NextAction> handlers = trigger->getHandlers();
+        if (handlers.size() == 1 && handlers.front().getName() == "move to travel target")
+            moveRelevance = handlers.front().getRelevance();
+    }
+
+    for (TriggerNode* trigger : triggers)
+        delete trigger;
+
+    EXPECT_GT(moveRelevance, ACTION_DEFAULT);
 }
 }  // namespace
