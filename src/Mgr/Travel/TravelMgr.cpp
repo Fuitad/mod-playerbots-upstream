@@ -1647,7 +1647,7 @@ bool TravelTarget::isWorking()
     if (m_status != TRAVEL_STATUS_WORK)
         return false;
 
-    if (!tDestination->isActive(bot))  // Target has become invalid. Stop.
+    if (!tDestination->isActive(bot) && !forced)  // Target has become invalid. Stop.
     {
         setStatus(TRAVEL_STATUS_COOLDOWN);
         return false;

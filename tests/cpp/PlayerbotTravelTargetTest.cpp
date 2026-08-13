@@ -106,6 +106,22 @@ TEST_F(PlayerbotTravelTargetTest, SinglePointForcedTravelPathKeepsForcedMovement
     target->releaseVisitors();
 }
 
+TEST_F(PlayerbotTravelTargetTest, ForcedTravelTargetRemainsWorkingWhenDestinationIsNotAmbientlyUseful)
+{
+    WorldPosition destination(bot->GetMapId(), 0.0f, 0.0f, 0.0f);
+    TravelDestination travelDestination(0.0f, 1.0f);
+    TravelTarget* target = botAI->GetAiObjectContext()->GetValue<TravelTarget*>("travel target")->Get();
+    target->setTarget(&travelDestination, &destination);
+    target->setForced(true);
+    target->setStatus(TRAVEL_STATUS_WORK);
+    botAI->ChangeStrategy("+travel", BOT_STATE_NON_COMBAT);
+
+    EXPECT_TRUE(target->isWorking());
+    EXPECT_EQ(target->getStatus(), TRAVEL_STATUS_WORK);
+
+    target->releaseVisitors();
+}
+
 TEST_F(PlayerbotTravelTargetTest, PathStepUsesRequestedStartAndDestination)
 {
     WorldPosition start(bot->GetMapId(), 40.0f, 10.0f, 5.0f);
