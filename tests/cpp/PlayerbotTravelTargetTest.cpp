@@ -85,6 +85,27 @@ TEST_F(PlayerbotTravelTargetTest, AllWalkTravelPathMovesToItsReachableWaypoint)
     target->releaseVisitors();
 }
 
+TEST_F(PlayerbotTravelTargetTest, SinglePointForcedTravelPathKeepsForcedMovementPriority)
+{
+    WorldPosition destination(bot->GetMapId(), 1000.0f, 0.0f, 0.0f);
+    TravelDestination travelDestination(0.0f, 1.0f);
+
+    TravelTarget* target = botAI->GetAiObjectContext()->GetValue<TravelTarget*>("travel target")->Get();
+    target->setTarget(&travelDestination, &destination);
+    target->setForced(true);
+
+    LastMovement& movement = botAI->GetAiObjectContext()->GetValue<LastMovement&>("last movement")->Get();
+    movement.lastPath.addPoint(destination, NODE_PATH);
+
+    MoveToTravelTargetAction action(botAI);
+
+    EXPECT_TRUE(action.Execute(Event()));
+    EXPECT_FLOAT_EQ(movement.lastMoveToX, destination.GetPositionX());
+    EXPECT_EQ(movement.priority, MovementPriority::MOVEMENT_FORCED);
+
+    target->releaseVisitors();
+}
+
 TEST_F(PlayerbotTravelTargetTest, PathStepUsesRequestedStartAndDestination)
 {
     WorldPosition start(bot->GetMapId(), 40.0f, 10.0f, 5.0f);
