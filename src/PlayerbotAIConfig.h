@@ -284,6 +284,7 @@ public:
     std::string randomBotAccountPrefix;
     uint32 randomBotAccountCount;
     bool randomBotRandomPassword;
+    bool preserveRandomBotAdmissions;
     uint32 randomBotGuildCount, randomBotGuildSizeMax;
     bool deleteRandomBotGuilds;
     std::vector<uint32> pvpProhibitedZoneIds;

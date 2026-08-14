@@ -22,6 +22,7 @@
 #include "Cell.h"
 #include "CellImpl.h"
 #include "ChannelMgr.h"
+#include "CharacterCache.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
 #include "DatabaseEnv.h"
@@ -57,6 +58,35 @@ struct GuidClassRaceInfo
     uint32 rClass;
     uint32 rRace;
 };
+
+namespace
+{
+void AppendAdmissionEvent(PlayerbotsDatabaseTransaction& transaction, std::uint32_t characterGuid,
+                          std::string const& eventName, std::uint32_t value, std::string const& data)
+{
+    PlayerbotsDatabasePreparedStatement* statement =
+        PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_RANDOM_BOTS_BY_OWNER_AND_EVENT);
+    statement->SetData(0, 0);
+    statement->SetData(1, characterGuid);
+    statement->SetData(2, eventName);
+    transaction->Append(statement);
+    if (!value)
+        return;
+
+    statement = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_INS_RANDOM_BOTS);
+    statement->SetData(0, 0);
+    statement->SetData(1, characterGuid);
+    statement->SetData(2, static_cast<uint32>(GameTime::GetGameTime().count()));
+    statement->SetData(3, 0);
+    statement->SetData(4, eventName);
+    statement->SetData(5, value);
+    if (data.empty())
+        statement->SetData(6);
+    else
+        statement->SetData(6, data);
+    transaction->Append(statement);
+}
+}  // namespace
 
 void PrintStatsThread() { sRandomPlayerbotMgr.PrintStats(); }
 
@@ -565,6 +595,9 @@ void RandomPlayerbotMgr::AssignAccountTypes()
         else if (accountType == 2) existingAddClassAccounts++;
     }
 
+    neededRndBotAccounts = ResolveRandomPlayerbotAccountCount(sPlayerbotAIConfig.preserveRandomBotAdmissions,
+                                                              existingRndBotAccounts, neededRndBotAccounts);
+
     // Assign RNDbot accounts from lowest position if needed
     if (existingRndBotAccounts < neededRndBotAccounts)
     {
@@ -629,6 +662,72 @@ bool RandomPlayerbotMgr::IsAccountType(uint32 accountId, uint8 accountType)
 {
     QueryResult result = PlayerbotsDatabase.Query("SELECT 1 FROM playerbots_account_type WHERE account_id = {} AND account_type = {}", accountId, accountType);
     return result != nullptr;
+}
+
+std::string RandomPlayerbotMgr::AdmitExactBots(std::vector<RandomPlayerbotAdmission> const& admissions)
+{
+    if (std::string error = ValidateRandomPlayerbotAdmissions(admissions); !error.empty())
+        return error;
+
+    bool anyExisting = false;
+    bool allExisting = true;
+    for (RandomPlayerbotAdmission const& admission : admissions)
+    {
+        ObjectGuid const guid = ObjectGuid::Create<HighGuid::Player>(admission.characterGuid);
+        uint32 const accountId = sCharacterCache->GetCharacterAccountIdByGuid(guid);
+        if (!accountId)
+            return "character_missing";
+        uint8 const accountType = IsAccountType(accountId, 0) ? 0 : IsAccountType(accountId, 1) ? 1 : 2;
+        if (!IsRandomPlayerbotAdmissionAccountType(accountType))
+            return "account_not_candidate";
+        if (std::find(currentBots.begin(), currentBots.end(), admission.characterGuid) != currentBots.end())
+            return "character_already_active";
+
+        bool const hasAdd = GetValue(admission.characterGuid, "add") == 1;
+        bool const hasLogout = GetValue(admission.characterGuid, "logout") != 0;
+        bool eventsMatch = true;
+        bool hasEvent = false;
+        for (RandomPlayerbotAdmissionEvent const& event : admission.events)
+        {
+            uint32 const value = GetValue(admission.characterGuid, event.name);
+            hasEvent |= value != 0;
+            eventsMatch &= value == event.value && GetData(admission.characterGuid, event.name) == event.data;
+        }
+        bool const exact = hasAdd && !hasLogout && eventsMatch;
+        anyExisting |= hasAdd || hasLogout || hasEvent;
+        allExisting &= exact;
+        if ((hasAdd || hasLogout || hasEvent) && !exact)
+            return "existing_conflict";
+    }
+    if (anyExisting && !allExisting)
+        return "mixed_existing";
+
+    if (!allExisting)
+    {
+        PlayerbotsDatabaseTransaction transaction = PlayerbotsDatabase.BeginTransaction();
+        for (RandomPlayerbotAdmission const& admission : admissions)
+        {
+            for (RandomPlayerbotAdmissionEvent const& event : admission.events)
+                AppendAdmissionEvent(transaction, admission.characterGuid, event.name, event.value, event.data);
+            AppendAdmissionEvent(transaction, admission.characterGuid, "logout", 0, "");
+            AppendAdmissionEvent(transaction, admission.characterGuid, "add", 1, "");
+        }
+        PlayerbotsDatabase.DirectCommitTransaction(transaction);
+    }
+
+    for (RandomPlayerbotAdmission const& admission : admissions)
+    {
+        eventCache.erase(admission.characterGuid);
+        if (GetValue(admission.characterGuid, "add") != 1 || GetValue(admission.characterGuid, "logout") != 0)
+            return "admission_persistence";
+        for (RandomPlayerbotAdmissionEvent const& event : admission.events)
+            if (GetValue(admission.characterGuid, event.name) != event.value ||
+                GetData(admission.characterGuid, event.name) != event.data)
+                return "event_persistence";
+    }
+    for (RandomPlayerbotAdmission const& admission : admissions)
+        currentBots.push_back(admission.characterGuid);
+    return {};
 }
 
 // Logs-in bots in 4 phases. Phase 1 logs Alliance bots up to how much is expected according to the faction ratio,
@@ -1762,7 +1861,8 @@ void RandomPlayerbotMgr::Init()
     if (sPlayerbotAIConfig.randomBotJoinBG)
         sRandomPlayerbotMgr.LoadBattleMastersCache();
 
-    PlayerbotsDatabase.Execute("DELETE FROM playerbots_random_bots WHERE event = 'add'");
+    if (ShouldClearRandomPlayerbotAdmissions(sPlayerbotAIConfig.preserveRandomBotAdmissions))
+        PlayerbotsDatabase.Execute("DELETE FROM playerbots_random_bots WHERE event = 'add'");
 }
 
 void RandomPlayerbotMgr::RandomTeleportForLevel(Player* bot)

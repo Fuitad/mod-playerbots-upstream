@@ -7,6 +7,7 @@
 #ifndef PLAYERBOTS_RANDOMPLAYERBOTMGR_H
 #define PLAYERBOTS_RANDOMPLAYERBOTMGR_H
 
+#include "Bot/Population/RandomPlayerbotAdmission.h"
 #include "NewRpgInfo.h"
 #include "ObjectGuid.h"
 #include "PlayerbotMgr.h"
@@ -172,6 +173,7 @@ public:
     // Account type management
     void AssignAccountTypes();
     bool IsAccountType(uint32 accountId, uint8 accountType);
+    [[nodiscard]] std::string AdmitExactBots(std::vector<RandomPlayerbotAdmission> const& admissions);
 
 protected:
     void OnBotLoginInternal(Player* const bot) override;
