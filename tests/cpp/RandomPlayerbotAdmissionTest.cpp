@@ -51,3 +51,22 @@ TEST(RandomPlayerbotAdmissionTest, PreservedAdmissionsKeepTheirExactAccountCensu
     EXPECT_TRUE(IsRandomPlayerbotAdmissionAccountType(1));
     EXPECT_FALSE(IsRandomPlayerbotAdmissionAccountType(2));
 }
+
+TEST(RandomPlayerbotAdmissionTest, DiscoversAndHydratesRuntimeAccountCacheWhenDefaultFactoryIsFenced)
+{
+    std::vector<std::uint32_t> accountCache = {111};
+    std::vector<std::uint32_t> const discoveredAccountIds = {395, 396, 397};
+    bool discoveryCalled = false;
+
+    std::vector<std::uint32_t> const reconciledAccountIds =
+        DiscoverAndHydrateRandomPlayerbotAccountCache(accountCache,
+                                                      [&]()
+                                                      {
+                                                          discoveryCalled = true;
+                                                          return discoveredAccountIds;
+                                                      });
+
+    EXPECT_TRUE(discoveryCalled);
+    EXPECT_EQ(reconciledAccountIds, discoveredAccountIds);
+    EXPECT_EQ(accountCache, discoveredAccountIds);
+}

@@ -8,6 +8,7 @@
 #define PLAYERBOTS_RANDOMPLAYERBOTADMISSION_H
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -30,5 +31,7 @@ struct RandomPlayerbotAdmission
                                                                std::uint32_t existingAccountCount,
                                                                std::uint32_t calculatedAccountCount);
 [[nodiscard]] bool IsRandomPlayerbotAdmissionAccountType(std::uint8_t accountType);
+[[nodiscard]] std::vector<std::uint32_t> DiscoverAndHydrateRandomPlayerbotAccountCache(
+    std::vector<std::uint32_t>& accountCache, std::function<std::vector<std::uint32_t>()> const& discoverAccountIds);
 
 #endif

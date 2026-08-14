@@ -46,3 +46,11 @@ std::uint32_t ResolveRandomPlayerbotAccountCount(bool preserveAdmissions, std::u
 }
 
 bool IsRandomPlayerbotAdmissionAccountType(std::uint8_t accountType) { return accountType == 0 || accountType == 1; }
+
+std::vector<std::uint32_t> DiscoverAndHydrateRandomPlayerbotAccountCache(
+    std::vector<std::uint32_t>& accountCache, std::function<std::vector<std::uint32_t>()> const& discoverAccountIds)
+{
+    std::vector<std::uint32_t> const discoveredAccountIds = discoverAccountIds();
+    accountCache = discoveredAccountIds;
+    return discoveredAccountIds;
+}
