@@ -7,6 +7,8 @@
 #ifndef PLAYERBOTS_LOOTOBJECTSTACK_H
 #define PLAYERBOTS_LOOTOBJECTSTACK_H
 
+#include <span>
+
 #include "ObjectGuid.h"
 
 class AiObjectContext;
@@ -14,6 +16,10 @@ class Player;
 class WorldObject;
 
 struct ItemTemplate;
+
+[[nodiscard]] std::span<uint32 const> RequiredGatheringToolItems(uint32 skillId);
+[[nodiscard]] bool HasRequiredGatheringTool(Player const* bot, uint32 skillId);
+[[nodiscard]] uint32 GatheringInteractionSpellId(uint32 skillId);
 
 class LootStrategy
 {

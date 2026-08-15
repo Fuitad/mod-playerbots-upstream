@@ -63,11 +63,8 @@ enum ProfessionSpells
     ENGINEERING = 49383,
     FIRST_AID = 3273,
     FISHING = 7620,
-    HERB_GATHERING = 2366,
     INSCRIPTION = 45357,
     JEWELCRAFTING = 25229,
-    MINING = 2575,
-    SKINNING = 8613,
     TAILORING = 3908
 };
 
@@ -129,7 +126,9 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
             case SKILL_MINING:
                 return botAI->HasSkill(SKILL_MINING) ? botAI->CastSpell(32606, creature) : false;
             default:
-                return botAI->HasSkill(SKILL_SKINNING) ? botAI->CastSpell(SKINNING, creature) : false;
+                return botAI->HasSkill(SKILL_SKINNING)
+                           ? botAI->CastSpell(GatheringInteractionSpellId(SKILL_SKINNING), creature)
+                           : false;
         }
     }
 
@@ -150,10 +149,11 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
         return false;
 
     if (lootObject.skillId == SKILL_MINING)
-        return botAI->HasSkill(SKILL_MINING) ? botAI->CastSpell(MINING, bot) : false;
+        return botAI->HasSkill(SKILL_MINING) ? botAI->CastSpell(GatheringInteractionSpellId(SKILL_MINING), bot) : false;
 
     if (lootObject.skillId == SKILL_HERBALISM)
-        return botAI->HasSkill(SKILL_HERBALISM) ? botAI->CastSpell(HERB_GATHERING, bot) : false;
+        return botAI->HasSkill(SKILL_HERBALISM) ? botAI->CastSpell(GatheringInteractionSpellId(SKILL_HERBALISM), bot)
+                                                : false;
 
     uint32 spellId = GetOpeningSpell(lootObject);
     if (!spellId)
@@ -180,7 +180,8 @@ uint32 OpenLootAction::GetOpeningSpell(LootObject& lootObject, GameObject* go)
         if (itr->second->State == PLAYERSPELL_REMOVED || !itr->second->Active)
             continue;
 
-        if (spellId == MINING || spellId == HERB_GATHERING)
+        if (spellId == GatheringInteractionSpellId(SKILL_MINING) ||
+            spellId == GatheringInteractionSpellId(SKILL_HERBALISM))
             continue;
 
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
@@ -193,7 +194,8 @@ uint32 OpenLootAction::GetOpeningSpell(LootObject& lootObject, GameObject* go)
 
     for (uint32 spellId = 0; spellId < sSpellMgr->GetSpellInfoStoreSize(); spellId++)
     {
-        if (spellId == MINING || spellId == HERB_GATHERING)
+        if (spellId == GatheringInteractionSpellId(SKILL_MINING) ||
+            spellId == GatheringInteractionSpellId(SKILL_HERBALISM))
             continue;
 
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
