@@ -682,7 +682,7 @@ std::string RandomPlayerbotMgr::AdmitExactBots(std::vector<RandomPlayerbotAdmiss
         uint8 const accountType = IsAccountType(accountId, 0) ? 0 : IsAccountType(accountId, 1) ? 1 : 2;
         if (!IsRandomPlayerbotAdmissionAccountType(accountType))
             return "account_not_candidate";
-        if (std::find(currentBots.begin(), currentBots.end(), admission.characterGuid) != currentBots.end())
+        if (currentBots.contains(admission.characterGuid))
             return "character_already_active";
 
         bool const hasAdd = GetValue(admission.characterGuid, "add") == 1;
@@ -728,7 +728,7 @@ std::string RandomPlayerbotMgr::AdmitExactBots(std::vector<RandomPlayerbotAdmiss
                 return "event_persistence";
     }
     for (RandomPlayerbotAdmission const& admission : admissions)
-        currentBots.push_back(admission.characterGuid);
+        currentBots.insert(admission.characterGuid);
     return {};
 }
 
