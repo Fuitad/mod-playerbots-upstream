@@ -5,12 +5,10 @@
  */
 
 #include "NewRpgBaseAction.h"
-
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
 #include "Creature.h"
-#include "G3D/Vector2.h"
 #include "GameObject.h"
 #include "GossipDef.h"
 #include "GridTerrainData.h"
@@ -38,6 +36,7 @@
 #include "StatsWeightCalculator.h"
 #include "Timer.h"
 #include "TravelMgr.h"
+#include "G3D/Vector2.h"
 
 bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {

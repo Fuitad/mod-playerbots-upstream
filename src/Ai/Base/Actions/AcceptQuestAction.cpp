@@ -5,7 +5,6 @@
  */
 
 #include "AcceptQuestAction.h"
-
 #include "Event.h"
 #include "ObjectAccessor.h"
 #include "PlayerbotTextMgr.h"

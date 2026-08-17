@@ -5,7 +5,6 @@
  */
 
 #include "AiObjectContext.h"
-
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "DKAiObjectContext.h"
 #include "DruidAiObjectContext.h"

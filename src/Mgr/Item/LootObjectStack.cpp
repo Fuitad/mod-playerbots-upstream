@@ -5,15 +5,13 @@
  */
 
 #include "LootObjectStack.h"
-
-#include <algorithm>
-#include <array>
-
 #include "LootMgr.h"
 #include "Object.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "Unit.h"
+#include <algorithm>
+#include <array>
 
 #define MAX_LOOT_OBJECT_COUNT 200
 

@@ -5,7 +5,6 @@
  */
 
 #include "MoveToTravelTargetAction.h"
-
 #include "ChooseRpgTargetAction.h"
 #include "Creature.h"
 #include "DBCStores.h"
