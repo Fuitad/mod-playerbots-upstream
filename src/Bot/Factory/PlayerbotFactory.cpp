@@ -2817,39 +2817,11 @@ void PlayerbotFactory::InitTradeSkills()
         sRandomPlayerbotMgr.SetValue(bot, "secondSkill", secondSkill);
     }
 
-    std::vector<uint16> primarySkills;
-    if (keepExistingProfessionPair)
-    {
-        primarySkills.push_back(firstSkill);
-        primarySkills.push_back(secondSkill);
-    }
-    else if (maxPrimaryTradeSkills > 0)
-        primarySkills.push_back(firstSkill);
-    if (!keepExistingProfessionPair && maxPrimaryTradeSkills > 1)
-        primarySkills.push_back(secondSkill);
-
-    SetRandomSkill(SKILL_FIRST_AID);
-    SetRandomSkill(SKILL_FISHING);
-    SetRandomSkill(SKILL_COOKING);
-
-    for (uint16 skillId : primarySkills)
-        SetRandomSkill(skillId);
-
-    std::vector<uint16> skillsToLearn = {SKILL_FIRST_AID, SKILL_FISHING, SKILL_COOKING};
-    skillsToLearn.insert(skillsToLearn.end(), primarySkills.begin(), primarySkills.end());
-
-    for (uint16 skillId : skillsToLearn)
-    {
-        uint32 spellId = GetProfessionStarterSpell(skillId);
-        if (!spellId || bot->HasSpell(spellId))
-            continue;
-
-        if (IsPrimaryTradeSkill(skillId) && !bot->GetFreePrimaryProfessionPoints() &&
-            !(keepExistingProfessionPair && bot->HasSkill(skillId)))
-            continue;
-
-        bot->learnSpell(spellId, false);
-    }
+    // The profession pair chosen above is the bot's plan, recorded for the career system to act on. It
+    // is deliberately not granted here. Professions are learned from a trainer the way a player learns
+    // them, because that visit is the only place the starter recipes are sold: granting the skill
+    // outright produced bots holding a trade skill with no recipe behind it, and the trainer would then
+    // refuse to teach a profession the bot already had.
 
     InitTradeSpecializations();
 }
