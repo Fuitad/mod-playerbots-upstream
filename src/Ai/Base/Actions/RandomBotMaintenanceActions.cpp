@@ -10,6 +10,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <unordered_map>
 
 #include "Bag.h"
 #include "BudgetValues.h"
@@ -82,38 +83,77 @@ bool IsFriendlyNpc(PlayerbotAI* botAI, CreatureTemplate const* creatureTemplate)
     return Unit::GetFactionReactionTo(botAI->GetBot()->GetFactionTemplateEntry(), faction) >= REP_NEUTRAL;
 }
 
+// Spawned npcs a maintenance trip can target, keyed by map. The old TravelMgr rpg destination table is
+// never loaded in this fork (LoadQuestTravelTable has no caller), so the cache is built here once from the
+// creature spawn data, the same source PrepareDestinationCache reads.
+struct MaintenanceNpcSpawn
+{
+    uint32 entry = 0;
+    WorldPosition position;
+};
+
+std::unordered_map<uint32, std::vector<MaintenanceNpcSpawn>> const& MaintenanceNpcSpawns()
+{
+    static std::unordered_map<uint32, std::vector<MaintenanceNpcSpawn>> spawns;
+    static bool built = false;
+    if (built)
+        return spawns;
+
+    built = true;
+    uint32 const wanted = UNIT_NPC_FLAG_VENDOR | UNIT_NPC_FLAG_REPAIR | UNIT_NPC_FLAG_TRAINER;
+    for (auto const& [guid, creatureData] : sObjectMgr->GetAllCreatureData())
+    {
+        CreatureTemplate const* creatureTemplate = sObjectMgr->GetCreatureTemplate(creatureData.id);
+        if (!creatureTemplate || (creatureTemplate->npcflag & wanted) == 0)
+            continue;
+        if (creatureData.spawnMask == 0 || creatureData.movementType != IDLE_MOTION_TYPE)
+            continue;
+        spawns[creatureData.mapid].push_back(
+            {creatureData.id,
+             WorldPosition(creatureData.mapid, creatureData.posX, creatureData.posY, creatureData.posZ)});
+    }
+    uint32 total = 0;
+    for (auto const& [mapId, list] : spawns)
+        total += list.size();
+    LOG_INFO("playerbots", "Random bot maintenance cached {} vendor, repair and trainer spawns across {} maps.",
+             total, spawns.size());
+    return spawns;
+}
+
 bool FindNearestDestination(PlayerbotAI* botAI, std::function<bool(uint32)> const& acceptsEntry,
                             NpcDestination& selected)
 {
     Player* bot = botAI->GetBot();
-    WorldPosition botPosition(bot);
+    auto const& byMap = MaintenanceNpcSpawns();
+    auto const it = byMap.find(bot->GetMapId());
+    if (it == byMap.end())
+        return false;
+
     float nearestDistance = std::numeric_limits<float>::max();
-
-    for (TravelDestination* destination : sTravelMgr.getRpgTravelDestinations(bot, true, true, 200000.0f))
+    std::unordered_map<uint32, bool> friendlyByEntry;
+    for (MaintenanceNpcSpawn const& spawn : it->second)
     {
-        // RpgTravelDestination::getEntry() is hard coded to 0; the creature entry is only reachable
-        // through its template. Observed live on 2026-08-23: every vendor and repair lookup came back
-        // empty, even for bots standing inside a capital.
-        RpgTravelDestination* const rpgDestination = dynamic_cast<RpgTravelDestination*>(destination);
-        CreatureTemplate const* creatureTemplate = rpgDestination ? rpgDestination->GetCreatureTemplate() : nullptr;
-        uint32 const entry = creatureTemplate ? creatureTemplate->Entry : 0u;
-        if (!entry || !acceptsEntry(entry))
+        if (!acceptsEntry(spawn.entry))
             continue;
 
-        if (!IsFriendlyNpc(botAI, creatureTemplate))
-            continue;
-
-        std::vector<WorldPosition*> const points = destination->nextPoint(&botPosition, true);
-        if (points.empty())
-            continue;
-
-        float const distance = destination->distanceTo(&botPosition);
+        float const distance = bot->GetDistance(spawn.position.GetPositionX(), spawn.position.GetPositionY(), spawn.position.GetPositionZ());
         if (distance >= nearestDistance)
             continue;
 
+        auto friendly = friendlyByEntry.find(spawn.entry);
+        if (friendly == friendlyByEntry.end())
+        {
+            CreatureTemplate const* creatureTemplate = sObjectMgr->GetCreatureTemplate(spawn.entry);
+            friendly = friendlyByEntry
+                           .emplace(spawn.entry, creatureTemplate && IsFriendlyNpc(botAI, creatureTemplate))
+                           .first;
+        }
+        if (!friendly->second)
+            continue;
+
         nearestDistance = distance;
-        selected.entry = entry;
-        selected.position = *points.front();
+        selected.entry = spawn.entry;
+        selected.position = spawn.position;
     }
 
     return selected.entry != 0;
