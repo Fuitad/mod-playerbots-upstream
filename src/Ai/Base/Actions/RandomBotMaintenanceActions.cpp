@@ -11,11 +11,13 @@
 #include <functional>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Bag.h"
 #include "BudgetValues.h"
 #include "ChatHelper.h"
 #include "Event.h"
+#include "GameEventMgr.h"
 #include "ItemUsageValue.h"
 #include "NPCPackets.h"
 #include "PlayerbotAI.h"
@@ -100,9 +102,18 @@ std::unordered_map<uint32, std::vector<MaintenanceNpcSpawn>> const& MaintenanceN
         return spawns;
 
     built = true;
+    // Seasonal spawns (game_event_creature) sit in the spawn table all year but only exist in the
+    // world during their event. Live on 2026-08-23 bots walked to Brewfest and Hallow's End vendors
+    // and stood on an empty spot, so every event bound guid is left out regardless of event state.
+    std::unordered_set<ObjectGuid::LowType> eventBound;
+    for (auto const& guids : sGameEventMgr->GameEventCreatureGuids)
+        eventBound.insert(guids.begin(), guids.end());
+
     uint32 const wanted = UNIT_NPC_FLAG_VENDOR | UNIT_NPC_FLAG_REPAIR | UNIT_NPC_FLAG_TRAINER;
     for (auto const& [guid, creatureData] : sObjectMgr->GetAllCreatureData())
     {
+        if (eventBound.contains(guid))
+            continue;
         CreatureTemplate const* creatureTemplate = sObjectMgr->GetCreatureTemplate(creatureData.id);
         if (!creatureTemplate || (creatureTemplate->npcflag & wanted) == 0)
             continue;
