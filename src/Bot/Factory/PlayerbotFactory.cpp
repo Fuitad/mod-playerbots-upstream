@@ -3041,15 +3041,20 @@ void PlayerbotFactory::InitSkills()
     //uint32 maxValue = level * 5; //not used, line marked for removal.
     bot->UpdateSkillsForLevel();
 
-    bot->SetSkill(SKILL_RIDING, 0, 0, 0);
-    if (bot->GetLevel() >= sPlayerbotAIConfig.useGroundMountAtMinLevel)
-        bot->learnSpell(33388);
-    if (bot->GetLevel() >= sPlayerbotAIConfig.useFastGroundMountAtMinLevel)
-        bot->learnSpell(33391);
-    if (bot->GetLevel() >= sPlayerbotAIConfig.useFlyMountAtMinLevel)
-        bot->learnSpell(34090);
-    if (bot->GetLevel() >= sPlayerbotAIConfig.useFastFlyMountAtMinLevel)
-        bot->learnSpell(34091);
+    // Riding is trained for gold like the mounts themselves, so it is left to the bot under
+    // EconomyManagedSupplies.
+    if (!sPlayerbotAIConfig.economyManagedSupplies)
+    {
+        bot->SetSkill(SKILL_RIDING, 0, 0, 0);
+        if (bot->GetLevel() >= sPlayerbotAIConfig.useGroundMountAtMinLevel)
+            bot->learnSpell(33388);
+        if (bot->GetLevel() >= sPlayerbotAIConfig.useFastGroundMountAtMinLevel)
+            bot->learnSpell(33391);
+        if (bot->GetLevel() >= sPlayerbotAIConfig.useFlyMountAtMinLevel)
+            bot->learnSpell(34090);
+        if (bot->GetLevel() >= sPlayerbotAIConfig.useFastFlyMountAtMinLevel)
+            bot->learnSpell(34091);
+    }
 
     uint32 skillLevel = bot->GetLevel() < 40 ? 0 : 1;
     uint32 dualWieldLevel = bot->GetLevel() < 20 ? 0 : 1;

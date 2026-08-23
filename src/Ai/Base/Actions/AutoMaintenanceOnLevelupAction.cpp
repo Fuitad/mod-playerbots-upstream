@@ -160,7 +160,7 @@ std::string const AutoMaintenanceOnLevelupAction::FormatSpell(SpellInfo const* s
 
 void AutoMaintenanceOnLevelupAction::AutoUpgradeEquip()
 {
-    if (!sRandomPlayerbotMgr.IsRandomBot(bot))
+    if (!sRandomPlayerbotMgr.IsRandomBot(bot) || sPlayerbotAIConfig.economyManagedSupplies)
         return;
 
     PlayerbotFactory factory(bot, bot->GetLevel());
