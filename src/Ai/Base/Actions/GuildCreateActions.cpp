@@ -13,6 +13,7 @@
 #include "RandomPlayerbotFactory.h"
 #include "ServerFacade.h"
 #include "SharedDefines.h"
+#include "PlayerbotAIConfig.h"
 
 bool BuyPetitionAction::Execute(Event /*event*/)
 {
@@ -239,22 +240,26 @@ bool PetitionTurnInAction::Execute(Event /*event*/)
             // (EMBLEM_PRICE = 10 * GOLD in core)
             static constexpr uint32 REQUIRED = 10 * GOLD;
             uint32 have = bot->GetMoney();               // actual money earned by bot in copper
-            if (have < REQUIRED)
+            if (have < REQUIRED && !sPlayerbotAIConfig.economyManagedSupplies)
             {
                 bot->ModifyMoney(int32(REQUIRED - have)); // add only the missing amount to bot to reach 10g
             }
 
             Guild* guild = sGuildMgr->GetGuildById(bot->GetGuildId());
 
-            uint32 st, cl, br, bc, bg;
-            bg = urand(0, 51);
-            bc = urand(0, 17);
-            cl = urand(0, 17);
-            br = urand(0, 7);
-            st = urand(0, 180);
-            EmblemInfo emblemInfo(st, cl, br, bc, bg);
+            // Without the gold gift the emblem waits until the guild master can pay for it.
+            if (bot->GetMoney() >= REQUIRED)
+            {
+                uint32 st, cl, br, bc, bg;
+                bg = urand(0, 51);
+                bc = urand(0, 17);
+                cl = urand(0, 17);
+                br = urand(0, 7);
+                st = urand(0, 180);
+                EmblemInfo emblemInfo(st, cl, br, bc, bg);
 
-            guild->HandleSetEmblem(emblemInfo); // official core handling
+                guild->HandleSetEmblem(emblemInfo); // official core handling
+            }
 
             // LANG_GUILD_VETERAN -> can invite
             guild->HandleSetRankInfo(2, GR_RIGHT_GCHATLISTEN | GR_RIGHT_GCHATSPEAK | GR_RIGHT_INVITE);

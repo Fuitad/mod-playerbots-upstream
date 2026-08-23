@@ -834,7 +834,8 @@ void PlayerbotFactory::Randomize(bool incremental)
         pmo->finish();
 
     LOG_DEBUG("playerbots", "Initializing glyphs...");
-    InitGlyphs();
+    if (!economyManaged)
+        InitGlyphs();
     // bot->SaveToDB(false, false);
 
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Guilds");

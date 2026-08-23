@@ -18,6 +18,7 @@
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "Position.h"
+#include "PlayerbotAIConfig.h"
 
 uint32 const FISHING_SPELL = 7620;
 uint32 const FISHING_POLE = 6256;
@@ -385,7 +386,8 @@ bool EquipFishingPoleAction::isUseful()
 
     if (sRandomPlayerbotMgr.IsRandomBot(bot))
     {
-        bot->StoreNewItemInBestSlots(FISHING_POLE, 1);  // Try to get a fishing pole
+        if (!sPlayerbotAIConfig.economyManagedSupplies)
+            bot->StoreNewItemInBestSlots(FISHING_POLE, 1);  // Try to get a fishing pole
         return true;
     }
 

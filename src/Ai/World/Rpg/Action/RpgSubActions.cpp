@@ -17,6 +17,7 @@
 #include "Playerbots.h"
 #include "PossibleRpgTargetsValue.h"
 #include "SocialMgr.h"
+#include "PlayerbotAIConfig.h"
 
 void RpgHelper::OnExecute(std::string nextAction)
 {
@@ -176,8 +177,12 @@ bool RpgTaxiAction::Execute(Event /*event*/)
     }
 
     uint32 path = nodes[urand(0, nodes.size() - 1)];
+    // The flight is free unless the economy module owns the bot's gold: then the fare is real and an
+    // unaffordable path simply fails below.
+    bool const freeFlight = !sPlayerbotAIConfig.economyManagedSupplies;
     uint32 money = bot->GetMoney();
-    bot->SetMoney(money + 100000);
+    if (freeFlight)
+        bot->SetMoney(money + 100000);
 
     TaxiPathEntry const* entry = sTaxiPathStore.LookupEntry(path);
     if (!entry)
@@ -203,7 +208,8 @@ bool RpgTaxiAction::Execute(Event /*event*/)
     LOG_INFO("playerbots", "Bot {} <{}> is flying from {} to {} ({} location available)",
              bot->GetGUID().ToString().c_str(), bot->GetName(), nodeFrom->name[0], nodeTo->name[0], nodes.size());
 
-    bot->SetMoney(money);
+    if (freeFlight)
+        bot->SetMoney(money);
 
     rpg->AfterExecute();
 

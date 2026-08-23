@@ -1132,7 +1132,9 @@ AiPlayerbot.EquipAndSpecPersistenceLevel = 1
 # Leave supplies and gold to the economy module. When enabled, randomization (bot creation, level
 # up, reset), the periodic refresh and the revive path no longer empty the bags, hand out bags,
 # ammo, food, reagents, class consumables or potions, learn mounts, apply enchants and gems,
-# repair gear for free, or set the bot's gold to a level based amount.
+# repair gear for free, or set the bot's gold to a level based amount. Glyphs are no longer applied
+# for free, dying and the refresh no longer repair for free, RPG flights cost the real fare, random
+# bots get no free fishing pole, and a new guild's emblem waits until the bot can pay for it.
 # Enable this when mod-playerbots-economy is loaded so bots have to buy, craft or earn those.
 # Default: 0 (disabled)
 AiPlayerbot.EconomyManagedSupplies = 0

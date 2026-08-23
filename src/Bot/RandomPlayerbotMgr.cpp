@@ -2190,8 +2190,11 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
     if (bot->GetMaxPower(POWER_ENERGY) > 0)
         bot->SetPower(POWER_ENERGY, bot->GetMaxPower(POWER_ENERGY));
 
-    uint32 money = bot->GetMoney();
-    bot->SetMoney(money + 500 * sqrt(urand(1, bot->GetLevel() * 5)));
+    if (!sPlayerbotAIConfig.economyManagedSupplies)
+    {
+        uint32 money = bot->GetMoney();
+        bot->SetMoney(money + 500 * sqrt(urand(1, bot->GetLevel() * 5)));
+    }
 
     if (bot->GetGroup())
         botAI->LeaveOrDisbandGroup();
