@@ -641,7 +641,12 @@ void PlayerbotFactory::Randomize(bool incremental)
             ClearAllItems();
         }
     }
-    ClearInventory();
+    // With EconomyManagedSupplies on, no randomization empties the bags or creates goods or gold.
+    // Bags, ammo, food, potions, reagents, class consumables, enchants, mounts and the level based
+    // gold are all things the economy module expects bots to buy, craft or earn. See Refresh.
+    bool const economyManaged = sPlayerbotAIConfig.economyManagedSupplies;
+    if (!economyManaged)
+        ClearInventory();
     bot->RemoveAllSpellCooldown();
     UnbindInstance();
 
@@ -725,7 +730,8 @@ void PlayerbotFactory::Randomize(bool incremental)
 
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Mounts");
     LOG_DEBUG("playerbots", "Initializing mounts...");
-    InitMounts();
+    if (!economyManaged)
+        InitMounts();
     // bot->SaveToDB(false, false);
     if (pmo)
         pmo->finish();
@@ -756,36 +762,39 @@ void PlayerbotFactory::Randomize(bool incremental)
     //         pmo->finish();
     // }
 
-    pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Bags");
-    LOG_DEBUG("playerbots", "Initializing bags...");
-    InitBags();
-    // bot->SaveToDB(false, false);
-    if (pmo)
-        pmo->finish();
+    if (!economyManaged)
+    {
+        pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Bags");
+        LOG_DEBUG("playerbots", "Initializing bags...");
+        InitBags();
+        // bot->SaveToDB(false, false);
+        if (pmo)
+            pmo->finish();
 
-    pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Ammo");
-    LOG_DEBUG("playerbots", "Initializing ammo...");
-    InitAmmo();
-    if (pmo)
-        pmo->finish();
+        pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Ammo");
+        LOG_DEBUG("playerbots", "Initializing ammo...");
+        InitAmmo();
+        if (pmo)
+            pmo->finish();
 
-    pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Food");
-    LOG_DEBUG("playerbots", "Initializing food...");
-    InitFood();
-    if (pmo)
-        pmo->finish();
+        pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Food");
+        LOG_DEBUG("playerbots", "Initializing food...");
+        InitFood();
+        if (pmo)
+            pmo->finish();
 
-    pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Potions");
-    LOG_DEBUG("playerbots", "Initializing potions...");
-    InitPotions();
-    if (pmo)
-        pmo->finish();
+        pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Potions");
+        LOG_DEBUG("playerbots", "Initializing potions...");
+        InitPotions();
+        if (pmo)
+            pmo->finish();
 
-    pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Reagents");
-    LOG_DEBUG("playerbots", "Initializing reagents...");
-    InitReagents();
-    if (pmo)
-        pmo->finish();
+        pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Reagents");
+        LOG_DEBUG("playerbots", "Initializing reagents...");
+        InitReagents();
+        if (pmo)
+            pmo->finish();
+    }
 
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Keys");
     LOG_DEBUG("playerbots", "Initializing keys...");
@@ -799,7 +808,7 @@ void PlayerbotFactory::Randomize(bool incremental)
     // if (pmo)
     //     pmo->finish();
 
-    if (bot->GetLevel() >= sPlayerbotAIConfig.minEnchantingBotLevel)
+    if (!economyManaged && bot->GetLevel() >= sPlayerbotAIConfig.minEnchantingBotLevel)
     {
         ApplyEnchantAndGemsNew();
     }
@@ -819,7 +828,8 @@ void PlayerbotFactory::Randomize(bool incremental)
 
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Consumable");
     LOG_DEBUG("playerbots", "Initializing consumables...");
-    InitConsumables();
+    if (!economyManaged)
+        InitConsumables();
     if (pmo)
         pmo->finish();
 
@@ -866,7 +876,8 @@ void PlayerbotFactory::Randomize(bool incremental)
 
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Save");
     LOG_DEBUG("playerbots", "Saving to DB...");
-    bot->SetMoney(urand(level * 100000, level * 5 * 100000));
+    if (!economyManaged)
+        bot->SetMoney(urand(level * 100000, level * 5 * 100000));
     bot->SetHealth(bot->GetMaxHealth());
     bot->SetPower(POWER_MANA, bot->GetMaxPower(POWER_MANA));
     bot->SaveToDB(false, false);
@@ -3680,7 +3691,7 @@ void PlayerbotFactory::AutoGear(Player* bot, uint32 itemQuality, uint32 ilvl, bo
     PlayerbotFactory factory(bot, bot->GetLevel(), itemQuality, gs);
     factory.InitEquipment(incremental, secondChance);
 
-    if (!applyFinishers)
+    if (!applyFinishers || sPlayerbotAIConfig.economyManagedSupplies)
         return;
 
     factory.InitAmmo();

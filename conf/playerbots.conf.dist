@@ -1129,10 +1129,10 @@ AiPlayerbot.EquipAndSpecPersistence = 1
 # Default: 1 (enable persistence for randombots of at least level 1 (i.e., all levels))
 AiPlayerbot.EquipAndSpecPersistenceLevel = 1
 
-# Leave supplies and gold to the economy module. When enabled, the periodic refresh and the revive
-# path no longer empty the bags, no longer create ammo, food, reagents, class consumables or potions,
-# no longer learn mounts, apply enchants and gems, repair gear for free, or raise the bot's gold to a
-# level based floor.
+# Leave supplies and gold to the economy module. When enabled, randomization (bot creation, level
+# up, reset), the periodic refresh and the revive path no longer empty the bags, hand out bags,
+# ammo, food, reagents, class consumables or potions, learn mounts, apply enchants and gems,
+# repair gear for free, or set the bot's gold to a level based amount.
 # Enable this when mod-playerbots-economy is loaded so bots have to buy, craft or earn those.
 # Default: 0 (disabled)
 AiPlayerbot.EconomyManagedSupplies = 0
