@@ -346,6 +346,7 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
     if (FindNearbyNpc(botAI, targetEntry, UNIT_NPC_FLAG_REPAIR) &&
         botAI->DoSpecificAction("repair", Event("random bot repair"), true))
     {
+        LOG_DEBUG("playerbots", "[Maintenance] {} repair: repaired at npc {}", bot->GetName(), targetEntry);
         targetEntry = 0;
         return true;
     }
@@ -356,14 +357,22 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
         if (!FindNearestDestination(
                 botAI, [](uint32 entry) { return HasNpcFlag(entry, UNIT_NPC_FLAG_REPAIR); }, destination))
         {
+            LOG_DEBUG("playerbots", "[Maintenance] {} repair: no repair destination from map {} zone {}",
+                      bot->GetName(), bot->GetMapId(), bot->GetZoneId());
             return false;
         }
 
         targetEntry = destination.entry;
         targetPosition = destination.position;
+        LOG_DEBUG("playerbots", "[Maintenance] {} repair: heading to npc {} at {:.0f} yd", bot->GetName(),
+                  targetEntry, bot->GetDistance(targetPosition));
     }
 
-    return MoveFarTo(targetPosition);
+    bool const moving = MoveFarTo(targetPosition);
+    if (!moving)
+        LOG_DEBUG("playerbots", "[Maintenance] {} repair: MoveFarTo returned false, npc {} at {:.0f} yd, isMoving={}",
+                  bot->GetName(), targetEntry, bot->GetDistance(targetPosition), bot->isMoving());
+    return moving;
 }
 
 bool RandomBotVendorAction::Execute(Event /*event*/)
@@ -378,6 +387,8 @@ bool RandomBotVendorAction::Execute(Event /*event*/)
     {
         bool const soldGray = botAI->DoSpecificAction("sell", Event("random bot vendor", "gray"), true);
         bool const soldVendor = botAI->DoSpecificAction("sell", Event("random bot vendor", "vendor"), true);
+        LOG_DEBUG("playerbots", "[Maintenance] {} vendor: at npc {} sold gray={} vendor={}", bot->GetName(),
+                  targetEntry, soldGray, soldVendor);
         targetEntry = 0;
         lastAttempt = getMSTime();
         return soldGray || soldVendor;
@@ -389,14 +400,22 @@ bool RandomBotVendorAction::Execute(Event /*event*/)
         if (!FindNearestDestination(
                 botAI, [](uint32 entry) { return HasNpcFlag(entry, UNIT_NPC_FLAG_VENDOR); }, destination))
         {
+            LOG_DEBUG("playerbots", "[Maintenance] {} vendor: no vendor destination from map {} zone {}",
+                      bot->GetName(), bot->GetMapId(), bot->GetZoneId());
             return false;
         }
 
         targetEntry = destination.entry;
         targetPosition = destination.position;
+        LOG_DEBUG("playerbots", "[Maintenance] {} vendor: heading to npc {} at {:.0f} yd", bot->GetName(),
+                  targetEntry, bot->GetDistance(targetPosition));
     }
 
-    return MoveFarTo(targetPosition);
+    bool const moving = MoveFarTo(targetPosition);
+    if (!moving)
+        LOG_DEBUG("playerbots", "[Maintenance] {} vendor: MoveFarTo returned false, npc {} at {:.0f} yd, isMoving={}",
+                  bot->GetName(), targetEntry, bot->GetDistance(targetPosition), bot->isMoving());
+    return moving;
 }
 
 bool RandomBotMountAction::Execute(Event /*event*/)
