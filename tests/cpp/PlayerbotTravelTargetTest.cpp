@@ -7,6 +7,7 @@
 #include "Ai/Base/Actions/MoveToTravelTargetAction.h"
 #include "Ai/Base/Strategy/TravelStrategy.h"
 #include "Ai/Base/Value/LastMovementValue.h"
+#include "Ai/Base/Value/PossibleRpgTargetsValue.h"
 #include "Bot/Engine/AiObjectContext.h"
 #include "Bot/Engine/WorldPacket/Event.h"
 #include "Bot/PlayerbotAI.h"
@@ -17,6 +18,13 @@
 
 namespace
 {
+class TestPossibleRpgTargetsValue : public PossibleRpgTargetsValue
+{
+public:
+    using PossibleRpgTargetsValue::PossibleRpgTargetsValue;
+    using PossibleRpgTargetsValue::AcceptUnit;
+};
+
 class PlayerbotTravelTargetTest : public IntegrationTestFixture
 {
 protected:
@@ -159,5 +167,19 @@ TEST_F(PlayerbotTravelTargetTest, TravelMovementOutranksAmbientNonCombatActions)
         delete trigger;
 
     EXPECT_GT(moveRelevance, ACTION_DEFAULT);
+}
+
+TEST_F(PlayerbotTravelTargetTest, LegacyRpgTargetsRejectBattlemasterGossipNpcs)
+{
+    bot->SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE, TEST_FACTION_HOSTILE_TO_MONSTERS);
+    TestCreature* emissary = CreateTestCreature(202, 14990, TEST_FACTION_HOSTILE_TO_MONSTERS);
+    emissary->Relocate(10.0f, 0.0f, 0.0f, 0.0f);
+
+    TestPossibleRpgTargetsValue targets(botAI);
+    emissary->ReplaceAllNpcFlags(UNIT_NPC_FLAG_GOSSIP);
+    ASSERT_TRUE(targets.AcceptUnit(emissary));
+
+    emissary->SetNpcFlag(UNIT_NPC_FLAG_BATTLEMASTER);
+    EXPECT_FALSE(targets.AcceptUnit(emissary));
 }
 }  // namespace

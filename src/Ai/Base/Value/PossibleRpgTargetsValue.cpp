@@ -38,7 +38,6 @@ PossibleRpgTargetsValue::PossibleRpgTargetsValue(PlayerbotAI* botAI, float range
         allowedNpcFlags.push_back(UNIT_NPC_FLAG_STABLEMASTER);
         allowedNpcFlags.push_back(UNIT_NPC_FLAG_PETITIONER);
         allowedNpcFlags.push_back(UNIT_NPC_FLAG_TABARDDESIGNER);
-        allowedNpcFlags.push_back(UNIT_NPC_FLAG_BATTLEMASTER);
 
         allowedNpcFlags.push_back(UNIT_NPC_FLAG_TRAINER);
         allowedNpcFlags.push_back(UNIT_NPC_FLAG_VENDOR);
@@ -65,6 +64,10 @@ bool PossibleRpgTargetsValue::AcceptUnit(Unit* unit)
         return false;
 
     if (unit->HasNpcFlag(UNIT_NPC_FLAG_SPIRITHEALER))
+        return false;
+
+    // Legacy RPG does not register its battleground queue action, and emissaries also carry the gossip flag.
+    if (unit->IsBattleMaster())
         return false;
 
     for (uint32 npcFlag : allowedNpcFlags)
