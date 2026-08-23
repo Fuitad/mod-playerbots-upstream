@@ -884,15 +884,21 @@ void PlayerbotFactory::Refresh()
     //     InitEquipment(true);
     // }
     InitAttunementQuests();
-    // The periodic refresh and the revive path used to empty the bags here before topping them up.
-    // That destroyed everything a bot had gathered, bought or crafted between refreshes, which the
-    // economy modules depend on. Every refill below tops up against what the bot already holds, so
-    // the clear is not needed for the refresh to be idempotent.
-    InitAmmo();
-    InitFood();
-    InitReagents();
-    InitConsumables();
-    InitPotions();
+    // With EconomyManagedSupplies on, the refresh neither empties the bags nor creates goods or gold.
+    // The clear destroyed everything a bot gathered, bought or crafted since the previous refresh, and
+    // the refills (ammo, food, reagents, class consumables, potions), the free mounts, enchants and
+    // repairs, and the money floor are all things the economy module expects bots to buy, craft or
+    // earn. Conjuring them here removes every buyer from the market.
+    bool const economyManaged = sPlayerbotAIConfig.economyManagedSupplies;
+    if (!economyManaged)
+    {
+        ClearInventory();
+        InitAmmo();
+        InitFood();
+        InitReagents();
+        InitConsumables();
+        InitPotions();
+    }
     InitPet();
     InitPetTalents();
     InitSkills();
@@ -900,18 +906,21 @@ void PlayerbotFactory::Refresh()
     InitAvailableSpells();
     InitReputation();
     InitSpecialSpells();
-    InitMounts();
+    if (!economyManaged)
+        InitMounts();
     InitKeyring();
     if (!sPlayerbotAIConfig.equipAndSpecPersistence ||
         bot->GetLevel() < sPlayerbotAIConfig.equipAndSpecPersistenceLevel)
     {
         InitTalentsTree(true, true, true);
     }
+    if (bot->isDead())
+        bot->ResurrectPlayer(1.0f, false);
+    if (economyManaged)
+        return;
     if (bot->GetLevel() >= sPlayerbotAIConfig.minEnchantingBotLevel)
         ApplyEnchantAndGemsNew();
     bot->DurabilityRepairAll(false, 1.0f, false);
-    if (bot->isDead())
-        bot->ResurrectPlayer(1.0f, false);
     uint32 money = urand(level * 1000, level * 5 * 1000);
     if (bot->GetMoney() < money)
         bot->SetMoney(money);
@@ -3932,30 +3941,10 @@ void PlayerbotFactory::InitFood()
         items[proto->Spells[0].SpellCategory].push_back(itemId);
     }
 
-    // Food the bot already carries, by spell category, so a refresh without a bag clear does not stack
-    // two more stacks on top of what is there.
-    std::unordered_set<uint32> heldCategories;
-    auto const noteHeld = [&heldCategories](Item const* item)
-    {
-        ItemTemplate const* proto = item ? item->GetTemplate() : nullptr;
-        if (proto && proto->Class == ITEM_CLASS_CONSUMABLE && proto->SubClass == ITEM_SUBCLASS_FOOD)
-            heldCategories.insert(proto->Spells[0].SpellCategory);
-    };
-    for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
-        noteHeld(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot));
-    for (uint8 bagSlot = INVENTORY_SLOT_BAG_START; bagSlot < INVENTORY_SLOT_BAG_END; ++bagSlot)
-    {
-        Bag const* bag = bot->GetBagByPos(bagSlot);
-        for (uint32 slot = 0; bag && slot < bag->GetBagSize(); ++slot)
-            noteHeld(bag->GetItemByPos(slot));
-    }
-
     uint32 categories[] = {11, 59};
     for (size_t i = 0; i < sizeof(categories) / sizeof(uint32); ++i)
     {
         uint32 category = categories[i];
-        if (heldCategories.contains(category))
-            continue;
         std::vector<uint32>& ids = items[category];
         int tries = 0;
         for (int j = 0; j < 2; j++)
