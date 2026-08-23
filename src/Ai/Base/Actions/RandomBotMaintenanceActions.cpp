@@ -91,12 +91,16 @@ bool FindNearestDestination(PlayerbotAI* botAI, std::function<bool(uint32)> cons
 
     for (TravelDestination* destination : sTravelMgr.getRpgTravelDestinations(bot, true, true, 200000.0f))
     {
-        uint32 const entry = destination->getEntry();
+        // RpgTravelDestination::getEntry() is hard coded to 0; the creature entry is only reachable
+        // through its template. Observed live on 2026-08-23: every vendor and repair lookup came back
+        // empty, even for bots standing inside a capital.
+        RpgTravelDestination* const rpgDestination = dynamic_cast<RpgTravelDestination*>(destination);
+        CreatureTemplate const* creatureTemplate = rpgDestination ? rpgDestination->GetCreatureTemplate() : nullptr;
+        uint32 const entry = creatureTemplate ? creatureTemplate->Entry : 0u;
         if (!entry || !acceptsEntry(entry))
             continue;
 
-        CreatureTemplate const* creatureTemplate = sObjectMgr->GetCreatureTemplate(entry);
-        if (!creatureTemplate || !IsFriendlyNpc(botAI, creatureTemplate))
+        if (!IsFriendlyNpc(botAI, creatureTemplate))
             continue;
 
         std::vector<WorldPosition*> const points = destination->nextPoint(&botPosition, true);
