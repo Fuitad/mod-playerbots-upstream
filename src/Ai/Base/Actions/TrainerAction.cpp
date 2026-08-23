@@ -136,7 +136,8 @@ void TrainerAction::Iterate(Creature* creature, bool learnSpells, uint32 spellId
 
 void TrainerAction::Learn(SpellInfo const* spellInfo, uint32 cost, std::ostringstream& out)
 {
-    if (!botAI->HasCheat(BotCheatMask::gold))
+    bool const economyBot = sPlayerbotAIConfig.economyManagedSupplies && sRandomPlayerbotMgr.IsRandomBot(bot);
+    if (!botAI->HasCheat(BotCheatMask::gold) || economyBot)
     {
         if (AI_VALUE2(uint32, "free money for", (uint32)NeedMoneyFor::spells) < cost)
         {

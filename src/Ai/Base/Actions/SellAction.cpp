@@ -122,7 +122,8 @@ void SellAction::Sell(Item* item)
         nicePacket.Read();
         bot->GetSession()->HandleSellItemOpcode(nicePacket);
 
-        if (botAI->HasCheat(BotCheatMask::gold))
+        bool const economyBot = sPlayerbotAIConfig.economyManagedSupplies && sRandomPlayerbotMgr.IsRandomBot(bot);
+        if (botAI->HasCheat(BotCheatMask::gold) && !economyBot)
         {
             bot->SetMoney(botMoney);
         }

@@ -230,12 +230,14 @@ bool BuyAction::BuyItem(VendorItemData const* tItems, ObjectGuid vendorguid, Ite
             continue;
 
         uint32 botMoney = bot->GetMoney();
-        if (botAI->HasCheat(BotCheatMask::gold))
+        bool const economyBot = sPlayerbotAIConfig.economyManagedSupplies && sRandomPlayerbotMgr.IsRandomBot(bot);
+        bool const useGoldCheat = botAI->HasCheat(BotCheatMask::gold) && !economyBot;
+        if (useGoldCheat)
             bot->SetMoney(10000000);
 
         bot->BuyItemFromVendorSlot(vendorguid, slot, itemId, 1, NULL_BAG, NULL_SLOT);
 
-        if (botAI->HasCheat(BotCheatMask::gold))
+        if (useGoldCheat)
             bot->SetMoney(botMoney);
 
         uint32 newCount = bot->GetItemCount(itemId, false);

@@ -222,10 +222,11 @@ uint32 FreeMoneyForValue::Calculate()
 {
     uint32 money = bot->GetMoney();
 
-    if (botAI->HasCheat(BotCheatMask::gold))
+    bool const economyBot = sPlayerbotAIConfig.economyManagedSupplies && sRandomPlayerbotMgr.IsRandomBot(bot);
+    if (botAI->HasCheat(BotCheatMask::gold) && !economyBot)
         return 10000000;
 
-    if (IsRealPlayer(botAI->GetMaster()))
+    if (IsRealPlayer(botAI->GetMaster()) && !economyBot)
         return money;
 
     uint32 savedMoney = AI_VALUE2(uint32, "total money needed for", getQualifier()) -

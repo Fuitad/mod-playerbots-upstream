@@ -25,7 +25,9 @@ bool RepairAllAction::Execute(Event /*event*/)
         float discountMod = bot->GetReputationPriceDiscount(unit);
 
         uint32 botMoney = bot->GetMoney();
-        if (botAI->HasCheat(BotCheatMask::gold))
+        bool const economyBot = sPlayerbotAIConfig.economyManagedSupplies && sRandomPlayerbotMgr.IsRandomBot(bot);
+        bool const useGoldCheat = botAI->HasCheat(BotCheatMask::gold) && !economyBot;
+        if (useGoldCheat)
         {
             bot->SetMoney(10000000);
         }
@@ -37,7 +39,7 @@ bool RepairAllAction::Execute(Event /*event*/)
 
         totalCost += bot->DurabilityRepairAll(true, discountMod, false);
 
-        if (botAI->HasCheat(BotCheatMask::gold))
+        if (useGoldCheat)
         {
             bot->SetMoney(botMoney);
         }

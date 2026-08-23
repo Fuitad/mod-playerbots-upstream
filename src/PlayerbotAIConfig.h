@@ -409,6 +409,7 @@ public:
     bool downgradeMaxLevelBot;
     bool equipAndSpecPersistence;
     bool economyManagedSupplies;
+    uint32 economyRepairThreshold;
     int32 equipAndSpecPersistenceLevel;
     int32 groupInvitationPermission;
     bool keepAltsInGroup = false;

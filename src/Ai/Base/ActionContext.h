@@ -51,6 +51,7 @@
 #include "PositionAction.h"
 #include "PullActions.h"
 #include "RandomBotUpdateAction.h"
+#include "RandomBotMaintenanceActions.h"
 #include "ReachTargetActions.h"
 #include "ReleaseSpiritAction.h"
 #include "RemoveAuraAction.h"
@@ -160,6 +161,9 @@ public:
         creators["reveal gathering item"] = &ActionContext::reveal_gathering_item;
         creators["outfit"] = &ActionContext::outfit;
         creators["random bot update"] = &ActionContext::random_bot_update;
+        creators["random bot repair"] = &ActionContext::random_bot_repair;
+        creators["random bot vendor"] = &ActionContext::random_bot_vendor;
+        creators["random bot mount"] = &ActionContext::random_bot_mount;
         creators["delay"] = &ActionContext::delay;
         creators["greet"] = &ActionContext::greet;
         creators["check values"] = &ActionContext::check_values;
@@ -485,6 +489,9 @@ private:
     static Action* new_rpg_do_quest(PlayerbotAI* ai) { return new NewRpgDoQuestAction(ai); }
     static Action* new_rpg_travel_flight(PlayerbotAI* ai) { return new NewRpgTravelFlightAction(ai); }
     static Action* new_rpg_outdoor_pvp(PlayerbotAI* ai) { return new NewRpgOutdoorPvpAction(ai); }
+    static Action* random_bot_repair(PlayerbotAI* ai) { return new RandomBotRepairAction(ai); }
+    static Action* random_bot_vendor(PlayerbotAI* ai) { return new RandomBotVendorAction(ai); }
+    static Action* random_bot_mount(PlayerbotAI* ai) { return new RandomBotMountAction(ai); }
     static Action* wait_for_attack_keep_safe_distance(PlayerbotAI* ai) { return new WaitForAttackKeepSafeDistanceAction(ai); }
 };
 

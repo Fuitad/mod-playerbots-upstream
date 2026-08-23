@@ -42,6 +42,7 @@
 #include "QuestStrategies.h"
 #include "RTSCStrategy.h"
 #include "RacialsStrategy.h"
+#include "RandomBotMaintenanceStrategy.h"
 #include "RangedCombatStrategy.h"
 #include "ReturnStrategy.h"
 #include "RpgStrategy.h"
@@ -118,6 +119,7 @@ public:
         creators["debug spell"] = &StrategyContext::debug_spell;
         creators["debug quest"] = &StrategyContext::debug_quest;
         creators["maintenance"] = &StrategyContext::maintenance;
+        creators["random bot maintenance"] = &StrategyContext::random_bot_maintenance;
         creators["group"] = &StrategyContext::group;
         creators["guild"] = &StrategyContext::guild;
         creators["grind"] = &StrategyContext::grind;
@@ -192,6 +194,7 @@ private:
     static Strategy* debug_spell(PlayerbotAI* botAI) { return new DebugSpellStrategy(botAI); }
     static Strategy* debug_quest(PlayerbotAI* botAI) { return new DebugQuestStrategy(botAI); }
     static Strategy* maintenance(PlayerbotAI* botAI) { return new MaintenanceStrategy(botAI); }
+    static Strategy* random_bot_maintenance(PlayerbotAI* botAI) { return new RandomBotMaintenanceStrategy(botAI); }
     static Strategy* group(PlayerbotAI* botAI) { return new GroupStrategy(botAI); }
     static Strategy* guild (PlayerbotAI* botAI) { return new GuildStrategy(botAI); }
     static Strategy* grind(PlayerbotAI* botAI) { return new GrindingStrategy(botAI); }
