@@ -6392,7 +6392,11 @@ uint8 PlayerbotAI::FindEquipSlot(ItemTemplate const* proto, uint32 slot, bool sw
         // if not found free and can swap return first appropriate from used
         for (uint8 i = 0; i < 4; ++i)
             if (slots[i] != NULL_SLOT && swap)
-                return slots[i];
+                // same rule as the free-slot search above: a two-hander (without titan grip) blocks
+                // the offhand outright, so offering it as a swap target only produces an equip
+                // attempt the core refuses, repeated forever by every caller that trusts this slot.
+                if (slots[i] != EQUIPMENT_SLOT_OFFHAND || !bot->IsTwoHandUsed())
+                    return slots[i];
     }
 
     // no free position
