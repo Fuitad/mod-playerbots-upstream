@@ -1658,6 +1658,9 @@ bool IllidariCouncilDisperseRangedAction::Execute(Event /*event*/)
 
 bool IllidariCouncilCommandPetsToAttackGathiosAction::Execute(Event /*event*/)
 {
+    if (!botAI->CanInitiateCombat())
+        return false;
+
     Unit* gathios = AI_VALUE2(Unit*, "find target", "gathios the shatterer");
     if (!gathios)
         return false;

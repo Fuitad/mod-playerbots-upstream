@@ -54,6 +54,9 @@ bool AttackMyTargetAction::Execute(Event /*event*/)
 
 bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
 {
+    if (!botAI->CanInitiateCombat())
+        return false;
+
     if (!target)
     {
         if (verbose)

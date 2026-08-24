@@ -133,11 +133,11 @@ public:
     void Refresh(Player* bot);
     void AutoGearBot(Player* bot);
     void RandomTeleportForLevel(Player* bot);
-    void RandomTeleportGrindForLevel(Player* bot);
     void RandomTeleportForRpg(Player* bot);
     uint32 GetMaxAllowedBotCount();
     bool ProcessBot(Player* player);
     void Revive(Player* player);
+    [[nodiscard]] bool RecoverAtHomebind(Player* player);
     void ChangeStrategy(Player* player);
     void ChangeStrategyOnce(Player* player);
     uint32 GetValue(Player* bot, std::string const& type);

@@ -10,6 +10,7 @@
 #include "MovementActions.h"
 
 class PlayerbotAI;
+class Corpse;
 
 struct GraveyardStruct;
 
@@ -28,6 +29,10 @@ public:
 
     bool Execute(Event event) override;
     bool isUseful() override;
+
+protected:
+    virtual Corpse* GetBotCorpse() const;
+    virtual bool RecoverAtHomebind();
 };
 
 class SpiritHealerAction : public MovementAction

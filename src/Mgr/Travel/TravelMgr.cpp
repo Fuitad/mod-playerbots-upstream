@@ -680,7 +680,7 @@ std::vector<WorldPosition> WorldPosition::frommGridCoord(mGridCoord GridCoord)
     return retVec;
 }
 
-// TODO: Cleanup — make this actually work.
+// TODO: Cleanup , make this actually work.
 void WorldPosition::loadMapAndVMap(uint32 mapId, uint8 x, uint8 y)
 {
     std::string const fileName = "load_map_grid.csv";
@@ -1506,7 +1506,7 @@ void TravelTarget::setTarget(TravelDestination* tDestination1, WorldPosition* wP
 
     addVisitors();
 
-    setStatus(TRAVEL_STATUS_TRAVEL);
+    setStatus(dynamic_cast<NullTravelDestination*>(tDestination) ? TRAVEL_STATUS_COOLDOWN : TRAVEL_STATUS_TRAVEL);
 }
 
 void TravelTarget::copyTarget(TravelTarget* target)
@@ -4426,7 +4426,7 @@ std::vector<std::vector<uint32>> TravelMgr::GetOptimalFlightDestinations(Player*
     uint32 botLevel = bot->GetLevel();
 
     // Bots already in a capital shouldn't have another capital picked as a
-    // flight destination — that just shuffles them between cities.
+    // flight destination , that just shuffles them between cities.
     bool botInCapital = false;
     if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(bot->GetZoneId()))
         botInCapital = (area->flags & AREA_FLAG_CAPITAL) != 0;
@@ -4735,7 +4735,7 @@ void TravelMgr::PrepareDestinationCache()
                 }
                 flightMastersCount++;
 
-                // Zones that have flight masters but no innkeepers — use flight master as hub
+                // Zones that have flight masters but no innkeepers , use flight master as hub
                 static const std::set<uint32> zonesWithoutInnkeeper = {
                     AREA_BLASTED_LANDS,
                     AREA_AZSHARA,

@@ -118,6 +118,9 @@ bool PetsAction::Execute(Event event)
     // The "attack" command forces pets/guardians to attack the master's selected target.
     else if (param == "attack")
     {
+        if (!botAI->CanInitiateCombat())
+            return false;
+
         // Try to get the master's selected target.
         Player* master = botAI->GetMaster();
         Unit* targetUnit = nullptr;

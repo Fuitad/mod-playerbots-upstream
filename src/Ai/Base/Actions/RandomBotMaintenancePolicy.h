@@ -37,6 +37,15 @@ struct MountVendorCandidate
     bool usable = false;
 };
 
+struct LevelupMaintenancePlan
+{
+    bool cleanupConsumables = false;
+    bool provisionConsumables = false;
+    bool upgradeEquipment = false;
+};
+
+[[nodiscard]] LevelupMaintenancePlan BuildLevelupMaintenancePlan(bool randomBot, bool economyManagedSupplies,
+                                                                 bool autoUpgradeEquip);
 [[nodiscard]] bool ShouldRepairItem(std::uint32_t durability, std::uint32_t maximumDurability,
                                     std::uint32_t thresholdPercent);
 [[nodiscard]] bool IsVendorTrash(std::uint32_t quality, bool vendorUsage);

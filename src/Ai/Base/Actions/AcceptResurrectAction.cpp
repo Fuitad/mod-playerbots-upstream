@@ -5,7 +5,9 @@
  */
 
 #include "AcceptResurrectAction.h"
+
 #include "Event.h"
+#include "GameTime.h"
 #include "Playerbots.h"
 
 bool AcceptResurrectAction::Execute(Event event)
@@ -23,5 +25,9 @@ bool AcceptResurrectAction::Execute(Event event)
     packet << uint8(1);                                        // accept
     bot->GetSession()->HandleResurrectResponseOpcode(packet);  // queue the packet to get around race condition
 
-    return true;
+    bool const success = bot->IsAlive();
+    if (success)
+        botAI->StartPostReviveRepairSafety();
+    botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(), success, bot->IsAlive());
+    return success;
 }

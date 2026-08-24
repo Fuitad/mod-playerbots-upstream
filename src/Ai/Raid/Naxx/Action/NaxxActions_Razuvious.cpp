@@ -19,6 +19,9 @@ constexpr uint32 SPELL_BLOOD_STRIKE     = 61696;
 
 bool RazuviousUseObedienceCrystalAction::Execute(Event /*event*/)
 {
+    if (!botAI->CanInitiateCombat())
+        return false;
+
     if (!helper.UpdateBossAI())
         return false;
 

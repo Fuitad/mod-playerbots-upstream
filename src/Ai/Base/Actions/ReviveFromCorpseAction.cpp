@@ -5,11 +5,15 @@
  */
 
 #include "ReviveFromCorpseAction.h"
+
 #include "Corpse.h"
 #include "Event.h"
 #include "FleeManager.h"
 #include "GameGraveyard.h"
+#include "GameTime.h"
 #include "MapMgr.h"
+#include "PhysicalDeathCountPolicy.h"
+#include "PlayerbotRecoveryPolicy.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
@@ -36,27 +40,35 @@ bool ReviveFromCorpseAction::Execute(Event event)
         }
     }
 
-    if (!corpse)
+    uint64 const timestampMs = GameTime::GetGameTimeMS().count();
+    uint64 const now = GameTime::GetGameTime().count();
+    bool const hasCorpse = corpse != nullptr;
+    bool const reclaimDelayElapsed = hasCorpse &&
+        corpse->GetGhostTime() + bot->GetCorpseReclaimDelay(corpse->GetType() == CORPSE_RESURRECTABLE_PVP) <= now;
+    playerbots::recovery::CorpseReclaimEligibility const eligibility{
+        .playerAlive = bot->IsAlive(),
+        .inArena = bot->InArena(),
+        .ghost = bot->HasPlayerFlag(PLAYER_FLAGS_GHOST),
+        .hasCorpse = hasCorpse,
+        .reclaimDelayElapsed = reclaimDelayElapsed,
+        .corpseInMap = hasCorpse && corpse->IsInMap(bot),
+        .withinReclaimRadius = hasCorpse && corpse->IsWithinDist(bot, CORPSE_RECLAIM_RADIUS, true),
+    };
+    if (!playerbots::recovery::CanReclaimCorpse(eligibility))
+    {
+        botAI->RecordReviveAttempt(timestampMs, false, bot->IsAlive());
         return false;
-
-    // if (corpse->GetGhostTime() + bot->GetCorpseReclaimDelay(corpse->GetType() == CORPSE_RESURRECTABLE_PVP) >
-    // time(nullptr))
-    //     return false;
+    }
 
     if (groupLeader)
     {
         if (!GET_PLAYERBOT_AI(groupLeader) && groupLeader->isDead() && groupLeader->GetCorpse() &&
             ServerFacade::instance().IsDistanceLessThan(AI_VALUE2(float, "distance", "group leader"),
                                               sPlayerbotAIConfig.farDistance))
+        {
+            botAI->RecordReviveAttempt(timestampMs, false, bot->IsAlive());
             return false;
-    }
-
-    if (!botAI->HasGameClientMaster())
-    {
-        uint32 dCount = AI_VALUE(uint32, "death count");
-
-        if (dCount >= 5)
-            return botAI->DoSpecificAction("spirit healer");
+        }
     }
 
     LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> revives at body", bot->GetGUID().ToString().c_str(),
@@ -69,7 +81,11 @@ bool ReviveFromCorpseAction::Execute(Event event)
     packet << bot->GetGUID();
     bot->GetSession()->HandleReclaimCorpseOpcode(packet);
 
-    return true;
+    bool const success = bot->IsAlive();
+    if (success)
+        botAI->StartPostReviveRepairSafety();
+    botAI->RecordReviveAttempt(timestampMs, success, bot->IsAlive());
+    return success;
 }
 
 bool FindCorpseAction::Execute(Event /*event*/)
@@ -78,7 +94,7 @@ bool FindCorpseAction::Execute(Event /*event*/)
         return false;
 
     Player* groupLeader = botAI->GetGroupLeader();
-    Corpse* corpse = bot->GetCorpse();
+    Corpse* corpse = GetBotCorpse();
     if (!corpse)
         return false;
 
@@ -98,10 +114,10 @@ bool FindCorpseAction::Execute(Event /*event*/)
             // LOG_INFO("playerbots", "Bot {} {}:{} <{}>: died too many times, was revived and teleported",
             //     bot->GetGUID().ToString().c_str(), bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(),
             //     bot->GetName().c_str());
-            context->GetValue<uint32>("death count")->Set(0);
-            // sRandomPlayerbotMgr.RandomTeleportForLevel(bot);
-            sRandomPlayerbotMgr.Revive(bot);
-            return true;
+            bool const recovered = RecoverAtHomebind();
+            context->GetValue<uint32>("death count")
+                ->Set(playerbots::recovery::DeathCountAfterForcedRecovery(dCount, recovered));
+            return recovered;
         }
     }
 
@@ -194,6 +210,10 @@ bool FindCorpseAction::Execute(Event /*event*/)
 
     return moved;
 }
+
+Corpse* FindCorpseAction::GetBotCorpse() const { return bot->GetCorpse(); }
+
+bool FindCorpseAction::RecoverAtHomebind() { return sRandomPlayerbotMgr.RecoverAtHomebind(bot); }
 
 bool FindCorpseAction::isUseful()
 {
@@ -306,6 +326,9 @@ bool SpiritHealerAction::Execute(Event /*event*/)
     GraveyardStruct const* ClosestGrave =
         GetGrave(dCount > 10 || deadTime > 15 * MINUTE || AI_VALUE(uint8, "durability") < 10);
 
+    if (!ClosestGrave)
+        return false;
+
     if (bot->GetDistance2d(ClosestGrave->x, ClosestGrave->y) < sPlayerbotAIConfig.sightDistance)
     {
         GuidVector npcs = AI_VALUE(GuidVector, "nearest npcs");
@@ -323,17 +346,17 @@ bool SpiritHealerAction::Execute(Event /*event*/)
                 bot->SetTarget();
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "Hello", {}));
 
-                if (dCount > 20)
+                bool const success = bot->IsAlive();
+                if (success)
+                    botAI->StartPostReviveRepairSafety();
+                botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(), success, bot->IsAlive());
+
+                if (success && dCount > 20)
                     context->GetValue<uint32>("death count")->Set(0);
 
-                return true;
+                return success;
             }
         }
-    }
-
-    if (!ClosestGrave)
-    {
-        return false;
     }
 
     bool moved = false;
@@ -348,7 +371,6 @@ bool SpiritHealerAction::Execute(Event /*event*/)
 
     // if (!IsRealPlayer(botAI->GetMaster()))
     // {
-    context->GetValue<uint32>("death count")->Set(dCount + 1);
     bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
     return bot->TeleportTo(ClosestGrave->Map, ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, 0.f);
     // }

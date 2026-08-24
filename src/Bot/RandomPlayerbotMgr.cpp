@@ -38,6 +38,7 @@
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
+#include "PlayerbotRecoveryPolicy.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "Position.h"
@@ -1685,14 +1686,42 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
 
 void RandomPlayerbotMgr::Revive(Player* player)
 {
-    uint32 bot = player->GetGUID().GetCounter();
+    if (!RecoverAtHomebind(player))
+        LOG_WARN("playerbots", "Bot recovery at homebind failed for {}", player ? player->GetName() : "unknown");
+}
 
-    // LOG_INFO("playerbots", "Bot {} revived", player->GetName().c_str());
-    SetEventValue(bot, "dead", 0, 0);
-    SetEventValue(bot, "revive", 0, 0);
+bool RandomPlayerbotMgr::RecoverAtHomebind(Player* player)
+{
+    if (!player)
+        return false;
 
+    PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
+    if (!botAI)
+        return false;
+
+    uint64 const timestampMs = GameTime::GetGameTimeMS().count();
     Refresh(player);
-    RandomTeleportGrindForLevel(player);
+    if (!player->IsAlive())
+    {
+        botAI->RecordReviveAttempt(timestampMs, false, false);
+        return false;
+    }
+
+    player->CombatStopWithPets(true);
+    botAI->StartPostReviveRepairSafety();
+    bool const teleportAccepted = player->TeleportTo(player->m_homebindMapId, player->m_homebindX,
+                                                     player->m_homebindY, player->m_homebindZ,
+                                                     player->GetOrientation());
+    bool const success = playerbots::recovery::IsHomebindRecoverySuccessful(player->IsAlive(), teleportAccepted);
+    if (success)
+    {
+        uint32 const botId = player->GetGUID().GetCounter();
+        SetEventValue(botId, "dead", 0, 0);
+        SetEventValue(botId, "revive", 0, 0);
+    }
+
+    botAI->RecordReviveAttempt(timestampMs, success, player->IsAlive());
+    return success;
 }
 
 void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>& locs, bool hearth)
@@ -1907,18 +1936,6 @@ void RandomPlayerbotMgr::RandomTeleportForLevel(Player* bot)
         RandomTeleport(bot, locs, false);
         return;
     }
-}
-
-void RandomPlayerbotMgr::RandomTeleportGrindForLevel(Player* bot)
-{
-    if (bot->InBattleground())
-        return;
-
-    std::vector<WorldLocation> locs = sTravelMgr.GetTeleportLocations(bot);
-    LOG_DEBUG("playerbots", "Random teleporting bot {} for level {} ({} locations available)", bot->GetName().c_str(),
-              bot->GetLevel(), locs.size());
-
-    RandomTeleport(bot, locs);
 }
 
 void RandomPlayerbotMgr::RandomTeleport(Player* bot)

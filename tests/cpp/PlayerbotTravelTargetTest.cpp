@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+#include <chrono>
+#include <thread>
+
+#include "Ai/Base/Actions/ChooseTravelTargetAction.h"
 #include "Ai/Base/Actions/MoveToTravelTargetAction.h"
 #include "Ai/Base/Strategy/TravelStrategy.h"
 #include "Ai/Base/Value/LastMovementValue.h"
@@ -23,6 +27,13 @@ class TestPossibleRpgTargetsValue : public PossibleRpgTargetsValue
 public:
     using PossibleRpgTargetsValue::PossibleRpgTargetsValue;
     using PossibleRpgTargetsValue::AcceptUnit;
+};
+
+class TestChooseTravelTargetAction : public ChooseTravelTargetAction
+{
+public:
+    using ChooseTravelTargetAction::ChooseTravelTargetAction;
+    using ChooseTravelTargetAction::SetNullTarget;
 };
 
 class PlayerbotTravelTargetTest : public IntegrationTestFixture
@@ -126,6 +137,23 @@ TEST_F(PlayerbotTravelTargetTest, ForcedTravelTargetRemainsWorkingWhenDestinatio
 
     EXPECT_TRUE(target->isWorking());
     EXPECT_EQ(target->getStatus(), TRAVEL_STATUS_WORK);
+
+    target->releaseVisitors();
+}
+
+TEST_F(PlayerbotTravelTargetTest, NullTravelTargetImmediatelyEntersCooldownAndTimeLeftSaturates)
+{
+    TravelTarget* target = botAI->GetAiObjectContext()->GetValue<TravelTarget*>("travel target")->Get();
+    TestChooseTravelTargetAction action(botAI);
+
+    ASSERT_TRUE(action.SetNullTarget(target));
+    EXPECT_EQ(target->getDestination(), TravelMgr::instance().nullTravelDestination);
+    EXPECT_EQ(target->getStatus(), TRAVEL_STATUS_COOLDOWN);
+    EXPECT_GT(target->getTimeLeft(), 0u);
+
+    target->setExpireIn(1u);
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    EXPECT_EQ(target->getTimeLeft(), 0u);
 
     target->releaseVisitors();
 }

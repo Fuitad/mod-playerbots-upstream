@@ -35,6 +35,19 @@ bool Contains(std::vector<std::uint32_t> const& values, std::uint32_t value)
 }
 }  // namespace
 
+LevelupMaintenancePlan BuildLevelupMaintenancePlan(bool randomBot, bool economyManagedSupplies,
+                                                    bool autoUpgradeEquip)
+{
+    if (!randomBot)
+        return {};
+
+    return {
+        .cleanupConsumables = !economyManagedSupplies,
+        .provisionConsumables = !economyManagedSupplies,
+        .upgradeEquipment = autoUpgradeEquip,
+    };
+}
+
 bool ShouldRepairItem(std::uint32_t durability, std::uint32_t maximumDurability, std::uint32_t thresholdPercent)
 {
     if (!maximumDurability)

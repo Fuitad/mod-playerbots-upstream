@@ -11,6 +11,18 @@
 
 bool RepairAllAction::Execute(Event /*event*/)
 {
+    if (!ExecutePaidRepair())
+    {
+        botAI->TellError("Cannot find any npc to repair at");
+        return false;
+    }
+
+    (void)botAI->IsPostReviveRepairPending();
+    return true;
+}
+
+bool RepairAllAction::ExecutePaidRepair()
+{
     GuidVector npcs = AI_VALUE(GuidVector, "nearest npcs");
     for (ObjectGuid const guid : npcs)
     {
@@ -53,11 +65,8 @@ bool RepairAllAction::Execute(Event /*event*/)
             bot->PlayDistanceSound(1116);
         }
 
-        context->GetValue<uint32>("death count")->Set(0);
-
         return true;
     }
 
-    botAI->TellError("Cannot find any npc to repair at");
     return false;
 }

@@ -51,7 +51,7 @@ bool MeleeAction::isUseful()
     if (botAI->IsInVehicle() && !botAI->IsInVehicle(false, false, true))
         return false;
 
-    // Do not start autoattack while prowled — let opener spells break stealth intentionally.
+    // Do not start autoattack while prowled , let opener spells break stealth intentionally.
     // Future rogue stealth implementation should use this instead:
     // return !(botAI->HasAura("stealth", bot) || botAI->HasAura("prowl", bot));
     return !botAI->HasAura("prowl", bot);
@@ -124,6 +124,9 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
 
 bool PetAttackAction::Execute(Event /*event*/)
 {
+    if (!botAI->CanInitiateCombat())
+        return false;
+
     Guardian* pet = bot->GetGuardianPet();
     if (!pet)
         return false;

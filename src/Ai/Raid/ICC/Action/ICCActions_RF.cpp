@@ -82,7 +82,7 @@ bool IccRotfaceTankPositionAction::PositionMainTankAndMelee(Unit* boss, Unit*)
 
         if (!bossInPosition)
         {
-            // Step 2y in the direction from boss toward center — tank leads, boss follows
+            // Step 2y in the direction from boss toward center , tank leads, boss follows
             float dirX = ICC_ROTFACE_CENTER_POSITION_BOSS.GetPositionX() - boss->GetPositionX();
             float dirY = ICC_ROTFACE_CENTER_POSITION_BOSS.GetPositionY() - boss->GetPositionY();
             float const len = std::sqrt(dirX * dirX + dirY * dirY);
@@ -104,7 +104,7 @@ bool IccRotfaceTankPositionAction::PositionMainTankAndMelee(Unit* boss, Unit*)
         }
         else
         {
-            if (bot->GetVictim() != boss)
+            if (bot->GetVictim() != boss && botAI->CanInitiateCombat())
                 bot->Attack(boss, true);
         }
     }
@@ -430,7 +430,7 @@ bool IccRotfaceGroupPositionAction::HandleOozeTargeting()
 
     Aura* infectionAura = botAI->GetAura("Mutated Infection", bot, false, false);
 
-    // Find assist tank currently kiting a Big Ooze — preferred merge point
+    // Find assist tank currently kiting a Big Ooze , preferred merge point
     Player* assistTankKiting = nullptr;
     if (Group* group = bot->GetGroup())
     {

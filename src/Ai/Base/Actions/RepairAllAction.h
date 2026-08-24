@@ -17,6 +17,9 @@ public:
     RepairAllAction(PlayerbotAI* botAI) : Action(botAI, "repair") {}
 
     bool Execute(Event event) override;
+
+protected:
+    virtual bool ExecutePaidRepair();
 };
 
 #endif

@@ -40,6 +40,9 @@ bool IsWithinPullRange(Player* bot, Unit* target, PullStrategy const* strategy)
 
 bool PullRequestAction::Execute(Event event)
 {
+    if (!botAI->CanInitiateCombat())
+        return false;
+
     PullStrategy* strategy = PullStrategy::Get(botAI);
     if (!strategy)
         return false;
@@ -176,6 +179,9 @@ std::vector<NextAction> PullAction::getPrerequisites()
 
 bool PullAction::Execute(Event event)
 {
+    if (!botAI->CanInitiateCombat())
+        return false;
+
     InitPullAction();
 
     PullStrategy* strategy = PullStrategy::Get(botAI);
@@ -211,6 +217,9 @@ bool PullAction::Execute(Event event)
 
 bool PullAction::isPossible()
 {
+    if (!botAI->CanInitiateCombat())
+        return false;
+
     InitPullAction();
 
     PullStrategy* strategy = PullStrategy::Get(botAI);

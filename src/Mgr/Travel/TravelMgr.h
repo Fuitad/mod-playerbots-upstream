@@ -807,7 +807,11 @@ public:
 
     uint32 getExpiredTime() { return getMSTime() - startTime; }
 
-    uint32 getTimeLeft() { return statusTime - getExpiredTime(); }
+    uint32 getTimeLeft()
+    {
+        uint32 const expiredTime = getExpiredTime();
+        return statusTime > expiredTime ? statusTime - expiredTime : 0u;
+    }
 
     uint32 getMaxTravelTime();
     uint32 getRetryCount(bool isMove) { return isMove ? moveRetryCount : extendRetryCount; }

@@ -16,6 +16,7 @@
 #include "NewRpgStrategy.h"
 #include "PlayerbotAIBase.h"
 #include "PlayerbotAIConfig.h"
+#include "Recovery/PlayerbotRecoveryPolicy.h"
 #include "PlayerbotSecurity.h"
 #include "PlayerbotTextMgr.h"
 #include "SpellAuras.h"
@@ -593,6 +594,11 @@ public:
     PlayerbotActivityLeaseState InspectActivityLease(uint64 now) const;
     PlayerbotActivityLeaseReleaseOutcome ReleaseActivityLease(std::string const& token, uint64 now);
     bool IsActivityLeaseActive(uint64 now) const;
+    void RecordReviveAttempt(uint64 timestampMs, bool success, bool aliveAfter);
+    [[nodiscard]] PlayerbotReviveAttemptSnapshot InspectReviveAttempt() const;
+    void StartPostReviveRepairSafety();
+    [[nodiscard]] bool IsPostReviveRepairPending();
+    [[nodiscard]] virtual bool CanInitiateCombat();
     uint32 AutoScaleActivity(uint32 mod);
 
     // Check if player is safe to use.
@@ -656,6 +662,7 @@ private:
     bool IsTellAllowed(PlayerbotSecurityLevel securityLevel = PLAYERBOT_SECURITY_ALLOW_ALL);
     void UpdateAIGroupMaster();
     Item* FindItemInInventory(std::function<bool(ItemTemplate const*)> checkItem) const;
+    [[nodiscard]] bool HasBrokenEquipment() const;
     void HandleCommands();
     void HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang = LANG_UNIVERSAL);
     void HandlePendingGroupInvite();
@@ -692,6 +699,7 @@ protected:
     mutable std::mutex activityLeaseMutex;
     std::string activityLeaseToken;
     std::atomic<uint64> activityLeaseExpiresAt{0};
+    PlayerbotReviveAttemptTracker reviveAttemptTracker;
     bool inCombat = false;
     BotCheatMask cheatMask = BotCheatMask::none;
     Position jumpDestination = Position();

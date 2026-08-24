@@ -8,6 +8,7 @@
 #include "BroadcastHelper.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
+#include "RandomBotMaintenancePolicy.h"
 #include "RandomPlayerbotMgr.h"
 #include "SharedDefines.h"
 #include "SpellMgr.h"
@@ -160,19 +161,27 @@ std::string const AutoMaintenanceOnLevelupAction::FormatSpell(SpellInfo const* s
 
 void AutoMaintenanceOnLevelupAction::AutoUpgradeEquip()
 {
-    if (!sRandomPlayerbotMgr.IsRandomBot(bot) || sPlayerbotAIConfig.economyManagedSupplies)
+    playerbots::maintenance::LevelupMaintenancePlan const plan =
+        playerbots::maintenance::BuildLevelupMaintenancePlan(sRandomPlayerbotMgr.IsRandomBot(bot),
+                                                             sPlayerbotAIConfig.economyManagedSupplies,
+                                                             sPlayerbotAIConfig.autoUpgradeEquip);
+    if (!plan.cleanupConsumables && !plan.provisionConsumables && !plan.upgradeEquipment)
         return;
 
     PlayerbotFactory factory(bot, bot->GetLevel());
 
-    factory.CleanupConsumables();
+    if (plan.cleanupConsumables)
+        factory.CleanupConsumables();
 
-    factory.InitAmmo();
-    factory.InitReagents();
-    factory.InitFood();
-    factory.InitConsumables();
-    factory.InitPotions();
+    if (plan.provisionConsumables)
+    {
+        factory.InitAmmo();
+        factory.InitReagents();
+        factory.InitFood();
+        factory.InitConsumables();
+        factory.InitPotions();
+    }
 
-    if (sPlayerbotAIConfig.autoUpgradeEquip)
+    if (plan.upgradeEquipment)
         factory.InitEquipment(true);
 }

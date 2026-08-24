@@ -146,7 +146,7 @@ static Position const& SelectClosestOf3(Position const& ref, Position const& p1,
     return p1;
 }
 
-// AoE taunt — returns true if a spell was cast
+// AoE taunt , returns true if a spell was cast
 static bool CastAoeTaunt(PlayerbotAI* botAI, Player* bot)
 {
     switch (bot->getClass())
@@ -294,7 +294,7 @@ bool IccLichKingNecroticPlagueAction::Execute(Event /*event*/)
         minDist = fallbackDist;
     }
 
-    // No alive Horror — stop moving so healers can dispel immediately.
+    // No alive Horror , stop moving so healers can dispel immediately.
     // Keeping the plague active with no valid target risks a raid wipe.
     if (!closestHorror)
     {
@@ -304,7 +304,7 @@ bool IccLichKingNecroticPlagueAction::Execute(Event /*event*/)
         return true;
     }
 
-    // Already in delivery range — hold position for dispel
+    // Already in delivery range , hold position for dispel
     if (minDist <= DELIVER_RANGE)
     {
         bot->StopMoving();
@@ -825,7 +825,7 @@ bool IccLichKingWinterAction::TryMoveToPosition(float targetX, float targetY, fl
             MoveTo(bot->GetMapId(), targetX, targetY, targetZ, false, false, false, true, priority, true, false);
             return true;
         }
-        // Path crosses defile or shadow trap — fall through to arc-stepping logic
+        // Path crosses defile or shadow trap , fall through to arc-stepping logic
     }
 
     // Arc-stepping: rotate around the movement direction to find a way around defile/traps
@@ -933,7 +933,7 @@ bool IccLichKingWinterAction::TryMoveToPosition(float targetX, float targetY, fl
         }
     }
 
-    // No defile nearby — safe to move directly to the target.
+    // No defile nearby , safe to move directly to the target.
 
     if (bot->IsWithinLOS(targetX, targetY, targetZ))
     {
@@ -1007,7 +1007,7 @@ bool IccLichKingWinterAction::HandleMeleePositioning()
 
     // Transition guard: only retreat to ranged frost position if the bot is
     // still inbound (outside the engagement zone) AND a nearby Shambling is
-    // not yet under MT control. Once engaged, trust flank logic — no retreats.
+    // not yet under MT control. Once engaged, trust flank logic , no retreats.
     if (distToPos > MELEE_FLANK_RADIUS)
     {
         Unit* mainTank = AI_VALUE(Unit*, "main tank");
@@ -1050,7 +1050,7 @@ bool IccLichKingWinterAction::HandleMeleePositioning()
     // toward MT during winter puts bots in front of shamblings (frontal cone).
 
     // Only adds within MT_ADD_RANGE of the main tank are valid melee targets.
-    // Adds further out are not under tank control — engaging them puts bots
+    // Adds further out are not under tank control , engaging them puts bots
     // in front of unrooted shamblings.
     static constexpr float MT_ADD_RANGE = 5.0f;
     Unit* mainTank = AI_VALUE(Unit*, "main tank");
@@ -1139,11 +1139,11 @@ bool IccLichKingWinterAction::HandleMeleePositioning()
     };
 
     // Settle band: if a candidate flank slot is safe AND the bot is already
-    // within FLANK_SETTLE_DIST of it, stay put and attack — no per-tick step
+    // within FLANK_SETTLE_DIST of it, stay put and attack , no per-tick step
     // (prevents back-and-forth jitter near the slot).
     static constexpr float FLANK_SETTLE_DIST = 2.0f;
 
-    // Position behind the current melee target using mainTank→add vector
+    // Position behind the current melee target using mainTank to add vector
     if (mainTank && mainTank->IsAlive())
     {
         float const vecX = currentTarget->GetPositionX() - mainTank->GetPositionX();
@@ -1193,14 +1193,13 @@ bool IccLichKingWinterAction::HandleMeleePositioning()
     }
 
     // Fallback: stored orientation-based angles
-    static constexpr std::array<float, 6> BehindAngles =
-    {
-        float(M_PI),           // 180° directly behind
-        float(M_PI) * 0.75f,   // 135° left-rear flank
-        float(M_PI) * 1.25f,   // 225° right-rear flank
-        float(M_PI) * 0.5f,    // 90°  left flank
-        float(M_PI) * 1.5f,    // 270° right flank
-        float(M_PI) * 0.875f,  // 157° closer left-rear
+    static constexpr std::array<float, 6> BehindAngles = {
+        float(M_PI),           // 180 degrees directly behind
+        float(M_PI) * 0.75f,   // 135 degrees left-rear flank
+        float(M_PI) * 1.25f,   // 225 degrees right-rear flank
+        float(M_PI) * 0.5f,    // 90 degrees  left flank
+        float(M_PI) * 1.5f,    // 270 degrees right flank
+        float(M_PI) * 0.875f,  // 157 degrees closer left-rear
     };
 
     for (float const angleOffset : BehindAngles)
@@ -1252,7 +1251,7 @@ bool IccLichKingWinterAction::HandleRangedPositioning()
     }
 
     // Move to ranged frost position. Clear target + reset only on the FIRST
-    // tick of the inbound phase — otherwise we cancel the bot's own movement
+    // tick of the inbound phase , otherwise we cancel the bot's own movement
     // every tick and it ends up walking 1y per cycle.
     auto& s_rangedInbound = IcecrownHelpers::IccState(bot->GetInstanceId()).rangedInbound;
     ObjectGuid const rangedKey = bot->GetGUID();
@@ -1272,7 +1271,7 @@ bool IccLichKingWinterAction::HandleRangedPositioning()
             s_rangedInbound[rangedKey] = true;
         }
         TryMoveToPosition(targetPos.GetPositionX(), targetPos.GetPositionY(), PLATFORM_Z, true);
-        // Skip target acquisition while inbound — Attack() would cancel movement.
+        // Skip target acquisition while inbound , Attack() would cancel movement.
         return false;
     }
 
@@ -1327,7 +1326,7 @@ bool IccLichKingWinterAction::HandleRangedPositioning()
         return true;
     }
 
-    // No spheres — engage skull-marked add or nearest valid add
+    // No spheres , engage skull-marked add or nearest valid add
     Unit* addTarget = nullptr;
     if (Group* group = bot->GetGroup())
     {
@@ -1565,7 +1564,7 @@ bool IccLichKingWinterAction::HandleAssistTankAddManagement(Unit*, Position cons
             addsLoose.push_back(add);
     }
 
-    // adds are on us — walk back to frost position
+    // adds are on us , walk back to frost position
     if (!addsOnUs.empty())
     {
         float const distToFrost = bot->GetExactDist2d(frostPos->GetPositionX(),
@@ -1670,7 +1669,7 @@ bool IccLichKingWinterAction::HandleAssistTankAddManagement(Unit*, Position cons
         if (cur && !IsLkCollectibleAdd(cur))
             bot->SetTarget(ObjectGuid::Empty);
 
-        // No loose adds — idle at frost pos but allow lower-priority actions to run
+        // No loose adds , idle at frost pos but allow lower-priority actions to run
         return false;
     }
 
@@ -1782,6 +1781,9 @@ bool IccLichKingWinterAction::HandlePetManagement()
     if (pet->GetVictim() == bestTarget)
         return false;
 
+    if (!botAI->CanInitiateCombat())
+        return false;
+
     ci->SetIsCommandAttack(true);
     ci->SetIsAtStay(false);
     ci->SetIsReturning(false);
@@ -1800,7 +1802,7 @@ bool IccLichKingWinterAction::HandlePetManagement()
 
 bool IccLichKingAddsAction::Execute(Event /*event*/)
 {
-    // Being carried by a Val'kyr — no actions possible
+    // Being carried by a Val'kyr , no actions possible
     if (bot->HasAura(SPELL_HARVEST_SOUL_VALKYR))
         return false;
 
@@ -1809,7 +1811,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
     bool const hasPlague = botAI->HasAura("Necrotic Plague", bot);
     Unit* const terenas = bot->FindNearestCreature(NPC_TERENAS_MENETHIL_HC, 55.0f);
 
-    // Heroic cheat buffs — apply to all group members
+    // Heroic cheat buffs , apply to all group members
     Creature* lichKing = bot->FindNearestCreature(NPC_THE_LICH_KING, 100.0f);
     if (lichKing && lichKing->IsInCombat() && sPlayerbotAIConfig.EnableICCBuffs && IsHeroicLk(diff))
     {
@@ -1832,7 +1834,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
     }
 
     // Skull marking: phase 1 marks the boss; phase 2+ prioritises Raging Spirits.
-    // Val'kyr marking owns skull while any Val'kyr is actively grabbing — skip here.
+    // Val'kyr marking owns skull while any Val'kyr is actively grabbing , skip here.
     if (Group* group = bot->GetGroup())
     {
         bool anyValkyrGrabbing = false;
@@ -1854,7 +1856,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
         if (!anyValkyrGrabbing)
         {
             // Phase 3 (boss < 40%, non-winter): skull priority is Raging Spirit > Vile Spirit > boss.
-            // During Vile Spirit windows, melee can't reach the spirits — mark boss on cross
+            // During Vile Spirit windows, melee can't reach the spirits , mark boss on cross
             // and route melee DPS there.
             bool phase3 = false;
             if (boss && boss->HealthBelowPct(40) && !IccBossHasRemorselessWinter(boss))
@@ -1902,7 +1904,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
                     group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), boss->GetGUID());
                 }
 
-                // Cross marker is no longer used for vile windows — clear if set
+                // Cross marker is no longer used for vile windows , clear if set
                 if (!group->GetTargetIcon(CROSS_ICON).IsEmpty())
                     group->SetTargetIcon(CROSS_ICON, bot->GetGUID(), ObjectGuid::Empty);
 
@@ -2345,7 +2347,7 @@ bool IccLichKingAddsAction::HandleHeroicNonTankPositioning(Difficulty diff, Unit
     if (!mainTank)
         return false;
 
-    // Stack on main tank — 3-yard threshold avoids micro-jitter
+    // Stack on main tank , 3-yard threshold avoids micro-jitter
     if (bot->GetExactDist2d(mainTank) > 3.0f)
     {
         MoveTo(bot->GetMapId(), mainTank->GetPositionX(), mainTank->GetPositionY(),
@@ -2942,13 +2944,13 @@ bool IccLichKingAddsAction::HandleAssistTankAddManagement(Unit* boss, Difficulty
     if (tauntTarget)
         IccCastClassTaunt(bot, botAI,tauntTarget);
 
-    // No adds at all — stay at hold position
+    // No adds at all , stay at hold position
     if (addsOnUs.empty() && addsElsewhere.empty())
         return boss->HealthAbovePct(70);
 
     // Target priority by mob type (stable, not victim-dependent):
-    //   Tier 1 — Shambling Horror
-    //   Tier 0 — Ghoul / Raging Spirit / other collectible add
+    //   Tier 1 , Shambling Horror
+    //   Tier 0 , Ghoul / Raging Spirit / other collectible add
     // Sticky: never switch away from a same-or-higher tier target.
     auto TargetTier = [](Unit* t) -> int
     {
@@ -2962,7 +2964,7 @@ bool IccLichKingAddsAction::HandleAssistTankAddManagement(Unit* boss, Difficulty
     Unit* currentTarget = bot->GetVictim();
     int const currentTier = TargetTier(currentTarget);
 
-    // Current target is a valid add — keep it unless a higher-tier add exists
+    // Current target is a valid add , keep it unless a higher-tier add exists
     if (currentTier >= 0)
     {
         if (currentTier < 1)
@@ -2988,7 +2990,7 @@ bool IccLichKingAddsAction::HandleAssistTankAddManagement(Unit* boss, Difficulty
     }
     else
     {
-        // Current target is dead/invalid — pick a new one.
+        // Current target is dead/invalid , pick a new one.
         // Prefer adds already on us, then nearby adds within melee reach.
         Unit* bestTarget = nullptr;
         int bestTier = -1;
@@ -3089,7 +3091,7 @@ bool IccLichKingAddsAction::HandleAssistTankAddManagement(Unit* boss, Difficulty
                 }
             }
 
-            // dot > 0.3: Shambling is facing toward MT — reposition to turn it away
+            // dot > 0.3: Shambling is facing toward MT , reposition to turn it away
             if (worstShambling && worstDot > 0.3f)
             {
                 float const axisX = worstShambling->GetPositionX() - mainTank->GetPositionX();
@@ -3551,7 +3553,7 @@ bool IccLichKingAddsAction::HandleDefileMechanics(Unit* boss, Difficulty diff)
     if (!boss->HasUnitState(UNIT_STATE_CASTING) || !boss->FindCurrentSpellBySpellId(DEFILE_CAST_ID))
         return false;
 
-    // Boss casting Defile — only the targeted player runs out. Target is
+    // Boss casting Defile , only the targeted player runs out. Target is
     // stamped by IccLichKingListenerScript at OnSpellPrepare time (cast start).
     auto const& info = IcecrownHelpers::IccState(bot->GetInstanceId()).defileCast;
     if (info.targetGuid.IsEmpty() || getMSTimeDiff(info.castTime, getMSTime()) > 3000)
@@ -3698,7 +3700,7 @@ bool IccLichKingAddsAction::HandleValkyrMechanics(Difficulty diff)
             grabbingValkyrs.push_back(unit);
     }
 
-    // No active valkyrs — reset bots still targeting an excluded valkyr
+    // No active valkyrs , reset bots still targeting an excluded valkyr
     if (grabbingValkyrs.empty() || (boss && boss->HealthBelowPct(40)))
     {
         Unit* currentTarget = bot->GetVictim();
@@ -4006,7 +4008,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
 
         if (defileHit)
         {
-            // Defile is fatal — move regardless of old spirits
+            // Defile is fatal , move regardless of old spirits
             sharedSlot = -1;
         }
         else if (spiritHit)
@@ -4072,7 +4074,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
         float const anchorX = slotPos.GetPositionX();
         float const anchorY = slotPos.GetPositionY();
 
-        // Find spirit closest to the slot (not to bot) — that's the spirit
+        // Find spirit closest to the slot (not to bot) , that's the spirit
         // most likely to reach the raid stack first.
         Unit* chaseTarget = nullptr;
         float chaseTargetDist = std::numeric_limits<float>::max();
@@ -4097,7 +4099,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
             float const lenc = std::hypot(dxc, dyc);
             if (lenc > LEASH_RADIUS)
             {
-                // Spirit too far from slot — clamp chase point to leash radius
+                // Spirit too far from slot , clamp chase point to leash radius
                 tx = anchorX + dxc * LEASH_RADIUS / lenc;
                 ty = anchorY + dyc * LEASH_RADIUS / lenc;
             }
@@ -4121,7 +4123,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
 
     // Hunter trap duty: only the lowest-GUID alive bot hunter handles it so
     // multiple hunters don't pile up at center. Real-player hunters are skipped
-    // — they may not know the strategy, so a bot owns the role.
+    // , they may not know the strategy, so a bot owns the role.
     bool isDesignatedHunter = false;
     if (bot->getClass() == CLASS_HUNTER)
     {
@@ -4147,7 +4149,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
     }
 
     // Skip the spirit-flee logic entirely if boss is casting Harvest Soul(s).
-    // The harvested player must stay alive — flee movement breaks range for
+    // The harvested player must stay alive , flee movement breaks range for
     // healers and gets the soul victim killed, buffing LK and wiping raid.
     Unit* Boss = AI_VALUE2(Unit*, "find target", "the lich king");
     bool const bossCastingHarvest = Boss && Boss->HasUnitState(UNIT_STATE_CASTING) &&
@@ -4160,7 +4162,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
     if (!botAI->IsTank(bot) && !bossCastingHarvest)
     {
         // Flee to MT if a spirit is targeting this bot OR is within FLEE_RANGE.
-        // Either condition is enough — proximity catches spirits that haven't
+        // Either condition is enough , proximity catches spirits that haven't
         // committed a target yet, targeting catches faraway chasers.
         static constexpr float FLEE_RANGE = 15.0f;
 
@@ -4189,7 +4191,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
                 return MoveTo(bot->GetMapId(), fx, fy, fz, false, false, false, true, MovementPriority::MOVEMENT_FORCED,
                               true, false);
             }
-            // No MT — fall through to leash logic
+            // No MT , fall through to leash logic
         }
     }
 

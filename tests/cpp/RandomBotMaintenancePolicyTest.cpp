@@ -13,6 +13,27 @@ using playerbots::maintenance::MountLevelThresholds;
 using playerbots::maintenance::MountTier;
 using playerbots::maintenance::MountVendorCandidate;
 
+TEST(RandomBotMaintenancePolicyTest, ManagedLevelupKeepsEquipmentFloorWithoutSyntheticConsumables)
+{
+    playerbots::maintenance::LevelupMaintenancePlan const managed =
+        playerbots::maintenance::BuildLevelupMaintenancePlan(true, true, true);
+    EXPECT_FALSE(managed.cleanupConsumables);
+    EXPECT_FALSE(managed.provisionConsumables);
+    EXPECT_TRUE(managed.upgradeEquipment);
+
+    playerbots::maintenance::LevelupMaintenancePlan const unmanaged =
+        playerbots::maintenance::BuildLevelupMaintenancePlan(true, false, true);
+    EXPECT_TRUE(unmanaged.cleanupConsumables);
+    EXPECT_TRUE(unmanaged.provisionConsumables);
+    EXPECT_TRUE(unmanaged.upgradeEquipment);
+
+    playerbots::maintenance::LevelupMaintenancePlan const nonRandom =
+        playerbots::maintenance::BuildLevelupMaintenancePlan(false, true, true);
+    EXPECT_FALSE(nonRandom.cleanupConsumables);
+    EXPECT_FALSE(nonRandom.provisionConsumables);
+    EXPECT_FALSE(nonRandom.upgradeEquipment);
+}
+
 TEST(RandomBotMaintenancePolicyTest, RepairThresholdUsesEachEquippedItemsDurability)
 {
     EXPECT_FALSE(playerbots::maintenance::ShouldRepairItem(80, 100, 80));
