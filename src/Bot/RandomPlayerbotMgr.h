@@ -7,13 +7,14 @@
 #ifndef PLAYERBOTS_RANDOMPLAYERBOTMGR_H
 #define PLAYERBOTS_RANDOMPLAYERBOTMGR_H
 
+#include <unordered_set>
+
 #include "Bot/Population/RandomPlayerbotAdmission.h"
 #include "GameTime.h"
 #include "NewRpgInfo.h"
 #include "ObjectGuid.h"
 #include "PlayerbotCommandServer.h"
 #include "PlayerbotMgr.h"
-#include <unordered_set>
 
 struct BattlegroundInfo
 {
@@ -130,6 +131,7 @@ public:
     void SetTradeDiscount(Player* bot, Player* master, uint32 value);
     uint32 GetTradeDiscount(Player* bot, Player* master);
     void Refresh(Player* bot);
+    void AutoGearBot(Player* bot);
     void RandomTeleportForLevel(Player* bot);
     void RandomTeleportGrindForLevel(Player* bot);
     void RandomTeleportForRpg(Player* bot);
@@ -191,7 +193,8 @@ private:
 
         BattlegroundData.clear();  // Clear here and here only.
 
-        // Cleanup on server start: orphaned pet data that's often left behind by bot pets that no longer exist in the DB
+        // Cleanup on server start: orphaned pet data that's often left behind by bot pets that no longer exist in the
+        // DB
         CharacterDatabase.Execute("DELETE FROM pet_aura WHERE guid NOT IN (SELECT id FROM character_pet)");
         CharacterDatabase.Execute("DELETE FROM pet_spell WHERE guid NOT IN (SELECT id FROM character_pet)");
         CharacterDatabase.Execute("DELETE FROM pet_spell_cooldown WHERE guid NOT IN (SELECT id FROM character_pet)");
@@ -255,10 +258,10 @@ private:
     uint32 playersLevel;
 
     // Account lists
-    std::vector<uint32> rndBotTypeAccounts;             // Accounts marked as RNDbot (type 1)
-    std::vector<uint32> addClassTypeAccounts;           // Accounts marked as AddClass (type 2)
+    std::vector<uint32> rndBotTypeAccounts;    // Accounts marked as RNDbot (type 1)
+    std::vector<uint32> addClassTypeAccounts;  // Accounts marked as AddClass (type 2)
 
-    //void ScaleBotActivity();      // Deprecated function
+    // void ScaleBotActivity();      // Deprecated function
     static inline uint32 NowSeconds() { return static_cast<uint32>(GameTime::GetGameTime().count()); }
 };
 
