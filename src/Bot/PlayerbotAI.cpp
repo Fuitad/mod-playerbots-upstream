@@ -53,6 +53,7 @@
 #include "UpdateTime.h"
 #include "Vehicle.h"
 #include <cmath>
+#include <limits>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -4605,6 +4606,80 @@ bool PlayerbotAI::HasPlayerNearby(float range)
     return HasPlayerNearby(&botPos, range);
 };
 
+PlayerbotActivityLeaseAcquireResult PlayerbotAI::HoldActivityLease(std::string const& token, uint32 durationSeconds,
+                                                                   uint64 now)
+{
+    if (token.empty() || !durationSeconds || durationSeconds > PLAYERBOT_ACTIVITY_LEASE_MAX_SECONDS ||
+        now > std::numeric_limits<uint64>::max() - durationSeconds)
+    {
+        return {};
+    }
+
+    std::scoped_lock lock(activityLeaseMutex);
+    uint64 const currentExpiry = activityLeaseExpiresAt.load(std::memory_order_acquire);
+    bool const currentActive = currentExpiry > now;
+    if (currentActive && activityLeaseToken != token)
+    {
+        return {
+            .outcome = PlayerbotActivityLeaseAcquireOutcome::Conflict,
+            .state = {.active = true, .token = activityLeaseToken, .expiresAt = currentExpiry},
+        };
+    }
+
+    uint64 const requestedExpiry = now + durationSeconds;
+    uint64 const expiresAt = currentActive ? std::max(currentExpiry, requestedExpiry) : requestedExpiry;
+    activityLeaseToken = token;
+    activityLeaseExpiresAt.store(expiresAt, std::memory_order_release);
+    for (uint8 index = 0; index < MAX_ACTIVITY_TYPE; ++index)
+    {
+        allowActive[index] = true;
+        allowActiveCheckTimer[index] = getMSTime();
+    }
+
+    return {
+        .outcome = currentActive ? PlayerbotActivityLeaseAcquireOutcome::Renewed
+                                 : PlayerbotActivityLeaseAcquireOutcome::Acquired,
+        .state = {.active = true, .token = activityLeaseToken, .expiresAt = expiresAt},
+    };
+}
+
+PlayerbotActivityLeaseState PlayerbotAI::InspectActivityLease(uint64 now) const
+{
+    std::scoped_lock lock(activityLeaseMutex);
+    uint64 const expiresAt = activityLeaseExpiresAt.load(std::memory_order_acquire);
+    return {
+        .active = expiresAt > now,
+        .token = activityLeaseToken,
+        .expiresAt = expiresAt,
+    };
+}
+
+PlayerbotActivityLeaseReleaseOutcome PlayerbotAI::ReleaseActivityLease(std::string const& token, uint64 now)
+{
+    if (token.empty())
+        return PlayerbotActivityLeaseReleaseOutcome::Invalid;
+
+    PlayerbotActivityLeaseReleaseOutcome outcome;
+    {
+        std::scoped_lock lock(activityLeaseMutex);
+        if (activityLeaseToken != token)
+            return PlayerbotActivityLeaseReleaseOutcome::Conflict;
+
+        uint64 const expiresAt = activityLeaseExpiresAt.exchange(0, std::memory_order_acq_rel);
+        outcome = expiresAt > now ? PlayerbotActivityLeaseReleaseOutcome::Released
+                                  : PlayerbotActivityLeaseReleaseOutcome::AlreadyInactive;
+    }
+
+    for (uint8 index = 0; index < MAX_ACTIVITY_TYPE; ++index)
+        AllowActivity(static_cast<ActivityType>(index), true);
+    return outcome;
+}
+
+bool PlayerbotAI::IsActivityLeaseActive(uint64 now) const
+{
+    return activityLeaseExpiresAt.load(std::memory_order_acquire) > now;
+}
+
 bool PlayerbotAI::AllowActive(ActivityType activityType)
 {
     // bot is in an invalid state, not safe to process
@@ -4614,6 +4689,9 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
 
     // always allow packet handling (e.g. group invites, trade, loot, friend requests etc)
     if (activityType == PACKET_ACTIVITY)
+        return true;
+
+    if (IsActivityLeaseActive(GameTime::GetGameTime().count()))
         return true;
 
     // all bots forced active, no rotation or scaling needed

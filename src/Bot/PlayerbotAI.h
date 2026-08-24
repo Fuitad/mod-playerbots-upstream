@@ -21,6 +21,8 @@
 #include "SpellAuras.h"
 #include "Util.h"
 #include "WorldPacket.h"
+#include <atomic>
+#include <mutex>
 #include <stack>
 
 class AiObjectContext;
@@ -75,6 +77,37 @@ enum BotState
     BOT_STATE_DEAD = 2,
 
     BOT_STATE_MAX
+};
+
+inline constexpr uint32 PLAYERBOT_ACTIVITY_LEASE_MAX_SECONDS = 45u * 60u;
+
+struct PlayerbotActivityLeaseState
+{
+    bool active = false;
+    std::string token;
+    uint64 expiresAt = 0;
+};
+
+enum class PlayerbotActivityLeaseAcquireOutcome
+{
+    Acquired,
+    Renewed,
+    Conflict,
+    Invalid
+};
+
+struct PlayerbotActivityLeaseAcquireResult
+{
+    PlayerbotActivityLeaseAcquireOutcome outcome = PlayerbotActivityLeaseAcquireOutcome::Invalid;
+    PlayerbotActivityLeaseState state;
+};
+
+enum class PlayerbotActivityLeaseReleaseOutcome
+{
+    Released,
+    AlreadyInactive,
+    Conflict,
+    Invalid
 };
 
 bool IsRealPlayer(Player* player);
@@ -556,6 +589,10 @@ public:
     bool AllowActive(ActivityType activityType);
     bool AllowActivity(ActivityType activityType = ALL_ACTIVITY, bool checkNow = false);
     bool IsActivityAllowedCached() const { return allowActive[ALL_ACTIVITY]; }
+    PlayerbotActivityLeaseAcquireResult HoldActivityLease(std::string const& token, uint32 durationSeconds, uint64 now);
+    PlayerbotActivityLeaseState InspectActivityLease(uint64 now) const;
+    PlayerbotActivityLeaseReleaseOutcome ReleaseActivityLease(std::string const& token, uint64 now);
+    bool IsActivityLeaseActive(uint64 now) const;
     uint32 AutoScaleActivity(uint32 mod);
 
     // Check if player is safe to use.
@@ -652,6 +689,9 @@ protected:
     static std::set<std::string> unsecuredCommands;
     bool allowActive[MAX_ACTIVITY_TYPE];
     time_t allowActiveCheckTimer[MAX_ACTIVITY_TYPE];
+    mutable std::mutex activityLeaseMutex;
+    std::string activityLeaseToken;
+    std::atomic<uint64> activityLeaseExpiresAt{0};
     bool inCombat = false;
     BotCheatMask cheatMask = BotCheatMask::none;
     Position jumpDestination = Position();
