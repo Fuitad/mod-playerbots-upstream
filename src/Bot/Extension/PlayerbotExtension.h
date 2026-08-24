@@ -83,6 +83,10 @@ public:
     virtual void AddDefaultDeadStrategies(Player*, PlayerbotAI*, Engine&) {}
 
     virtual bool InitializeTradeSkills(Player*) { return false; }
+
+    // Hooks run synchronously on their caller. OnWorldUpdate is world thread only. OnBotUpdate and
+    // HandleBotEvent inherit their caller thread. Keep them bounded and nonblocking, and never retain
+    // raw game pointers for work on another thread. See docs/extension-threading.md.
     virtual bool HandleBotEvent(PlayerbotAI*, PlayerbotEvent const&) { return false; }
     virtual void OnWorldUpdate(std::uint32_t) {}
     virtual void OnBotUpdate(PlayerbotAI*, PlayerbotAIUpdate const&) {}

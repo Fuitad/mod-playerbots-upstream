@@ -61,6 +61,8 @@ For additional references, see the [AzerothCore Installation Guide](https://www.
 
 The [Playerbots Wiki](https://github.com/mod-playerbots/mod-playerbots/wiki) contains an extensive overview of AddOns, commands, raids with programmed bot strategies, and recommended performance configurations. Please note that documentation may be incomplete or out-of-date in some sections, and contributions are welcome.
 
+Extension authors must follow the [extension threading contract](docs/extension-threading.md). The contract defines hook ownership, bounded work, safe worker handoff, backpressure, shutdown, and queue telemetry.
+
 Bots are controlled via chat commands. For larger bot groups, this can be cumbersome. Because of this, community members have developed client AddOns to allow controlling bots through the in-game UI. We recommend you check out their projects listed in the [AddOns and Submodules](https://github.com/mod-playerbots/mod-playerbots/wiki/Playerbot-Addons-and-Sub%E2%80%90Modules) page.
 
 ## Contributing
