@@ -3,6 +3,10 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "LootAction.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
@@ -123,6 +127,7 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
             case SKILL_MINING:
                 return botAI->HasSkill(SKILL_MINING) ? botAI->CastSpell(32606, creature) : false;
             default:
+                // PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
                 return botAI->HasSkill(SKILL_SKINNING)
                            ? botAI->CastSpell(GatheringInteractionSpellId(SKILL_SKINNING), creature)
                            : false;
@@ -146,9 +151,11 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
         return false;
 
     if (lootObject.skillId == SKILL_MINING)
+        // PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
         return botAI->HasSkill(SKILL_MINING) ? botAI->CastSpell(GatheringInteractionSpellId(SKILL_MINING), bot) : false;
 
     if (lootObject.skillId == SKILL_HERBALISM)
+        // PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
         return botAI->HasSkill(SKILL_HERBALISM) ? botAI->CastSpell(GatheringInteractionSpellId(SKILL_HERBALISM), bot)
                                                 : false;
 
@@ -177,6 +184,7 @@ uint32 OpenLootAction::GetOpeningSpell(LootObject& lootObject, GameObject* go)
         if (itr->second->State == PLAYERSPELL_REMOVED || !itr->second->Active)
             continue;
 
+        // PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
         if (spellId == GatheringInteractionSpellId(SKILL_MINING) ||
             spellId == GatheringInteractionSpellId(SKILL_HERBALISM))
             continue;
@@ -191,6 +199,7 @@ uint32 OpenLootAction::GetOpeningSpell(LootObject& lootObject, GameObject* go)
 
     for (uint32 spellId = 0; spellId < sSpellMgr->GetSpellInfoStoreSize(); spellId++)
     {
+        // PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
         if (spellId == GatheringInteractionSpellId(SKILL_MINING) ||
             spellId == GatheringInteractionSpellId(SKILL_HERBALISM))
             continue;

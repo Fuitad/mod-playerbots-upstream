@@ -4,9 +4,14 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_LOOTOBJECTSTACK_H
 #define PLAYERBOTS_LOOTOBJECTSTACK_H
 
+// PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
 #include <span>
 
 #include "ObjectGuid.h"
@@ -17,6 +22,7 @@ class WorldObject;
 
 struct ItemTemplate;
 
+// PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
 [[nodiscard]] std::span<uint32 const> RequiredGatheringToolItems(uint32 skillId);
 [[nodiscard]] bool HasRequiredGatheringTool(Player const* bot, uint32 skillId);
 [[nodiscard]] uint32 GatheringInteractionSpellId(uint32 skillId);

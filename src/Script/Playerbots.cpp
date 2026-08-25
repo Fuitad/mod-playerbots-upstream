@@ -3,15 +3,21 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 7 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "Playerbots.h"
 #include "BattleGroundTactics.h"
 #include "BattlefieldScript.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "Channel.h"
 #include "Config.h"
 #include "DatabaseEnv.h"
 #include "DatabaseLoader.h"
 #include "GuildTaskMgr.h"
+// PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
 #include "ModuleMgr.h"
 #include "PlayerScript.h"
 #include "PlayerbotAIConfig.h"
@@ -22,6 +28,7 @@
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
 #include "cmath"
+// PLB-LOCAL(22371d0c8c68): chore(upstream): merge mod-playerbots updates through 8d9f6aa
 #include <string>
 
 namespace
@@ -45,6 +52,7 @@ public:
 
     bool OnDatabasesLoading() override
     {
+        // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
         std::string const modules = EnabledModulesList();
         DatabaseLoader playerbotLoader(
             "server.playerbots",
@@ -87,6 +95,7 @@ public:
 class PlayerbotsPlayerScript : public PlayerScript
 {
 public:
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     PlayerbotsPlayerScript()
         : PlayerScript("PlayerbotsPlayerScript",
                        {PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_AFTER_UPDATE, PLAYERHOOK_ON_BEFORE_CRITERIA_PROGRESS,
@@ -171,6 +180,7 @@ public:
         return true;
     }
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     void OnPlayerEnterCombat(Player* player, Unit* /*enemy*/) override
     {
         PlayerbotAI* const botAI = PlayerbotsMgr::instance().GetPlayerbotAI(player);
@@ -392,6 +402,7 @@ public:
     {
         PlayerbotWorldThreadProcessor::instance().Update(diff);
         sRandomPlayerbotMgr.UpdateAI(diff);  // World thread only
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         GetPlayerbotExtensionRegistry().OnWorldUpdate(diff);
     }
 };

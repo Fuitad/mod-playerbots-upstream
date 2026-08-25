@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 6 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "RpgSubActions.h"
 #include "BudgetValues.h"
 #include "ChooseRpgTargetAction.h"
@@ -17,6 +21,7 @@
 #include "Playerbots.h"
 #include "PossibleRpgTargetsValue.h"
 #include "SocialMgr.h"
+// PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
 #include "PlayerbotAIConfig.h"
 
 void RpgHelper::OnExecute(std::string nextAction)
@@ -31,6 +36,7 @@ void RpgHelper::BeforeExecute()
 {
     OnExecute();
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     bot->SetSelection(guid());
 
     setFacingTo(guidP());
@@ -40,6 +46,7 @@ void RpgHelper::AfterExecute(bool doDelay, bool waitForGroup)
 {
     OnExecute();
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     bot->SetSelection(guid());
 
     setFacingTo(guidP());
@@ -177,10 +184,12 @@ bool RpgTaxiAction::Execute(Event /*event*/)
     }
 
     uint32 path = nodes[urand(0, nodes.size() - 1)];
+    // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
     // The flight is free unless the economy module owns the bot's gold: then the fare is real and an
     // unaffordable path simply fails below.
     bool const freeFlight = !sPlayerbotAIConfig.economyManagedSupplies;
     uint32 money = bot->GetMoney();
+    // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
     if (freeFlight)
         bot->SetMoney(money + 100000);
 
@@ -208,6 +217,7 @@ bool RpgTaxiAction::Execute(Event /*event*/)
     LOG_INFO("playerbots", "Bot {} <{}> is flying from {} to {} ({} location available)",
              bot->GetGUID().ToString().c_str(), bot->GetName(), nodeFrom->name[0], nodeTo->name[0], nodes.size());
 
+    // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
     if (freeFlight)
         bot->SetMoney(money);
 

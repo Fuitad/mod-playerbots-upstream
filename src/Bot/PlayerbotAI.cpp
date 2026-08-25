@@ -3,8 +3,16 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 37 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "PlayerbotAI.h"
+
 #include "AiFactory.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
+#include <cmath>
+
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "BudgetValues.h"
 #include "ChannelMgr.h"
@@ -52,7 +60,7 @@
 #include "Unit.h"
 #include "UpdateTime.h"
 #include "Vehicle.h"
-#include <cmath>
+// PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases
 #include <limits>
 #include <mutex>
 #include <sstream>
@@ -89,7 +97,7 @@ void PacketHandlingHelper::Handle(ExternalEventHelper& helper)
     while (!queue.empty())
     {
         WorldPacket packet = queue.top();
-        queue.pop(); // remove first so handling can't modify the queue while we're using it
+        queue.pop();  // remove first so handling can't modify the queue while we're using it
 
         helper.HandlePacket(handlers, packet);
     }
@@ -224,6 +232,7 @@ PlayerbotAI::PlayerbotAI(Player* bot)
 
 PlayerbotAI::~PlayerbotAI()
 {
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     GetPlayerbotExtensionRegistry().OnBotRemoved(this);
 
     for (uint8 i = 0; i < BOT_STATE_MAX; i++)
@@ -239,6 +248,7 @@ PlayerbotAI::~PlayerbotAI()
         PlayerbotsMgr::instance().RemovePlayerBotData(bot->GetGUID(), true);
 }
 
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 void PlayerbotAI::HandleCombatStart()
 {
     AllowActivity(ALL_ACTIVITY, true);
@@ -250,6 +260,7 @@ void PlayerbotAI::HandleCombatStart()
 
 void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 {
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     uint32 const dueLatenessMs = elapsed > nextAICheckDelay ? elapsed - nextAICheckDelay : 0;
 
     // Handle the AI check delay
@@ -279,6 +290,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 
     AllowActivity();
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     if (bot->GetGroupInvite())
     {
         HandlePendingGroupInvite();
@@ -419,8 +431,10 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     UpdateAIGroupMaster();
 
     // Update internal AI
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     uint32 const updateStartedAt = getMSTime();
     UpdateAIInternal(elapsed, minimal);
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     GetPlayerbotExtensionRegistry().OnBotUpdate(this, {elapsed, dueLatenessMs, GetMSTimeDiffToNow(updateStartedAt)});
     YieldThread(bot, GetReactDelay());
 }
@@ -472,11 +486,10 @@ void PlayerbotAI::UpdateAIGroupMaster()
                 botAI->ChangeStrategy("+follow", BOT_STATE_NON_COMBAT);
 
                 if (botAI->GetMaster() == botAI->GetGroupLeader())
-                    botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "hello_follow", "Hello, I follow you!", {}));
+                    botAI->TellMaster(
+                        PlayerbotTextMgr::instance().GetBotTextOrDefault("hello_follow", "Hello, I follow you!", {}));
                 else
-                    botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "hello", "Hello!", {}));
+                    botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "Hello!", {}));
             }
             else
             {
@@ -489,7 +502,6 @@ void PlayerbotAI::UpdateAIGroupMaster()
 
 void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal)
 {
-
     if (!bot || !bot->GetSession())
         return;
 
@@ -497,12 +509,11 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
         return;
 
     if (!bot->GetMap())
-        return; // instances are created and destroyed on demand
+        return;  // instances are created and destroyed on demand
 
     // kinda expensive call to make on every single updateAI, do we really need this information?
     std::string const mapString = WorldPosition(bot).isOverworld() ? std::to_string(bot->GetMapId()) : "I";
-    PerfMonitorOperation* pmo =
-        sPerfMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
+    PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
 
     ExternalEventHelper helper(aiObjectContext);
 
@@ -538,8 +549,7 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
 
         if (master &&
             (master->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || master->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
-             (master->GetSession() &&
-              master->GetSession()->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT))))
+             (master->GetSession() && master->GetSession()->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT))))
         {
             logout = true;
         }
@@ -880,8 +890,7 @@ void PlayerbotAI::Reset(bool full)
     {
         WorldPackets::Character::LogoutCancel data = WorldPacket(CMSG_LOGOUT_CANCEL);
         bot->GetSession()->HandleLogoutCancelOpcode(data);
-        TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "logout_cancel", "Logout cancelled!", {}));
+        TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("logout_cancel", "Logout cancelled!", {}));
     }
 
     currentEngine = engines[BOT_STATE_NON_COMBAT];
@@ -1081,8 +1090,8 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         {
             if (type == CHAT_MSG_WHISPER)
             {
-                std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "bot_not_your_master", "You are not my master!", {});
+                std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault("bot_not_your_master",
+                                                                                       "You are not my master!", {});
                 bot->Whisper(message, LANG_UNIVERSAL, fromPlayer);
             }
             return;
@@ -1097,8 +1106,8 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         {
             if (type == CHAT_MSG_WHISPER)
             {
-                std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "logout_start", "I'm logging out!", {});
+                std::string message =
+                    PlayerbotTextMgr::instance().GetBotTextOrDefault("logout_start", "I'm logging out!", {});
                 TellMaster(message);
             }
 
@@ -1118,8 +1127,8 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
 
         if (type == CHAT_MSG_WHISPER)
         {
-            std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "logout_cancel", "Logout cancelled!", {});
+            std::string message =
+                PlayerbotTextMgr::instance().GetBotTextOrDefault("logout_cancel", "Logout cancelled!", {});
             TellMaster(message);
         }
 
@@ -1140,6 +1149,7 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
     if (!bot || !bot->IsInWorld() || bot->IsDuringRemoveFromWorld())
         return;
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     if (packet.GetOpcode() == SMSG_GROUP_INVITE)
         HandlePendingGroupInvite();
 
@@ -1211,7 +1221,7 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
                     return;
 
                 if (lang == LANG_ADDON)
-                        return;
+                    return;
 
                 if (p.GetOpcode() == SMSG_GM_MESSAGECHAT)
                 {
@@ -1306,8 +1316,8 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
 
             return;
         }
-        case SMSG_FORCE_MOVE_ROOT:      // CMSG_FORCE_MOVE_ROOT_ACK
-        case SMSG_FORCE_MOVE_UNROOT:    // CMSG_FORCE_MOVE_UNROOT_ACK
+        case SMSG_FORCE_MOVE_ROOT:    // CMSG_FORCE_MOVE_ROOT_ACK
+        case SMSG_FORCE_MOVE_UNROOT:  // CMSG_FORCE_MOVE_UNROOT_ACK
         {
             // Quick fix for CMSG_FORCE_MOVE_ROOT_ACK and CMSG_FORCE_MOVE_UNROOT_ACK:
             // this should resolve issues with MOVEMENTFLAG_ROOT being permanently set
@@ -1325,7 +1335,7 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
 
             return;
         }
-        case SMSG_MOVE_KNOCK_BACK:      // CMSG_MOVE_KNOCK_BACK_ACK
+        case SMSG_MOVE_KNOCK_BACK:  // CMSG_MOVE_KNOCK_BACK_ACK
         {
             WorldPacket p(packet);
             p.rpos(0);
@@ -1410,6 +1420,7 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
     }
 }
 
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 void PlayerbotAI::HandlePendingGroupInvite()
 {
     if (!bot || !bot->GetGroupInvite())
@@ -1514,11 +1525,13 @@ void PlayerbotAI::DoNextAction(bool min)
     bool isBotAlive = bot->IsAlive();
     if (currentEngine != engines[BOT_STATE_DEAD] && !isBotAlive)
     {
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         reviveAttemptTracker.RecordPhysicalDeath();
         GetPlayerbotExtensionRegistry().OnBotDeath(this, GetTimeMS().count());
 
         // Death Count to prevent skeleton piles
         // Player* master = GetMaster();  // warning here - whipowill
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         if (playerbots::recovery::ShouldCountPhysicalDeath(currentEngine == engines[BOT_STATE_DEAD], isBotAlive,
                                                            bot->InBattleground(), IsRealPlayer(master)))
         {
@@ -1657,14 +1670,12 @@ std::vector<std::string> PlayerbotAI::GetStrategies(BotState type)
 
 void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
 {
-    static const std::vector<std::string> allInstanceStrategies =
-    {
-        "aq20", "blacktemple", "bwl", "gruulslair", "hyjal", "icc", "karazhan", "magtheridon",
-        "moltencore", "naxx", "onyxia", "rs", "ssc", "tbc-ac", "tbc-mech", "tbc-seth",
-        "tempestkeep", "ulduar", "voa", "wotlk-an", "wotlk-cos", "wotlk-dtk", "wotlk-eoe",
-        "wotlk-fos", "wotlk-gd", "wotlk-hol", "wotlk-hos", "wotlk-nex", "wotlk-occ", "wotlk-ok",
-        "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up", "wotlk-vh", "zulaman"
-    };
+    static const std::vector<std::string> allInstanceStrategies = {
+        "aq20",        "blacktemple", "bwl",       "gruulslair", "hyjal",     "icc",       "karazhan",  "magtheridon",
+        "moltencore",  "naxx",        "onyxia",    "rs",         "ssc",       "tbc-ac",    "tbc-mech",  "tbc-seth",
+        "tempestkeep", "ulduar",      "voa",       "wotlk-an",   "wotlk-cos", "wotlk-dtk", "wotlk-eoe", "wotlk-fos",
+        "wotlk-gd",    "wotlk-hol",   "wotlk-hos", "wotlk-nex",  "wotlk-occ", "wotlk-ok",  "wotlk-os",  "wotlk-pos",
+        "wotlk-toc",   "wotlk-uk",    "wotlk-up",  "wotlk-vh",   "zulaman"};
 
     for (const std::string& strat : allInstanceStrategies)
     {
@@ -1877,9 +1888,10 @@ bool PlayerbotAI::PlayEmote(uint32 emote)
     WorldPacket data(SMSG_TEXT_EMOTE);
     data << (TextEmotes)emote;
     data << EmoteAction::GetNumberOfEmoteVariants((TextEmotes)emote, bot->getRace(), bot->getGender());
-    data << ((master && (ServerFacade::instance().GetDistance2d(bot, master) < 30.0f) && urand(0, 1)) ? master->GetGUID()
-             : (bot->GetTarget() && urand(0, 1))                                            ? bot->GetTarget()
-                                                                                            : ObjectGuid::Empty);
+    data << ((master && (ServerFacade::instance().GetDistance2d(bot, master) < 30.0f) && urand(0, 1))
+                 ? master->GetGUID()
+             : (bot->GetTarget() && urand(0, 1)) ? bot->GetTarget()
+                                                 : ObjectGuid::Empty);
     bot->GetSession()->HandleTextEmoteOpcode(data);
 
     return false;
@@ -2018,8 +2030,8 @@ bool PlayerbotAI::IsAssistHealOfIndex(Player* player, uint8 index, bool ignoreDe
 
     // If the player is an assistant, their index is just the number of assistants before them.
     // If they are a non-assistant, their index is shifted by the total number of assistants.
-    uint8 playerIndex = group->IsAssistant(player->GetGUID())
-        ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
+    uint8 playerIndex =
+        group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
 
     return playerIndex == index;
 }
@@ -2068,8 +2080,8 @@ bool PlayerbotAI::IsAssistRangedDpsOfIndex(Player* player, uint8 index, bool ign
 
     // If the player is an assistant, their index is just the number of assistants before them.
     // If they are a non-assistant, their index is shifted by the total number of assistants.
-    uint8 playerIndex = group->IsAssistant(player->GetGUID())
-        ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
+    uint8 playerIndex =
+        group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
 
     return playerIndex == index;
 }
@@ -2588,8 +2600,8 @@ bool PlayerbotAI::IsAssistTankOfIndex(Player* player, uint8 index, bool ignoreDe
 
     // If the player is an assistant, their index is just the number of assistants before them.
     // If they are a non-assistant, their index is shifted by the total number of assistants.
-    uint8 playerIndex = group->IsAssistant(player->GetGUID())
-        ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
+    uint8 playerIndex =
+        group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
 
     return playerIndex == index;
 }
@@ -2651,8 +2663,7 @@ Player* PlayerbotAI::GetPlayer(ObjectGuid guid)
 
 uint32 GetCreatureIdForCreatureTemplateId(uint32 creatureTemplateId)
 {
-    QueryResult results =
-        WorldDatabase.Query("SELECT guid FROM `creature` WHERE id = {} LIMIT 1;", creatureTemplateId);
+    QueryResult results = WorldDatabase.Query("SELECT guid FROM `creature` WHERE id = {} LIMIT 1;", creatureTemplateId);
     if (results)
     {
         Field* fields = results->Fetch();
@@ -2871,36 +2882,46 @@ bool PlayerbotAI::SayToWorld(const std::string& msg)
     return false;
 }
 
+// PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
 bool PlayerbotAI::IsOnChannel(ChatChannelId const& chanId)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     Channel* const channel = FindZoneChannel(chanId);
     return channel != nullptr && bot->IsInChannel(channel);
 }
 
+// PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
 Channel* PlayerbotAI::FindZoneChannel(ChatChannelId const& chanId)
 {
     ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
     if (!cMgr)
+        // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
         return nullptr;
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     AreaTableEntry const* currentZone = GetCurrentZone();
     if (!currentZone)
         return nullptr;
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     std::string const currentZoneName = GetLocalizedAreaName(currentZone);
     for (auto const& [key, channel] : cMgr->GetChannels())
     {
+        // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
         if (!channel || channel->GetChannelId() != chanId || channel->GetName().empty())
             continue;
 
+        // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
         bool const isGlobalZoneChannel =
             chanId == ChatChannelId::LOOKING_FOR_GROUP || chanId == ChatChannelId::WORLD_DEFENSE;
         if (!isGlobalZoneChannel && channel->GetName().find(currentZoneName) == std::string::npos)
             continue;
 
+        // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
         return channel;
     }
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     return nullptr;
 }
 
@@ -3295,7 +3316,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (!spellid)
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
-            LOG_DEBUG("playerbots", "Can cast spell failed. No spellid. - spellid: {}, bot name: {}", spellid, bot->GetName());
+            LOG_DEBUG("playerbots", "Can cast spell failed. No spellid. - spellid: {}, bot name: {}", spellid,
+                      bot->GetName());
 
         return false;
     }
@@ -3303,7 +3325,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (bot->HasUnitState(UNIT_STATE_LOST_CONTROL))
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
-            LOG_DEBUG("playerbots", "Can cast spell failed. Unit state lost control. - spellid: {}, bot name: {}", spellid, bot->GetName());
+            LOG_DEBUG("playerbots", "Can cast spell failed. Unit state lost control. - spellid: {}, bot name: {}",
+                      spellid, bot->GetName());
 
         return false;
     }
@@ -3311,7 +3334,7 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (!target)
         target = bot;
 
-     if (!IsValidUnit(target))
+    if (!IsValidUnit(target))
         return false;
 
     if (Pet* pet = bot->GetPet())
@@ -3321,8 +3344,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (checkHasSpell && !bot->HasSpell(spellid))
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
-            LOG_DEBUG("playerbots", "Can cast spell failed. Bot not has spell. - target name: {}, spellid: {}, bot name: {}",
-                target->GetName(), spellid, bot->GetName());
+            LOG_DEBUG("playerbots",
+                      "Can cast spell failed. Bot not has spell. - target name: {}, spellid: {}, bot name: {}",
+                      target->GetName(), spellid, bot->GetName());
 
         return false;
     }
@@ -3330,7 +3354,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL) != nullptr)
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
-            LOG_DEBUG("playerbots", "CanCastSpell() target name: {}, spellid: {}, bot name: {}, failed because has current channeled spell",
+            LOG_DEBUG(
+                "playerbots",
+                "CanCastSpell() target name: {}, spellid: {}, bot name: {}, failed because has current channeled spell",
                 target->GetName(), spellid, bot->GetName());
 
         return false;
@@ -3339,8 +3365,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (bot->HasSpellCooldown(spellid))
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
-            LOG_DEBUG("playerbots", "Can cast spell failed. Spell not has cooldown. - target name: {}, spellid: {}, bot name: {}",
-                target->GetName(), spellid, bot->GetName());
+            LOG_DEBUG("playerbots",
+                      "Can cast spell failed. Spell not has cooldown. - target name: {}, spellid: {}, bot name: {}",
+                      target->GetName(), spellid, bot->GetName());
 
         return false;
     }
@@ -3350,7 +3377,7 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Can cast spell failed. No spellInfo. - target name: {}, spellid: {}, bot name: {}",
-                target->GetName(), spellid, bot->GetName());
+                      target->GetName(), spellid, bot->GetName());
 
         return false;
     }
@@ -3358,7 +3385,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if ((bot->GetShapeshiftForm() == FORM_FLIGHT || bot->GetShapeshiftForm() == FORM_FLIGHT_EPIC) && !bot->IsInCombat())
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
-            LOG_DEBUG("playerbots", "Can cast spell failed. In flight form (not in combat). - target name: {}, spellid: {}, bot name: {}",
+            LOG_DEBUG(
+                "playerbots",
+                "Can cast spell failed. In flight form (not in combat). - target name: {}, spellid: {}, bot name: {}",
                 target->GetName(), spellid, bot->GetName());
 
         return false;
@@ -3370,7 +3399,7 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Casting time and bot is moving - target name: {}, spellid: {}, bot name: {}",
-                target->GetName(), spellid, bot->GetName());
+                      target->GetName(), spellid, bot->GetName());
 
         return false;
     }
@@ -3384,7 +3413,7 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
             {
                 if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
                     LOG_DEBUG("playerbots", "target is immuned to spell - target name: {}, spellid: {}, bot name: {}",
-                        target->GetName(), spellid, bot->GetName());
+                              target->GetName(), spellid, bot->GetName());
 
                 return false;
             }
@@ -3395,7 +3424,7 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
         {
             if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
                 LOG_DEBUG("playerbots", "target is out of sight distance - target name: {}, spellid: {}, bot name: {}",
-                    target->GetName(), spellid, bot->GetName());
+                          target->GetName(), spellid, bot->GetName());
 
             return false;
         }
@@ -3441,8 +3470,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
             return true;
         default:
             if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
-                LOG_DEBUG("playerbots", "CanCastSpell Check Failed. - target name: {}, spellid: {}, bot name: {}, result: {}",
-                    target->GetName(), spellid, bot->GetName(), result);
+                LOG_DEBUG("playerbots",
+                          "CanCastSpell Check Failed. - target name: {}, spellid: {}, bot name: {}, result: {}",
+                          target->GetName(), spellid, bot->GetName(), result);
 
             return false;
     }
@@ -4480,12 +4510,16 @@ Player* PlayerbotAI::FindNewMaster()
     return nullptr;
 }
 
-// An altbot is a bot whose master is client-based (a regular player or a selfbot), and is not a randombot, and is not a selfbot.
-// For the purpose of this bool, all addclassbots return true for IsAltBot, but not all altbots return true for IsAddClassBot, since
-// IsAddClassBot requires the bot to come from a type 2 account in playerbots_account_type.
-bool PlayerbotAI::IsAltBot() { return HasGameClientMaster() && !sRandomPlayerbotMgr.IsRandomBot(bot) && !IsSelfBot(bot); }
+// An altbot is a bot whose master is client-based (a regular player or a selfbot), and is not a randombot, and is not a
+// selfbot. For the purpose of this bool, all addclassbots return true for IsAltBot, but not all altbots return true for
+// IsAddClassBot, since IsAddClassBot requires the bot to come from a type 2 account in playerbots_account_type.
+bool PlayerbotAI::IsAltBot()
+{
+    return HasGameClientMaster() && !sRandomPlayerbotMgr.IsRandomBot(bot) && !IsSelfBot(bot);
+}
 
-// True when the bot's master is driven by a player with a game client: a regular player (no bot AI) or a selfbot player.
+// True when the bot's master is driven by a player with a game client: a regular player (no bot AI) or a selfbot
+// player.
 bool PlayerbotAI::HasGameClientMaster() { return IsRealPlayer(master) || IsSelfBot(master); }
 
 Player* PlayerbotAI::GetGroupLeader()
@@ -4608,6 +4642,7 @@ bool PlayerbotAI::HasPlayerNearby(float range)
     return HasPlayerNearby(&botPos, range);
 };
 
+// PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases
 PlayerbotActivityLeaseAcquireResult PlayerbotAI::HoldActivityLease(std::string const& token, uint32 durationSeconds,
                                                                    uint64 now)
 {
@@ -4682,15 +4717,13 @@ bool PlayerbotAI::IsActivityLeaseActive(uint64 now) const
     return activityLeaseExpiresAt.load(std::memory_order_acquire) > now;
 }
 
-void PlayerbotAI::RecordReviveAttempt(uint64 timestampMs, bool success, bool aliveAfter)
+// PLB-LOCAL(revive-outcome): takes an outcome rather than a success flag. See PlayerbotAI.h.
+void PlayerbotAI::RecordReviveAttempt(uint64 timestampMs, PlayerbotReviveOutcome outcome, bool aliveAfter)
 {
-    reviveAttemptTracker.Record(timestampMs, success, aliveAfter);
+    reviveAttemptTracker.Record(timestampMs, outcome, aliveAfter);
 }
 
-PlayerbotReviveAttemptSnapshot PlayerbotAI::InspectReviveAttempt() const
-{
-    return reviveAttemptTracker.Inspect();
-}
+PlayerbotReviveAttemptSnapshot PlayerbotAI::InspectReviveAttempt() const { return reviveAttemptTracker.Inspect(); }
 
 void PlayerbotAI::StartPostReviveRepairSafety() { (void)IsPostReviveRepairPending(); }
 
@@ -4711,8 +4744,7 @@ bool PlayerbotAI::HasBrokenEquipment() const
     for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
     {
         Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
-        if (item && item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY) &&
-            !item->GetUInt32Value(ITEM_FIELD_DURABILITY))
+        if (item && item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY) && !item->GetUInt32Value(ITEM_FIELD_DURABILITY))
         {
             return true;
         }
@@ -4731,6 +4763,7 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
     // always allow packet handling (e.g. group invites, trade, loot, friend requests etc)
     if (activityType == PACKET_ACTIVITY)
         return true;
+    // PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases
 
     if (IsActivityLeaseActive(GameTime::GetGameTime().count()))
         return true;
@@ -4745,10 +4778,12 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
         if (bot->IsInCombat())
             return true;
     }
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
     // bot is inside a BG, dungeon, or raid, so it is always active
     if (!WorldPosition(bot).isOverworld())
         return true;
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
     // bot is waiting in a BG queue, so stay active to speed up join
     if (bot->InBattlegroundQueue())
@@ -4828,6 +4863,7 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
                 continue;
 
             PlayerbotAI* memberBotAI = GET_PLAYERBOT_AI(member);
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
             // group member is a real player or owned by one, so stay active
             if (!memberBotAI || memberBotAI->HasGameClientMaster())
@@ -4841,6 +4877,7 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
             }
         }
     }
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
     // bot is in LFG queue, so stay active
     bool isLFG = false;
@@ -4877,6 +4914,7 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
                 return true;
         }
     }
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
     // pathfinding only runs for bots forced active by the rules above.
     // skip it for bots that would only be active via random rotation
@@ -4899,6 +4937,7 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
     {
         mod = AutoScaleActivity(mod);
     }
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
     // Deterministic rotation activates a bot when its hash falls below the threshold.
     uint32 ActivityNumber = GetFixedBotNumber(100);
@@ -4911,6 +4950,7 @@ bool PlayerbotAI::AllowActivity(ActivityType activityType, bool checkNow)
 
     if (!allowActiveCheckTimer[activityIndex])
         allowActiveCheckTimer[activityIndex] = getMSTime();
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
     // 4500ms base plus a 0 to 499ms per-bot offset caps the delay just under 5 seconds.
     uint32 offset = bot->GetGUID().GetCounter() % 500;
@@ -4972,6 +5012,7 @@ void PlayerbotAI::RemoveShapeshift()
     RemoveAura("ghost wolf");
     // RemoveAura("tree of life");
 }
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
 // Mirrors Blizzard's GetAverageItemLevel rules:
 // https://wowpedia.fandom.com/wiki/API_GetAverageItemLevel
@@ -4979,10 +5020,12 @@ uint32 PlayerbotAI::GetEquipGearScore(Player* player)
 {
     constexpr uint8 TOTAL_SLOTS = 17;  // every slot except Body & Tabard
     uint32 sumLevel = 0;
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
     /* ---------- 0. Detect "ignore off-hand" situations --------- */
     Item* main = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
     Item* off = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
     bool ignoreOffhand = false;  // true means divisor = 16
     if (main)
@@ -5711,8 +5754,8 @@ Item* PlayerbotAI::FindStoneFor(Item* weapon) const
         SOLID_SHARPENING_STONE,      HEAVY_SHARPENING_STONE, COARSE_SHARPENING_STONE,    ROUGH_SHARPENING_STONE};
 
     static const std::vector<uint32_t> uPrioritizedWeightStoneIds = {
-        ADAMANTITE_WEIGHTSTONE, FEL_WEIGHTSTONE,    ELEMENTAL_SHARPENING_STONE, DENSE_WEIGHTSTONE, SOLID_WEIGHTSTONE,
-        HEAVY_WEIGHTSTONE,      COARSE_WEIGHTSTONE, ROUGH_WEIGHTSTONE};
+        ADAMANTITE_WEIGHTSTONE, FEL_WEIGHTSTONE,   ELEMENTAL_SHARPENING_STONE, DENSE_WEIGHTSTONE,
+        SOLID_WEIGHTSTONE,      HEAVY_WEIGHTSTONE, COARSE_WEIGHTSTONE,         ROUGH_WEIGHTSTONE};
 
     Item* stone = nullptr;
     ItemTemplate const* pProto = weapon->GetTemplate();
@@ -6510,6 +6553,7 @@ uint8 PlayerbotAI::FindEquipSlot(ItemTemplate const* proto, uint32 slot, bool sw
 
         // if not found free and can swap return first appropriate from used
         for (uint8 i = 0; i < 4; ++i)
+            // PLB-LOCAL(c55ef62eb966): fix(equip): never offer the offhand as a swap target under a two-hander
             if (slots[i] != NULL_SLOT && swap)
                 // same rule as the free-slot search above: a two-hander (without titan grip) blocks
                 // the offhand outright, so offering it as a swap target only produces an equip
@@ -6603,11 +6647,13 @@ ChatChannelSource PlayerbotAI::GetChatChannelSource(Player* bot, uint32 type, st
             {
                 return ChatChannelSource::SRC_GUILD;
             }
+            // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
             case CHAT_MSG_PARTY:
             case CHAT_MSG_PARTY_LEADER:
             {
                 return ChatChannelSource::SRC_PARTY;
             }
+            // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
             case CHAT_MSG_RAID:
             case CHAT_MSG_RAID_LEADER:
             {

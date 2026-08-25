@@ -1,3 +1,6 @@
+# PLB-LOCAL FILE. Not present upstream, so it can never conflict on a merge.
+# Prefer adding here over editing an upstream file. See docs/local-changes.md.
+
 #!/usr/bin/env python3
 from __future__ import annotations
 

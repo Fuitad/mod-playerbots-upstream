@@ -4,14 +4,21 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 14 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "ReviveFromCorpseAction.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
 #include "Corpse.h"
 #include "Event.h"
 #include "FleeManager.h"
 #include "GameGraveyard.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "GameTime.h"
 #include "MapMgr.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "PhysicalDeathCountPolicy.h"
 #include "PlayerbotRecoveryPolicy.h"
 #include "PlayerbotTextMgr.h"
@@ -29,7 +36,7 @@ bool ReviveFromCorpseAction::Execute(Event event)
     if (!p.empty() && p.GetOpcode() == CMSG_RECLAIM_CORPSE && groupLeader && !corpse && bot->IsAlive())
     {
         if (ServerFacade::instance().IsDistanceLessThan(AI_VALUE2(float, "distance", "group leader"),
-                                              sPlayerbotAIConfig.farDistance))
+                                                        sPlayerbotAIConfig.farDistance))
         {
             if (!botAI->HasStrategy("follow", BOT_STATE_NON_COMBAT))
             {
@@ -40,10 +47,12 @@ bool ReviveFromCorpseAction::Execute(Event event)
         }
     }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     uint64 const timestampMs = GameTime::GetGameTimeMS().count();
     uint64 const now = GameTime::GetGameTime().count();
     bool const hasCorpse = corpse != nullptr;
-    bool const reclaimDelayElapsed = hasCorpse &&
+    bool const reclaimDelayElapsed =
+        hasCorpse &&
         corpse->GetGhostTime() + bot->GetCorpseReclaimDelay(corpse->GetType() == CORPSE_RESURRECTABLE_PVP) <= now;
     playerbots::recovery::CorpseReclaimEligibility const eligibility{
         .playerAlive = bot->IsAlive(),
@@ -56,17 +65,25 @@ bool ReviveFromCorpseAction::Execute(Event event)
     };
     if (!playerbots::recovery::CanReclaimCorpse(eligibility))
     {
-        botAI->RecordReviveAttempt(timestampMs, false, bot->IsAlive());
+        // PLB-LOCAL(revive-outcome): upstream recorded `false` here, which is a failed revive.
+        // Not a failure. This trigger fires every tick a ghost waits out its reclaim delay, so
+        // recording these as failures made an ordinary corpse run read as a revive loop.
+        botAI->RecordReviveAttempt(timestampMs, playerbots::recovery::CorpseReviveOutcome(eligibility, false, false),
+                                   bot->IsAlive());
         return false;
     }
 
     if (groupLeader)
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     {
         if (!GET_PLAYERBOT_AI(groupLeader) && groupLeader->isDead() && groupLeader->GetCorpse() &&
             ServerFacade::instance().IsDistanceLessThan(AI_VALUE2(float, "distance", "group leader"),
-                                              sPlayerbotAIConfig.farDistance))
+                                                        sPlayerbotAIConfig.farDistance))
         {
-            botAI->RecordReviveAttempt(timestampMs, false, bot->IsAlive());
+            // PLB-LOCAL(revive-outcome): upstream recorded `false` here too. A choice, not a
+            // failure: the bot waits to be resurrected by its human leader.
+            botAI->RecordReviveAttempt(timestampMs, playerbots::recovery::CorpseReviveOutcome(eligibility, true, false),
+                                       bot->IsAlive());
             return false;
         }
     }
@@ -74,6 +91,7 @@ bool ReviveFromCorpseAction::Execute(Event event)
     LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> revives at body", bot->GetGUID().ToString().c_str(),
               bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName().c_str());
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     bot->GetMotionMaster()->Clear();
     bot->StopMoving();
 
@@ -84,7 +102,9 @@ bool ReviveFromCorpseAction::Execute(Event event)
     bool const success = bot->IsAlive();
     if (success)
         botAI->StartPostReviveRepairSafety();
-    botAI->RecordReviveAttempt(timestampMs, success, bot->IsAlive());
+    // PLB-LOCAL(revive-outcome): same verdict as upstream, routed through the shared classifier.
+    botAI->RecordReviveAttempt(timestampMs, playerbots::recovery::CorpseReviveOutcome(eligibility, false, success),
+                               bot->IsAlive());
     return success;
 }
 
@@ -105,6 +125,7 @@ bool FindCorpseAction::Execute(Event /*event*/)
     //         sPlayerbotAIConfig.farDistance)) return false;
     // }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     uint32 dCount = AI_VALUE(uint32, "death count");
 
     if (!botAI->HasGameClientMaster())
@@ -184,7 +205,8 @@ bool FindCorpseAction::Execute(Event /*event*/)
         {
             bot->GetMotionMaster()->Clear();
             bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
-            bot->TeleportTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(), moveToPos.GetPositionZ(), 0);
+            bot->TeleportTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(),
+                            moveToPos.GetPositionZ(), 0);
         }
 
         moved = true;
@@ -197,11 +219,12 @@ bool FindCorpseAction::Execute(Event /*event*/)
         {
             if (deadTime < 10 * MINUTE && dCount < 5)  // Look for corpse up to 30 minutes.
             {
-                moved =
-                    MoveTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(), moveToPos.GetPositionZ(), false, false);
+                moved = MoveTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(),
+                               moveToPos.GetPositionZ(), false, false);
             }
 
             if (!moved)
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             {
                 moved = botAI->DoSpecificAction("spirit healer", Event(), true);
             }
@@ -255,11 +278,11 @@ GraveyardStruct const* SpiritHealerAction::GetGrave(bool startZone)
             {
                 uint32 areaId = 0;
                 uint32 zoneId = 0;
-                sMapMgr->GetZoneAndAreaId(bot->GetPhaseMask(), zoneId, areaId, travelPos.GetMapId(), travelPos.GetPositionX(),
-                                          travelPos.GetPositionY(), travelPos.GetPositionZ());
-                ClosestGrave = sGraveyard->GetClosestGraveyard(travelPos.GetMapId(), travelPos.GetPositionX(), travelPos.GetPositionY(),
-                                                               travelPos.GetPositionZ(), bot->GetTeamId(), areaId, zoneId,
-                                                               bot->getClass() == CLASS_DEATH_KNIGHT);
+                sMapMgr->GetZoneAndAreaId(bot->GetPhaseMask(), zoneId, areaId, travelPos.GetMapId(),
+                                          travelPos.GetPositionX(), travelPos.GetPositionY(), travelPos.GetPositionZ());
+                ClosestGrave = sGraveyard->GetClosestGraveyard(
+                    travelPos.GetMapId(), travelPos.GetPositionX(), travelPos.GetPositionY(), travelPos.GetPositionZ(),
+                    bot->GetTeamId(), areaId, zoneId, bot->getClass() == CLASS_DEATH_KNIGHT);
 
                 if (ClosestGrave)
                     return ClosestGrave;
@@ -317,6 +340,7 @@ bool SpiritHealerAction::Execute(Event /*event*/)
     if (!corpse)
     {
         botAI->TellError("I am not a spirit");
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         return false;
     }
 
@@ -337,6 +361,7 @@ bool SpiritHealerAction::Execute(Event /*event*/)
             Unit* unit = botAI->GetUnit(*i);
             if (unit && unit->HasNpcFlag(UNIT_NPC_FLAG_SPIRITHEALER))
             {
+                // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
                 LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> revives at spirit healer", bot->GetGUID().ToString().c_str(),
                           bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName());
                 PlayerbotChatHandler ch(bot);
@@ -345,11 +370,15 @@ bool SpiritHealerAction::Execute(Event /*event*/)
                 context->GetValue<Unit*>("current target")->Set(nullptr);
                 bot->SetTarget();
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "Hello", {}));
+                // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
                 bool const success = bot->IsAlive();
                 if (success)
                     botAI->StartPostReviveRepairSafety();
-                botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(), success, bot->IsAlive());
+                // PLB-LOCAL(revive-outcome): same verdict as upstream, expressed as an outcome.
+                botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(),
+                                           success ? PlayerbotReviveOutcome::Succeeded : PlayerbotReviveOutcome::Failed,
+                                           bot->IsAlive());
 
                 if (success && dCount > 20)
                     context->GetValue<uint32>("death count")->Set(0);

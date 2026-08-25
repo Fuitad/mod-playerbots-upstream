@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 4 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "MovementActions.h"
 #include "Corpse.h"
 #include "Event.h"
@@ -30,11 +34,13 @@
 #include "SpellInfo.h"
 #include "Stances.h"
 #include "Timer.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Transport.h"
 #include "Unit.h"
 #include "Vehicle.h"
 #include "WaypointMovementGenerator.h"
 #include "G3D/Vector3.h"
+// PLB-LOCAL(22371d0c8c68): chore(upstream): merge mod-playerbots updates through 8d9f6aa
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -47,6 +53,7 @@ MovementAction::MovementAction(PlayerbotAI* botAI, std::string const name) : Act
     bot = botAI->GetBot();
 }
 
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 Transport* MovementAction::GetTransportForPosTolerant(Map* map, WorldObject* reference, uint32 phaseMask, float x,
                                                       float y, float z)
 {
@@ -2396,6 +2403,7 @@ bool CombatFormationMoveAction::Execute(Event /*event*/)
         if (FleePosition(playerToLeave->GetPosition(), dis))
         {
             lastMoveTimer = getMSTime();
+            // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
             return true;
         }
     }

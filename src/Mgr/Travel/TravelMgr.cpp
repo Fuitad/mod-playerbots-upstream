@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 6 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "TravelMgr.h"
 #include "AreaDefines.h"
 #include "CellImpl.h"
@@ -680,6 +684,7 @@ std::vector<WorldPosition> WorldPosition::frommGridCoord(mGridCoord GridCoord)
     return retVec;
 }
 
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 // TODO: Cleanup , make this actually work.
 void WorldPosition::loadMapAndVMap(uint32 mapId, uint8 x, uint8 y)
 {
@@ -786,6 +791,7 @@ std::vector<WorldPosition> WorldPosition::getPathStepFrom(WorldPosition startPos
     loadMapAndVMaps(startPos);
 
     PathGenerator path(bot);
+    // PLB-LOCAL(8ba3eed46d03): fix(travel): attach graph routes through the bot pathfinder
     return getPathStepFrom(startPos, path);
 }
 
@@ -1506,6 +1512,7 @@ void TravelTarget::setTarget(TravelDestination* tDestination1, WorldPosition* wP
 
     addVisitors();
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     setStatus(dynamic_cast<NullTravelDestination*>(tDestination) ? TRAVEL_STATUS_COOLDOWN : TRAVEL_STATUS_TRAVEL);
 }
 
@@ -1645,6 +1652,7 @@ bool TravelTarget::isWorking()
     if (m_status != TRAVEL_STATUS_WORK)
         return false;
 
+    // PLB-LOCAL(e30615308174): fix(travel): preserve forced working targets
     if (!tDestination->isActive(bot) && !forced)  // Target has become invalid. Stop.
     {
         setStatus(TRAVEL_STATUS_COOLDOWN);
@@ -4426,6 +4434,7 @@ std::vector<std::vector<uint32>> TravelMgr::GetOptimalFlightDestinations(Player*
     uint32 botLevel = bot->GetLevel();
 
     // Bots already in a capital shouldn't have another capital picked as a
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // flight destination , that just shuffles them between cities.
     bool botInCapital = false;
     if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(bot->GetZoneId()))
@@ -4735,6 +4744,7 @@ void TravelMgr::PrepareDestinationCache()
                 }
                 flightMastersCount++;
 
+                // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
                 // Zones that have flight masters but no innkeepers , use flight master as hub
                 static const std::set<uint32> zonesWithoutInnkeeper = {
                     AREA_BLASTED_LANDS,

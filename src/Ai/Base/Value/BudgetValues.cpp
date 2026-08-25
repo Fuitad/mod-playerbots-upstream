@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "BudgetValues.h"
 #include "Playerbots.h"
 
@@ -222,10 +226,12 @@ uint32 FreeMoneyForValue::Calculate()
 {
     uint32 money = bot->GetMoney();
 
+    // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
     bool const economyBot = sPlayerbotAIConfig.economyManagedSupplies && sRandomPlayerbotMgr.IsRandomBot(bot);
     if (botAI->HasCheat(BotCheatMask::gold) && !economyBot)
         return 10000000;
 
+    // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
     if (IsRealPlayer(botAI->GetMaster()) && !economyBot)
         return money;
 

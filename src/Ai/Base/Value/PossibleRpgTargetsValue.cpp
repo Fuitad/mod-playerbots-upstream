@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "PossibleRpgTargetsValue.h"
 #include "CellImpl.h"
 #include "GridNotifiers.h"
@@ -66,6 +70,7 @@ bool PossibleRpgTargetsValue::AcceptUnit(Unit* unit)
     if (unit->HasNpcFlag(UNIT_NPC_FLAG_SPIRITHEALER))
         return false;
 
+    // PLB-LOCAL(286ede664ee5): fix(rpg): reject battlemasters as ambient targets
     // Legacy RPG does not register its battleground queue action, and emissaries also carry the gossip flag.
     if (unit->IsBattleMaster())
         return false;

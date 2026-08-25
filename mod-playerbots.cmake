@@ -1,3 +1,6 @@
+# PLB-LOCAL FILE. Not present upstream, so it can never conflict on a merge.
+# Prefer adding here over editing an upstream file. See docs/local-changes.md.
+
 if(BUILD_TESTING)
     set_property(GLOBAL APPEND PROPERTY ACORE_MODULE_TEST_SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotFactoryTrainerPolicyTest.cpp"

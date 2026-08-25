@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "QuestAction.h"
 #include "BroadcastHelper.h"
 #include "Chat.h"
@@ -195,6 +199,7 @@ bool QuestAction::ProcessQuests(WorldObject* questGiver)
     if (!bot->HasInArc(CAST_ANGLE_IN_FRONT, questGiver, sPlayerbotAIConfig.sightDistance))
         bot->SetFacingToObject(questGiver);
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     // Player::SetTarget is an empty override. The selection is the authoritative NPC target.
     bot->SetSelection(guid);
     bot->PrepareQuestMenu(guid);

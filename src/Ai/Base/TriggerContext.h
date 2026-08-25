@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_TRIGGERCONTEXT_H
 #define PLAYERBOTS_TRIGGERCONTEXT_H
 
@@ -19,6 +23,7 @@
 #include "NewRpgTriggers.h"
 #include "PullTriggers.h"
 #include "PvpTriggers.h"
+// PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
 #include "RandomBotMaintenanceTriggers.h"
 #include "RangeTriggers.h"
 #include "RpgTriggers.h"
@@ -243,6 +248,7 @@ public:
         creators["do quest status"] = &TriggerContext::do_quest_status;
         creators["travel flight status"] = &TriggerContext::travel_flight_status;
         creators["outdoor pvp status"] = &TriggerContext::outdoor_pvp_status;
+        // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
         creators["random bot needs repair"] = &TriggerContext::random_bot_needs_repair;
         creators["random bot needs vendor"] = &TriggerContext::random_bot_needs_vendor;
         creators["random bot needs mount"] = &TriggerContext::random_bot_needs_mount;
@@ -460,6 +466,7 @@ private:
     static Trigger* do_quest_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_DO_QUEST); }
     static Trigger* travel_flight_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_TRAVEL_FLIGHT); }
     static Trigger* outdoor_pvp_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_OUTDOOR_PVP); }
+    // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
     static Trigger* random_bot_needs_repair(PlayerbotAI* botAI) { return new RandomBotRepairTrigger(botAI); }
     static Trigger* random_bot_needs_vendor(PlayerbotAI* botAI) { return new RandomBotVendorTrigger(botAI); }
     static Trigger* random_bot_needs_mount(PlayerbotAI* botAI) { return new RandomBotMountTrigger(botAI); }

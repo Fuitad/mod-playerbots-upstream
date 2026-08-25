@@ -4,7 +4,12 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "NewRpgBaseAction.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
@@ -848,6 +853,7 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
             if (qPoi.ObjectiveIndex != -1)
                 continue;
 
+            // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
             PlayerbotObjective const objective{PlayerbotObjectiveKind::Quest, questId, qPoi.ObjectiveIndex, qPoi.MapId};
             if (!GetPlayerbotExtensionRegistry().IsObjectiveAvailable(botAI, objective, GetTimeMS().count()))
                 continue;
@@ -925,6 +931,7 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
         }
         if (!inComplete)
             continue;
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         PlayerbotObjective const objective{PlayerbotObjectiveKind::Quest, questId, qPoi.ObjectiveIndex, qPoi.MapId};
         if (!GetPlayerbotExtensionRegistry().IsObjectiveAvailable(botAI, objective, GetTimeMS().count()))
             continue;
@@ -964,6 +971,7 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
 
 WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
 {
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     PlayerbotAI* const botAI = GET_PLAYERBOT_AI(bot);
     const std::vector<WorldLocation>& locs = sTravelMgr.GetLocsPerLevelCache(bot->GetLevel());
     float hiRange = 500.0f;
@@ -994,6 +1002,7 @@ WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
                                                 loc.GetPositionZ()) != bot->GetZoneId())
             continue;
 
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         PlayerbotObjective const objective{
             PlayerbotObjectiveKind::Grind,
             0,

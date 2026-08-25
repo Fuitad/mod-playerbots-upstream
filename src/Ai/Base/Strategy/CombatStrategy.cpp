@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "CombatStrategy.h"
 #include "Strategy.h"
 
@@ -34,6 +38,7 @@ void CombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             }
         )
     );
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     triggers.push_back(new TriggerNode("combat stuck", {NextAction("reset botAI", 1.0f)}));
     triggers.push_back(
         new TriggerNode(

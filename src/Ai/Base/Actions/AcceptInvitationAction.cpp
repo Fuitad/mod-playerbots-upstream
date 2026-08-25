@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 4 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "AcceptInvitationAction.h"
 #include "Event.h"
 #include "ObjectAccessor.h"
@@ -13,16 +17,20 @@
 #include "Playerbots.h"
 #include "WorldPacket.h"
 
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 bool AcceptInvitationAction::Execute([[maybe_unused]] Event event)
 {
     Group* grp = bot->GetGroupInvite();
     if (!grp)
         return false;
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     Player* inviter = ObjectAccessor::FindConnectedPlayer(grp->GetLeaderGUID());
     if (!inviter)
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     {
         bot->UninviteFromGroup();
         return false;
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     }
 
     if (!botAI->GetSecurity()->CheckLevelFor(PLAYERBOT_SECURITY_INVITE, false, inviter))

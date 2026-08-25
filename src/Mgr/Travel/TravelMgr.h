@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_TRAVELMGR_H
 #define PLAYERBOTS_TRAVELMGR_H
 
@@ -19,6 +23,7 @@
 class Creature;
 class GuidPosition;
 class ObjectGuid;
+// PLB-LOCAL(8ba3eed46d03): fix(travel): attach graph routes through the bot pathfinder
 class PathGenerator;
 class Quest;
 class Player;
@@ -289,6 +294,7 @@ public:
 
     // Pathfinding
     std::vector<WorldPosition> getPathStepFrom(WorldPosition startPos, Unit* bot);
+    // PLB-LOCAL(8ba3eed46d03): fix(travel): attach graph routes through the bot pathfinder
     std::vector<WorldPosition> getPathStepFrom(WorldPosition startPos, PathGenerator& path);
     std::vector<WorldPosition> getPathFromPath(std::vector<WorldPosition> startPath, Unit* bot, uint8 maxAttempt = 40);
 
@@ -807,6 +813,7 @@ public:
 
     uint32 getExpiredTime() { return getMSTime() - startTime; }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     uint32 getTimeLeft()
     {
         uint32 const expiredTime = getExpiredTime();

@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 36 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "GenericActions.h"
 #include "GenericSpellActions.h"
 #include "ICCActions.h"
@@ -146,6 +150,7 @@ static Position const& SelectClosestOf3(Position const& ref, Position const& p1,
     return p1;
 }
 
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 // AoE taunt , returns true if a spell was cast
 static bool CastAoeTaunt(PlayerbotAI* botAI, Player* bot)
 {
@@ -294,6 +299,7 @@ bool IccLichKingNecroticPlagueAction::Execute(Event /*event*/)
         minDist = fallbackDist;
     }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // No alive Horror , stop moving so healers can dispel immediately.
     // Keeping the plague active with no valid target risks a raid wipe.
     if (!closestHorror)
@@ -304,6 +310,7 @@ bool IccLichKingNecroticPlagueAction::Execute(Event /*event*/)
         return true;
     }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Already in delivery range , hold position for dispel
     if (minDist <= DELIVER_RANGE)
     {
@@ -825,6 +832,7 @@ bool IccLichKingWinterAction::TryMoveToPosition(float targetX, float targetY, fl
             MoveTo(bot->GetMapId(), targetX, targetY, targetZ, false, false, false, true, priority, true, false);
             return true;
         }
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         // Path crosses defile or shadow trap , fall through to arc-stepping logic
     }
 
@@ -933,6 +941,7 @@ bool IccLichKingWinterAction::TryMoveToPosition(float targetX, float targetY, fl
         }
     }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // No defile nearby , safe to move directly to the target.
 
     if (bot->IsWithinLOS(targetX, targetY, targetZ))
@@ -1007,6 +1016,7 @@ bool IccLichKingWinterAction::HandleMeleePositioning()
 
     // Transition guard: only retreat to ranged frost position if the bot is
     // still inbound (outside the engagement zone) AND a nearby Shambling is
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // not yet under MT control. Once engaged, trust flank logic , no retreats.
     if (distToPos > MELEE_FLANK_RADIUS)
     {
@@ -1050,6 +1060,7 @@ bool IccLichKingWinterAction::HandleMeleePositioning()
     // toward MT during winter puts bots in front of shamblings (frontal cone).
 
     // Only adds within MT_ADD_RANGE of the main tank are valid melee targets.
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Adds further out are not under tank control , engaging them puts bots
     // in front of unrooted shamblings.
     static constexpr float MT_ADD_RANGE = 5.0f;
@@ -1139,10 +1150,12 @@ bool IccLichKingWinterAction::HandleMeleePositioning()
     };
 
     // Settle band: if a candidate flank slot is safe AND the bot is already
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // within FLANK_SETTLE_DIST of it, stay put and attack , no per-tick step
     // (prevents back-and-forth jitter near the slot).
     static constexpr float FLANK_SETTLE_DIST = 2.0f;
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Position behind the current melee target using mainTank to add vector
     if (mainTank && mainTank->IsAlive())
     {
@@ -1193,6 +1206,7 @@ bool IccLichKingWinterAction::HandleMeleePositioning()
     }
 
     // Fallback: stored orientation-based angles
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     static constexpr std::array<float, 6> BehindAngles = {
         float(M_PI),           // 180 degrees directly behind
         float(M_PI) * 0.75f,   // 135 degrees left-rear flank
@@ -1251,6 +1265,7 @@ bool IccLichKingWinterAction::HandleRangedPositioning()
     }
 
     // Move to ranged frost position. Clear target + reset only on the FIRST
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // tick of the inbound phase , otherwise we cancel the bot's own movement
     // every tick and it ends up walking 1y per cycle.
     auto& s_rangedInbound = IcecrownHelpers::IccState(bot->GetInstanceId()).rangedInbound;
@@ -1271,6 +1286,7 @@ bool IccLichKingWinterAction::HandleRangedPositioning()
             s_rangedInbound[rangedKey] = true;
         }
         TryMoveToPosition(targetPos.GetPositionX(), targetPos.GetPositionY(), PLATFORM_Z, true);
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         // Skip target acquisition while inbound , Attack() would cancel movement.
         return false;
     }
@@ -1326,6 +1342,7 @@ bool IccLichKingWinterAction::HandleRangedPositioning()
         return true;
     }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // No spheres , engage skull-marked add or nearest valid add
     Unit* addTarget = nullptr;
     if (Group* group = bot->GetGroup())
@@ -1564,6 +1581,7 @@ bool IccLichKingWinterAction::HandleAssistTankAddManagement(Unit*, Position cons
             addsLoose.push_back(add);
     }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // adds are on us , walk back to frost position
     if (!addsOnUs.empty())
     {
@@ -1669,6 +1687,7 @@ bool IccLichKingWinterAction::HandleAssistTankAddManagement(Unit*, Position cons
         if (cur && !IsLkCollectibleAdd(cur))
             bot->SetTarget(ObjectGuid::Empty);
 
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         // No loose adds , idle at frost pos but allow lower-priority actions to run
         return false;
     }
@@ -1781,6 +1800,7 @@ bool IccLichKingWinterAction::HandlePetManagement()
     if (pet->GetVictim() == bestTarget)
         return false;
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     if (!botAI->CanInitiateCombat())
         return false;
 
@@ -1802,6 +1822,7 @@ bool IccLichKingWinterAction::HandlePetManagement()
 
 bool IccLichKingAddsAction::Execute(Event /*event*/)
 {
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Being carried by a Val'kyr , no actions possible
     if (bot->HasAura(SPELL_HARVEST_SOUL_VALKYR))
         return false;
@@ -1811,6 +1832,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
     bool const hasPlague = botAI->HasAura("Necrotic Plague", bot);
     Unit* const terenas = bot->FindNearestCreature(NPC_TERENAS_MENETHIL_HC, 55.0f);
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Heroic cheat buffs , apply to all group members
     Creature* lichKing = bot->FindNearestCreature(NPC_THE_LICH_KING, 100.0f);
     if (lichKing && lichKing->IsInCombat() && sPlayerbotAIConfig.EnableICCBuffs && IsHeroicLk(diff))
@@ -1834,6 +1856,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
     }
 
     // Skull marking: phase 1 marks the boss; phase 2+ prioritises Raging Spirits.
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Val'kyr marking owns skull while any Val'kyr is actively grabbing , skip here.
     if (Group* group = bot->GetGroup())
     {
@@ -1856,6 +1879,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
         if (!anyValkyrGrabbing)
         {
             // Phase 3 (boss < 40%, non-winter): skull priority is Raging Spirit > Vile Spirit > boss.
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             // During Vile Spirit windows, melee can't reach the spirits , mark boss on cross
             // and route melee DPS there.
             bool phase3 = false;
@@ -1904,6 +1928,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
                     group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), boss->GetGUID());
                 }
 
+                // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
                 // Cross marker is no longer used for vile windows , clear if set
                 if (!group->GetTargetIcon(CROSS_ICON).IsEmpty())
                     group->SetTargetIcon(CROSS_ICON, bot->GetGUID(), ObjectGuid::Empty);
@@ -2347,6 +2372,7 @@ bool IccLichKingAddsAction::HandleHeroicNonTankPositioning(Difficulty diff, Unit
     if (!mainTank)
         return false;
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Stack on main tank , 3-yard threshold avoids micro-jitter
     if (bot->GetExactDist2d(mainTank) > 3.0f)
     {
@@ -2944,11 +2970,13 @@ bool IccLichKingAddsAction::HandleAssistTankAddManagement(Unit* boss, Difficulty
     if (tauntTarget)
         IccCastClassTaunt(bot, botAI,tauntTarget);
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // No adds at all , stay at hold position
     if (addsOnUs.empty() && addsElsewhere.empty())
         return boss->HealthAbovePct(70);
 
     // Target priority by mob type (stable, not victim-dependent):
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     //   Tier 1 , Shambling Horror
     //   Tier 0 , Ghoul / Raging Spirit / other collectible add
     // Sticky: never switch away from a same-or-higher tier target.
@@ -2964,6 +2992,7 @@ bool IccLichKingAddsAction::HandleAssistTankAddManagement(Unit* boss, Difficulty
     Unit* currentTarget = bot->GetVictim();
     int const currentTier = TargetTier(currentTarget);
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Current target is a valid add , keep it unless a higher-tier add exists
     if (currentTier >= 0)
     {
@@ -2990,6 +3019,7 @@ bool IccLichKingAddsAction::HandleAssistTankAddManagement(Unit* boss, Difficulty
     }
     else
     {
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         // Current target is dead/invalid , pick a new one.
         // Prefer adds already on us, then nearby adds within melee reach.
         Unit* bestTarget = nullptr;
@@ -3091,6 +3121,7 @@ bool IccLichKingAddsAction::HandleAssistTankAddManagement(Unit* boss, Difficulty
                 }
             }
 
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             // dot > 0.3: Shambling is facing toward MT , reposition to turn it away
             if (worstShambling && worstDot > 0.3f)
             {
@@ -3553,6 +3584,7 @@ bool IccLichKingAddsAction::HandleDefileMechanics(Unit* boss, Difficulty diff)
     if (!boss->HasUnitState(UNIT_STATE_CASTING) || !boss->FindCurrentSpellBySpellId(DEFILE_CAST_ID))
         return false;
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Boss casting Defile , only the targeted player runs out. Target is
     // stamped by IccLichKingListenerScript at OnSpellPrepare time (cast start).
     auto const& info = IcecrownHelpers::IccState(bot->GetInstanceId()).defileCast;
@@ -3700,6 +3732,7 @@ bool IccLichKingAddsAction::HandleValkyrMechanics(Difficulty diff)
             grabbingValkyrs.push_back(unit);
     }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // No active valkyrs , reset bots still targeting an excluded valkyr
     if (grabbingValkyrs.empty() || (boss && boss->HealthBelowPct(40)))
     {
@@ -4008,6 +4041,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
 
         if (defileHit)
         {
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             // Defile is fatal , move regardless of old spirits
             sharedSlot = -1;
         }
@@ -4074,6 +4108,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
         float const anchorX = slotPos.GetPositionX();
         float const anchorY = slotPos.GetPositionY();
 
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         // Find spirit closest to the slot (not to bot) , that's the spirit
         // most likely to reach the raid stack first.
         Unit* chaseTarget = nullptr;
@@ -4099,6 +4134,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
             float const lenc = std::hypot(dxc, dyc);
             if (lenc > LEASH_RADIUS)
             {
+                // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
                 // Spirit too far from slot , clamp chase point to leash radius
                 tx = anchorX + dxc * LEASH_RADIUS / lenc;
                 ty = anchorY + dyc * LEASH_RADIUS / lenc;
@@ -4123,6 +4159,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
 
     // Hunter trap duty: only the lowest-GUID alive bot hunter handles it so
     // multiple hunters don't pile up at center. Real-player hunters are skipped
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // , they may not know the strategy, so a bot owns the role.
     bool isDesignatedHunter = false;
     if (bot->getClass() == CLASS_HUNTER)
@@ -4149,6 +4186,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
     }
 
     // Skip the spirit-flee logic entirely if boss is casting Harvest Soul(s).
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // The harvested player must stay alive , flee movement breaks range for
     // healers and gets the soul victim killed, buffing LK and wiping raid.
     Unit* Boss = AI_VALUE2(Unit*, "find target", "the lich king");
@@ -4162,6 +4200,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
     if (!botAI->IsTank(bot) && !bossCastingHarvest)
     {
         // Flee to MT if a spirit is targeting this bot OR is within FLEE_RANGE.
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         // Either condition is enough , proximity catches spirits that haven't
         // committed a target yet, targeting catches faraway chasers.
         static constexpr float FLEE_RANGE = 15.0f;
@@ -4191,6 +4230,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
                 return MoveTo(bot->GetMapId(), fx, fy, fz, false, false, false, true, MovementPriority::MOVEMENT_FORCED,
                               true, false);
             }
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             // No MT , fall through to leash logic
         }
     }

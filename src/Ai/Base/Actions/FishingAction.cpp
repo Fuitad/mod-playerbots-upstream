@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "FishingAction.h"
 #include "Event.h"
 #include "FishValues.h"
@@ -18,6 +22,7 @@
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "Position.h"
+// PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
 #include "PlayerbotAIConfig.h"
 
 uint32 const FISHING_SPELL = 7620;
@@ -386,6 +391,7 @@ bool EquipFishingPoleAction::isUseful()
 
     if (sRandomPlayerbotMgr.IsRandomBot(bot))
     {
+        // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
         if (!sPlayerbotAIConfig.economyManagedSupplies)
             bot->StoreNewItemInBestSlots(FISHING_POLE, 1);  // Try to get a fishing pole
         return true;

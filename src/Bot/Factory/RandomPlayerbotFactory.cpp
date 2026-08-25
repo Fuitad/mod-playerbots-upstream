@@ -4,9 +4,14 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 15 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "RandomPlayerbotFactory.h"
 #include "AccountMgr.h"
 #include "ArenaTeamMgr.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "Bot/Factory/RandomPlayerbotFactionBalance.h"
 #include "DatabaseEnv.h"
@@ -32,13 +37,16 @@ bool RandomPlayerbotFactory::IsValidRaceClassCombination(uint8 race, uint8 cls, 
     return info != nullptr;
 }
 
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 std::vector<uint8> RandomPlayerbotFactory::GetAvailableRaces(uint8 cls, bool alliance)
 {
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     std::vector<uint8> races;
     for (uint8 race = RACE_HUMAN; race < sRaceMgr->GetMaxRaces(); ++race)
     {
         if ((1 << (race - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK))
             continue;
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         if (alliance == IsAlliance(race) &&
             IsValidRaceClassCombination(race, cls, sWorld->getIntConfig(CONFIG_EXPANSION)))
             races.push_back(race);
@@ -46,6 +54,7 @@ std::vector<uint8> RandomPlayerbotFactory::GetAvailableRaces(uint8 cls, bool all
     return races;
 }
 
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 std::vector<uint8> RandomPlayerbotFactory::GetAvailableClasses(bool alliance)
 {
     std::vector<uint8> classes;
@@ -58,6 +67,7 @@ std::vector<uint8> RandomPlayerbotFactory::GetAvailableClasses(bool alliance)
         if (!GetAvailableRaces(cls, alliance).empty())
             classes.push_back(cls);
     }
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     return classes;
 }
 
@@ -84,6 +94,7 @@ Player* RandomPlayerbotFactory::CreateRandomBot(
     {
         if (nameCache[raceAndGender].empty())
         {
+            // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
             LOG_ERROR("playerbots", "No names found in the global pool for gender: {}", gender);
             return nullptr;
         }
@@ -440,6 +451,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
 {
     /* multi-thread here is meaningless? since the async db operations */
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     if (GetPlayerbotExtensionRegistry().HandleRandomBotAccountCleanup())
         return;
 
@@ -498,6 +510,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
     std::vector<std::pair<Player*, uint32>> playerBots;
     std::vector<WorldSession*> sessionBots;
     int bot_creation = 0;
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     RandomPlayerbotFactory factory;
     RandomPlayerbotFactionBalance factionBalance;
     std::vector<uint8> const allianceClasses = GetAvailableClasses(true);
@@ -527,6 +540,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
         sPlayerbotAIConfig.randomBotAccounts.push_back(accountId);
 
         uint32 count = AccountMgr::GetCharactersCount(accountId);
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         CharacterDatabasePreparedStatement* charactersStmt =
             CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARS_BY_ACCOUNT_ID);
         charactersStmt->SetData(0, accountId);
@@ -548,6 +562,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
         if (!nameCached)
         {
             nameCached = true;
+            // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
             LOG_INFO("playerbots", "Creating cache for global names per gender...");
             QueryResult result = CharacterDatabase.Query("SELECT name, gender FROM playerbots_names");
             if (!result)
@@ -574,15 +589,18 @@ void RandomPlayerbotFactory::CreateRandomBots()
             } while (result->NextRow());
         }
 
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         LOG_DEBUG("playerbots", "Creating random bot characters for account: [{}/{}]", accountNumber + 1,
                   totalAccountCount);
         WorldSession* session = new WorldSession(accountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING,
                                                 time_t(0), LOCALE_enUS, 0, false, false, 0, true);
         sessionBots.push_back(session);
 
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         uint32 const remainingSlots = RandomPlayerbotRemainingCharacterSlots(count);
         for (uint32 slot = 0; slot < remainingSlots; ++slot)
         {
+            // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
             bool const alliance = factionBalance.ShouldCreateAlliance();
             std::vector<uint8> const& availableClasses = alliance ? allianceClasses : hordeClasses;
             uint8 const cls = factionBalance.SelectLeastRepresentedClass(alliance, availableClasses);
@@ -599,6 +617,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
                                                     playerBot->getClass(), playerBot->GetLevel());
             playerBot->CleanupsBeforeDelete();
             delete playerBot;
+            // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
             factionBalance.RecordCreated(alliance, cls);
             bot_creation++;
         }

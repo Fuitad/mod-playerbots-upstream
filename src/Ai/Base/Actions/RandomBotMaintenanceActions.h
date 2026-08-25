@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL FILE. Not present upstream, so it can never conflict on a merge.
+// Prefer adding here over editing an upstream file. See docs/local-changes.md.
+
 #ifndef PLAYERBOTS_RANDOMBOTMAINTENANCEACTIONS_H
 #define PLAYERBOTS_RANDOMBOTMAINTENANCEACTIONS_H
 

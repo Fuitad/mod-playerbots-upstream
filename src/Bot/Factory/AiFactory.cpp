@@ -4,8 +4,13 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "AiFactory.h"
 #include "BattlegroundMgr.h"
+// PLB-LOCAL(ae1931575f9f): feat(extensions): add generic module seams
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "DKAiObjectContext.h"
 #include "DruidAiObjectContext.h"
@@ -493,6 +498,7 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
         engine->removeStrategy("threat", false);
         engine->addStrategy("boost", false);
     }
+// PLB-LOCAL(ae1931575f9f): feat(extensions): add generic module seams
 
     GetPlayerbotExtensionRegistry().ForEach([player, facade, engine](PlayerbotExtension& extension)
                                             { extension.AddDefaultCombatStrategies(player, facade, *engine); });
@@ -596,6 +602,7 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
     {
         Player* master = facade->GetMaster();
 
+        // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
         if (sPlayerbotAIConfig.economyManagedSupplies)
             nonCombatEngine->addStrategy("random bot maintenance", false);
 
@@ -716,6 +723,7 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
             nonCombatEngine->removeStrategy("mount", false);
         }
     }
+// PLB-LOCAL(ae1931575f9f): feat(extensions): add generic module seams
 
     GetPlayerbotExtensionRegistry().ForEach(
         [player, facade, nonCombatEngine](PlayerbotExtension& extension)
@@ -738,6 +746,7 @@ void AiFactory::AddDefaultDeadStrategies(Player* player, PlayerbotAI* const faca
 
     if (sRandomPlayerbotMgr.IsRandomBot(player) && !player->GetGroup())
         deadEngine->removeStrategy("follow", false);
+// PLB-LOCAL(ae1931575f9f): feat(extensions): add generic module seams
 
     GetPlayerbotExtensionRegistry().ForEach([player, facade, deadEngine](PlayerbotExtension& extension)
                                             { extension.AddDefaultDeadStrategies(player, facade, *deadEngine); });

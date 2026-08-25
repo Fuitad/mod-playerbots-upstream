@@ -4,9 +4,14 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 7 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_RANDOMPLAYERBOTMGR_H
 #define PLAYERBOTS_RANDOMPLAYERBOTMGR_H
 
+// PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
 #include <unordered_set>
 
 #include "Bot/Population/RandomPlayerbotAdmission.h"
@@ -131,12 +136,14 @@ public:
     void SetTradeDiscount(Player* bot, Player* master, uint32 value);
     uint32 GetTradeDiscount(Player* bot, Player* master);
     void Refresh(Player* bot);
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     void AutoGearBot(Player* bot);
     void RandomTeleportForLevel(Player* bot);
     void RandomTeleportForRpg(Player* bot);
     uint32 GetMaxAllowedBotCount();
     bool ProcessBot(Player* player);
     void Revive(Player* player);
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     [[nodiscard]] bool RecoverAtHomebind(Player* player);
     void ChangeStrategy(Player* player);
     void ChangeStrategyOnce(Player* player);
@@ -176,6 +183,7 @@ public:
     // Account type management
     void AssignAccountTypes();
     bool IsAccountType(uint32 accountId, uint8 accountType);
+    // PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
     [[nodiscard]] std::string AdmitExactBots(std::vector<RandomPlayerbotAdmission> const& admissions);
 
 protected:
@@ -193,6 +201,7 @@ private:
 
         BattlegroundData.clear();  // Clear here and here only.
 
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         // Cleanup on server start: orphaned pet data that's often left behind by bot pets that no longer exist in the
         // DB
         CharacterDatabase.Execute("DELETE FROM pet_aura WHERE guid NOT IN (SELECT id FROM character_pet)");
@@ -258,9 +267,11 @@ private:
     uint32 playersLevel;
 
     // Account lists
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     std::vector<uint32> rndBotTypeAccounts;    // Accounts marked as RNDbot (type 1)
     std::vector<uint32> addClassTypeAccounts;  // Accounts marked as AddClass (type 2)
 
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     // void ScaleBotActivity();      // Deprecated function
     static inline uint32 NowSeconds() { return static_cast<uint32>(GameTime::GetGameTime().count()); }
 };

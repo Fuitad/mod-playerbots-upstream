@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "GuildCreateActions.h"
 #include "ArenaTeam.h"
 #include "BudgetValues.h"
@@ -13,6 +17,7 @@
 #include "RandomPlayerbotFactory.h"
 #include "ServerFacade.h"
 #include "SharedDefines.h"
+// PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
 #include "PlayerbotAIConfig.h"
 
 bool BuyPetitionAction::Execute(Event /*event*/)
@@ -240,6 +245,7 @@ bool PetitionTurnInAction::Execute(Event /*event*/)
             // (EMBLEM_PRICE = 10 * GOLD in core)
             static constexpr uint32 REQUIRED = 10 * GOLD;
             uint32 have = bot->GetMoney();               // actual money earned by bot in copper
+            // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
             if (have < REQUIRED && !sPlayerbotAIConfig.economyManagedSupplies)
             {
                 bot->ModifyMoney(int32(REQUIRED - have)); // add only the missing amount to bot to reach 10g
@@ -247,6 +253,7 @@ bool PetitionTurnInAction::Execute(Event /*event*/)
 
             Guild* guild = sGuildMgr->GetGuildById(bot->GetGuildId());
 
+            // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
             // Without the gold gift the emblem waits until the guild master can pay for it.
             if (bot->GetMoney() >= REQUIRED)
             {

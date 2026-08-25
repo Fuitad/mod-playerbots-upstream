@@ -4,8 +4,13 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 10 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "BroadcastHelper.h"
 #include "AiFactory.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "Channel.h"
 #include "Playerbots.h"
@@ -174,6 +179,7 @@ bool BroadcastHelper::BroadcastToChannelWithGlobalChance(PlayerbotAI* ai, std::s
 
 bool BroadcastHelper::BroadcastLootingItem(PlayerbotAI* ai, Player* bot, ItemTemplate const* proto)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     if (proto->Quality <= ITEM_QUALITY_ARTIFACT &&
         GetPlayerbotExtensionRegistry().HandleBotEvent(ai, {PlayerbotEventType::Loot, proto->ItemId, proto->Name1}))
         return false;
@@ -271,6 +277,7 @@ bool BroadcastHelper::BroadcastLootingItem(PlayerbotAI* ai, Player* bot, ItemTem
 
 bool BroadcastHelper::BroadcastQuestAccepted(PlayerbotAI* ai, Player* bot, const Quest* quest)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     if (GetPlayerbotExtensionRegistry().HandleBotEvent(
             ai, {PlayerbotEventType::QuestAccepted, quest->GetQuestId(), quest->GetTitle()}))
         return false;
@@ -301,6 +308,7 @@ bool BroadcastHelper::BroadcastQuestAccepted(PlayerbotAI* ai, Player* bot, const
 
 bool BroadcastHelper::BroadcastQuestUpdateAddKill(PlayerbotAI* ai, Player* bot, Quest const* quest, uint32 availableCount, uint32 requiredCount, std::string obectiveName)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     if (availableCount <= requiredCount)
     {
         PlayerbotEventType const type = availableCount == requiredCount ? PlayerbotEventType::QuestObjectiveCompleted
@@ -350,6 +358,7 @@ bool BroadcastHelper::BroadcastQuestUpdateAddKill(PlayerbotAI* ai, Player* bot, 
 
 bool BroadcastHelper::BroadcastQuestUpdateAddItem(PlayerbotAI* ai, Player* bot, Quest const* quest, uint32 availableCount, uint32 requiredCount, const ItemTemplate* proto)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     if (availableCount <= requiredCount)
     {
         PlayerbotEventType const type = availableCount == requiredCount ? PlayerbotEventType::QuestObjectiveCompleted
@@ -400,6 +409,7 @@ bool BroadcastHelper::BroadcastQuestUpdateAddItem(PlayerbotAI* ai, Player* bot, 
 
 bool BroadcastHelper::BroadcastQuestUpdateFailedTimer(PlayerbotAI* ai, Player* bot, Quest const* quest)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     if (GetPlayerbotExtensionRegistry().HandleBotEvent(
             ai, {PlayerbotEventType::QuestFailed, quest->GetQuestId(), quest->GetTitle()}))
         return false;
@@ -430,6 +440,7 @@ bool BroadcastHelper::BroadcastQuestUpdateFailedTimer(PlayerbotAI* ai, Player* b
 
 bool BroadcastHelper::BroadcastQuestUpdateComplete(PlayerbotAI* ai, Player* bot, Quest const* quest)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     if (GetPlayerbotExtensionRegistry().HandleBotEvent(
             ai, {PlayerbotEventType::QuestCompleted, quest->GetQuestId(), quest->GetTitle()}))
         return false;
@@ -460,6 +471,7 @@ bool BroadcastHelper::BroadcastQuestUpdateComplete(PlayerbotAI* ai, Player* bot,
 
 bool BroadcastHelper::BroadcastQuestTurnedIn(PlayerbotAI* ai, Player* bot, Quest const* quest)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     if (GetPlayerbotExtensionRegistry().HandleBotEvent(
             ai, {PlayerbotEventType::QuestTurnedIn, quest->GetQuestId(), quest->GetTitle()}))
         return false;
@@ -490,6 +502,7 @@ bool BroadcastHelper::BroadcastQuestTurnedIn(PlayerbotAI* ai, Player* bot, Quest
 
 bool BroadcastHelper::BroadcastKill(PlayerbotAI* ai, Player* bot, Creature *creature)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     if (GetPlayerbotExtensionRegistry().HandleBotEvent(
             ai, {PlayerbotEventType::Kill, creature->GetEntry(), creature->GetName()}))
         return false;
@@ -610,6 +623,7 @@ bool BroadcastHelper::BroadcastKill(PlayerbotAI* ai, Player* bot, Creature *crea
 
 bool BroadcastHelper::BroadcastLevelup(PlayerbotAI* ai, Player* bot)
 {
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     uint32 level = bot->GetLevel();
     if (GetPlayerbotExtensionRegistry().HandleBotEvent(
             ai, {PlayerbotEventType::Level, level, "level " + std::to_string(level)}))

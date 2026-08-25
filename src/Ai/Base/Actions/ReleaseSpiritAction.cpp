@@ -3,10 +3,16 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "ReleaseSpiritAction.h"
+
 #include "Corpse.h"
 #include "Event.h"
 #include "GameGraveyard.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "GameTime.h"
 #include "Log.h"
 #include "NearestNpcsValue.h"
@@ -15,6 +21,7 @@
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
+// PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
 #include "PlayerbotAIConfig.h"
 
 // ReleaseSpiritAction implementation
@@ -36,17 +43,20 @@ bool ReleaseSpiritAction::Execute(Event event)
 
     if (bot->GetCorpse() && bot->HasPlayerFlag(PLAYER_FLAGS_GHOST))
     {
-        botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "release_spirit_already_spirit", "I am already a spirit", {}));
+        botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_already_spirit",
+                                                                                   "I am already a spirit", {}));
         return false;
     }
 
     const WorldPacket& packet = event.getPacket();
-    const std::string message = !packet.empty() && packet.GetOpcode() == CMSG_REPOP_REQUEST
-        ? PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_releasing", "Releasing...", {})
-        : PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_meet_graveyard", "Meet me at the graveyard", {});
+    const std::string message =
+        !packet.empty() && packet.GetOpcode() == CMSG_REPOP_REQUEST
+            ? PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_releasing", "Releasing...", {})
+            : PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_meet_graveyard",
+                                                               "Meet me at the graveyard", {});
     botAI->TellMasterNoFacing(message);
 
+    // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
     if (!sPlayerbotAIConfig.economyManagedSupplies)
         bot->DurabilityRepairAll(false, 1.0f, false);
     LogRelease("released");
@@ -62,17 +72,14 @@ void ReleaseSpiritAction::LogRelease(const std::string& releaseMsg) const
 {
     const std::string teamPrefix = bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H";
 
-    LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> {}",
-        bot->GetGUID().ToString().c_str(),
-        teamPrefix,
-        bot->GetLevel(),
-        bot->GetName().c_str(),
-        releaseMsg.c_str());
+    LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> {}", bot->GetGUID().ToString().c_str(), teamPrefix, bot->GetLevel(),
+              bot->GetName().c_str(), releaseMsg.c_str());
 }
 
 // AutoReleaseSpiritAction implementation
 bool AutoReleaseSpiritAction::Execute(Event /*event*/)
 {
+    // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
     if (!sPlayerbotAIConfig.economyManagedSupplies)
         bot->DurabilityRepairAll(false, 1.0f, false);
     LogRelease("auto released");
@@ -111,8 +118,7 @@ bool AutoReleaseSpiritAction::HandleBattlegroundSpiritHealer()
     constexpr uint32_t RESURRECT_DELAY = 15;
     const time_t now = time(nullptr);
 
-    if ((now - m_bgGossipTime < RESURRECT_DELAY) &&
-        bot->HasAura(SPELL_WAITING_FOR_RESURRECT))
+    if ((now - m_bgGossipTime < RESURRECT_DELAY) && bot->HasAura(SPELL_WAITING_FOR_RESURRECT))
     {
         return false;
     }
@@ -141,7 +147,8 @@ bool AutoReleaseSpiritAction::HandleBattlegroundSpiritHealer()
 
         // Teleport to nearest friendly Spirit Healer when not currently in range of one.
         bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
-        bot->TeleportTo(bot->GetMapId(), spiritHealer->GetPositionX(), spiritHealer->GetPositionY(), spiritHealer->GetPositionZ(), 0.f);
+        bot->TeleportTo(bot->GetMapId(), spiritHealer->GetPositionX(), spiritHealer->GetPositionY(),
+                        spiritHealer->GetPositionZ(), 0.f);
         RESET_AI_VALUE(bool, "combat::self target");
         RESET_AI_VALUE(WorldPosition, "current position");
     }
@@ -168,17 +175,14 @@ bool AutoReleaseSpiritAction::ShouldAutoRelease() const
     if (!IsRealPlayer(botAI->GetMaster()))
         return true;
 
-    if (IsRealPlayer(botAI->GetMaster()) &&
-        groupLeader->GetMapId() == bot->GetMapId() &&
-        bot->GetMap() &&
+    if (IsRealPlayer(botAI->GetMaster()) && groupLeader->GetMapId() == bot->GetMapId() && bot->GetMap() &&
         (bot->GetMap()->IsRaid() || bot->GetMap()->IsDungeon()))
     {
         return false;
     }
 
-    return ServerFacade::instance().IsDistanceGreaterThan(
-        AI_VALUE2(float, "distance", "group leader"),
-        sPlayerbotAIConfig.sightDistance);
+    return ServerFacade::instance().IsDistanceGreaterThan(AI_VALUE2(float, "distance", "group leader"),
+                                                          sPlayerbotAIConfig.sightDistance);
 }
 
 bool AutoReleaseSpiritAction::ShouldDelayBattlegroundRelease() const
@@ -209,10 +213,8 @@ bool AutoReleaseSpiritAction::ShouldDelayBattlegroundRelease() const
 
 bool RepopAction::Execute(Event /*event*/)
 {
-    const GraveyardStruct* graveyard = GetGrave(
-        AI_VALUE(uint32, "death count") > 10 ||
-        CalculateDeadTime() > 30 * MINUTE
-    );
+    const GraveyardStruct* graveyard =
+        GetGrave(AI_VALUE(uint32, "death count") > 10 || CalculateDeadTime() > 30 * MINUTE);
 
     if (!graveyard)
         return false;
@@ -221,10 +223,7 @@ bool RepopAction::Execute(Event /*event*/)
     return true;
 }
 
-bool RepopAction::isUseful()
-{
-    return !bot->InBattleground();
-}
+bool RepopAction::isUseful() { return !bot->InBattleground(); }
 
 int64 RepopAction::CalculateDeadTime() const
 {
@@ -249,15 +248,16 @@ bool SelfResurrectAction::Execute(Event /*event*/)
     {
         WorldPacket packet(CMSG_SELF_RES);
         bot->GetSession()->HandleSelfResOpcode(packet);
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         bool const success = bot->IsAlive();
         if (success)
             botAI->StartPostReviveRepairSafety();
-        botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(), success, bot->IsAlive());
+        // PLB-LOCAL(revive-outcome): same verdict as upstream, expressed as an outcome.
+        botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(),
+                                   success ? PlayerbotReviveOutcome::Succeeded : PlayerbotReviveOutcome::Failed,
+                                   bot->IsAlive());
         return success;
     }
     return false;
 }
-bool SelfResurrectAction::isUseful()
-{
-    return !bot->IsAlive() && bot->GetUInt32Value(PLAYER_SELF_RES_SPELL);
-}
+bool SelfResurrectAction::isUseful() { return !bot->IsAlive() && bot->GetUInt32Value(PLAYER_SELF_RES_SPELL); }

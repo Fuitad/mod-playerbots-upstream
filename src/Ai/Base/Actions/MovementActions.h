@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_MOVEMENTACTIONS_H
 #define PLAYERBOTS_MOVEMENTACTIONS_H
 
@@ -14,6 +18,7 @@
 
 class Player;
 class PlayerbotAI;
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 class Map;
 class Transport;
 class Unit;
@@ -63,6 +68,7 @@ protected:
     bool Move(float angle, float distance);
     bool MoveInside(uint32 mapId, float x, float y, float z, float distance = sPlayerbotAIConfig.followDistance,
                     MovementPriority priority = MovementPriority::MOVEMENT_NORMAL);
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     Transport* GetTransportForPosTolerant(Map* map, WorldObject* reference, uint32 phaseMask, float x, float y,
                                           float z);
     bool FindBoardingPointOnTransport(Map* map, Transport* expectedTransport, WorldObject* reference, float masterX,

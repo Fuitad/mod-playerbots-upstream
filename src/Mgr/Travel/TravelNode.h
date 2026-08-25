@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_TRAVELNODE_H
 #define PLAYERBOTS_TRAVELNODE_H
 
@@ -409,6 +413,7 @@ public:
     void clear() { fullPath.clear(); }
 
     bool empty() { return fullPath.empty(); }
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     bool hasPathType(PathNodeType type) const;
     std::vector<PathNodePoint> getPath() { return fullPath; }
     WorldPosition getFront() { return fullPath.front().point; }
@@ -426,6 +431,7 @@ public:
     bool shouldMoveToNextPoint(WorldPosition startPos, std::vector<PathNodePoint>::iterator beg,
                                std::vector<PathNodePoint>::iterator ed, std::vector<PathNodePoint>::iterator p,
                                float& moveDist, float maxDist);
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     WorldPosition getNextPoint(WorldPosition startPos, float maxDist, TravelNodePathType& pathType, uint32& entry,
                                uint32 currentTransportEntry = 0);
 

@@ -3,6 +3,9 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
+// PLB-LOCAL FILE. Not present upstream, so it can never conflict on a merge.
+// Prefer adding here over editing an upstream file. See docs/local-changes.md.
+
 #ifndef PLAYERBOTS_PLAYERBOTTRAINERLEARNINGPOLICY_H
 #define PLAYERBOTS_PLAYERBOTTRAINERLEARNINGPOLICY_H
 

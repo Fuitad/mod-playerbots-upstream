@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_ACTIONCONTEXT_H
 #define PLAYERBOTS_ACTIONCONTEXT_H
 
@@ -51,6 +55,7 @@
 #include "PositionAction.h"
 #include "PullActions.h"
 #include "RandomBotUpdateAction.h"
+// PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
 #include "RandomBotMaintenanceActions.h"
 #include "ReachTargetActions.h"
 #include "ReleaseSpiritAction.h"
@@ -161,6 +166,7 @@ public:
         creators["reveal gathering item"] = &ActionContext::reveal_gathering_item;
         creators["outfit"] = &ActionContext::outfit;
         creators["random bot update"] = &ActionContext::random_bot_update;
+        // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
         creators["random bot repair"] = &ActionContext::random_bot_repair;
         creators["random bot vendor"] = &ActionContext::random_bot_vendor;
         creators["random bot mount"] = &ActionContext::random_bot_mount;
@@ -489,6 +495,7 @@ private:
     static Action* new_rpg_do_quest(PlayerbotAI* ai) { return new NewRpgDoQuestAction(ai); }
     static Action* new_rpg_travel_flight(PlayerbotAI* ai) { return new NewRpgTravelFlightAction(ai); }
     static Action* new_rpg_outdoor_pvp(PlayerbotAI* ai) { return new NewRpgOutdoorPvpAction(ai); }
+    // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
     static Action* random_bot_repair(PlayerbotAI* ai) { return new RandomBotRepairAction(ai); }
     static Action* random_bot_vendor(PlayerbotAI* ai) { return new RandomBotVendorAction(ai); }
     static Action* random_bot_mount(PlayerbotAI* ai) { return new RandomBotMountAction(ai); }

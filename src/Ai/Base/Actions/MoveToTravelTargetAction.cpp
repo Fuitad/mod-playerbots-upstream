@@ -4,12 +4,18 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "MoveToTravelTargetAction.h"
 #include "ChooseRpgTargetAction.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Creature.h"
 #include "DBCStores.h"
 #include "LootObjectStack.h"
 #include "Playerbots.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Transport.h"
 #include "TravelNode.h"
 
@@ -111,6 +117,7 @@ bool MoveToTravelTargetAction::Execute(Event /*event*/)
     float z = location.GetPositionZ();
     float mapId = location.GetMapId();
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     MovementPriority const priority =
         target->isForced() ? MovementPriority::MOVEMENT_FORCED : MovementPriority::MOVEMENT_NORMAL;
 

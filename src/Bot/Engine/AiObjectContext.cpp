@@ -4,7 +4,12 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 4 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "AiObjectContext.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "DKAiObjectContext.h"
 #include "DruidAiObjectContext.h"
@@ -23,6 +28,7 @@ SharedNamedObjectContextList<Action> AiObjectContext::sharedActionContexts;
 SharedNamedObjectContextList<Trigger> AiObjectContext::sharedTriggerContexts;
 SharedNamedObjectContextList<UntypedValue> AiObjectContext::sharedValueContexts;
 
+// PLB-LOCAL(b20de798db27): fix(extensions): register contexts for concrete bot classes
 namespace
 {
 template <class Context>
@@ -55,6 +61,7 @@ AiObjectContext::AiObjectContext(PlayerbotAI* botAI, SharedNamedObjectContextLis
 void AiObjectContext::BuildAllSharedContexts()
 {
     AiObjectContext::BuildSharedContexts();
+    // PLB-LOCAL(b20de798db27): fix(extensions): register contexts for concrete bot classes
     BuildClassSharedContexts<PriestAiObjectContext>();
     BuildClassSharedContexts<MageAiObjectContext>();
     BuildClassSharedContexts<WarlockAiObjectContext>();
@@ -73,6 +80,7 @@ void AiObjectContext::BuildSharedContexts()
     BuildSharedActionContexts(sharedActionContexts);
     BuildSharedTriggerContexts(sharedTriggerContexts);
     BuildSharedValueContexts(sharedValueContexts);
+// PLB-LOCAL(ae1931575f9f): feat(extensions): add generic module seams
 
     GetPlayerbotExtensionRegistry().ForEach(
         [](PlayerbotExtension& extension)

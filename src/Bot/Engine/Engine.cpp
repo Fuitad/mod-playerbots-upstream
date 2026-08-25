@@ -4,8 +4,13 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "Engine.h"
 #include "Action.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "Event.h"
 #include "PerfMonitor.h"
@@ -602,6 +607,7 @@ bool Engine::ListenAndExecute(Action* action, Event event)
 
     actionExecuted = actionExecutionListeners.OverrideResult(action, actionExecuted, event);
     actionExecutionListeners.After(action, actionExecuted, event);
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     std::string const actionName = action->getName();
     GetPlayerbotExtensionRegistry().OnActionExecuted(botAI, actionName, actionExecuted, GetTimeMS().count());
     return actionExecuted;

@@ -4,12 +4,17 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 4 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "LootObjectStack.h"
 #include "LootMgr.h"
 #include "Object.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "Unit.h"
+// PLB-LOCAL(22371d0c8c68): chore(upstream): merge mod-playerbots updates through 8d9f6aa
 #include <algorithm>
 #include <array>
 
@@ -174,6 +179,7 @@ void LootObject::Refresh(Player* bot, ObjectGuid lootGUID)
             }
         }
 
+        // PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
         // If gameobject has only quest items that bot doesn't need, skip it.
         if (!neededQuestItem && hasAnyQuestItems && onlyHasQuestItems)
             return;
@@ -279,6 +285,7 @@ LootObject::LootObject(LootObject const& other)
     reqItem = other.reqItem;
 }
 
+// PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
 std::span<uint32 const> RequiredGatheringToolItems(uint32 skillId)
 {
     static constexpr std::array<uint32, 11> miningTools = {
@@ -368,6 +375,7 @@ bool LootObject::IsLootPossible(Player* bot)
     if (reqSkillValue > skillValue)
         return false;
 
+    // PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
     return HasRequiredGatheringTool(bot, skillId);
 }
 

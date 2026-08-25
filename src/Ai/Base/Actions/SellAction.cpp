@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "SellAction.h"
 #include "Event.h"
 #include "ItemPackets.h"
@@ -122,6 +126,7 @@ void SellAction::Sell(Item* item)
         nicePacket.Read();
         bot->GetSession()->HandleSellItemOpcode(nicePacket);
 
+        // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
         bool const economyBot = sPlayerbotAIConfig.economyManagedSupplies && sRandomPlayerbotMgr.IsRandomBot(bot);
         if (botAI->HasCheat(BotCheatMask::gold) && !economyBot)
         {

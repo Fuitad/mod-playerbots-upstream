@@ -4,12 +4,17 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "RepairAllAction.h"
 #include "ChatHelper.h"
 #include "Event.h"
 #include "Playerbots.h"
 
 bool RepairAllAction::Execute(Event /*event*/)
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 {
     if (!ExecutePaidRepair())
     {
@@ -37,6 +42,7 @@ bool RepairAllAction::ExecutePaidRepair()
         float discountMod = bot->GetReputationPriceDiscount(unit);
 
         uint32 botMoney = bot->GetMoney();
+        // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
         bool const economyBot = sPlayerbotAIConfig.economyManagedSupplies && sRandomPlayerbotMgr.IsRandomBot(bot);
         bool const useGoldCheat = botAI->HasCheat(BotCheatMask::gold) && !economyBot;
         if (useGoldCheat)
@@ -51,6 +57,7 @@ bool RepairAllAction::ExecutePaidRepair()
 
         totalCost += bot->DurabilityRepairAll(true, discountMod, false);
 
+        // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
         if (useGoldCheat)
         {
             bot->SetMoney(botMoney);

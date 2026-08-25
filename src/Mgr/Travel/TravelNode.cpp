@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 13 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "TravelNode.h"
 #include "BudgetValues.h"
 #include "PathGenerator.h"
@@ -11,6 +15,7 @@
 #include "RaceMgr.h"
 #include "ServerFacade.h"
 #include "TransportMgr.h"
+// PLB-LOCAL(22371d0c8c68): chore(upstream): merge mod-playerbots updates through 8d9f6aa
 #include <algorithm>
 #include <iomanip>
 #include <regex>
@@ -813,6 +818,7 @@ bool TravelPath::shouldMoveToNextPoint(WorldPosition startPos, std::vector<PathN
     return true;
 }
 
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 bool TravelPath::hasPathType(PathNodeType type) const
 {
     return std::any_of(fullPath.begin(), fullPath.end(),
@@ -823,6 +829,7 @@ bool TravelPath::hasPathType(PathNodeType type) const
 WorldPosition TravelPath::getNextPoint(WorldPosition startPos, float maxDist, TravelNodePathType& pathType,
                                        uint32& entry, uint32 currentTransportEntry)
 {
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     pathType = TravelNodePathType::none;
     entry = 0;
 
@@ -832,6 +839,7 @@ WorldPosition TravelPath::getNextPoint(WorldPosition startPos, float maxDist, Tr
     auto beg = fullPath.begin();
     auto ed = fullPath.end();
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     if (currentTransportEntry)
     {
         for (auto departure = beg; departure != ed; ++departure)
@@ -916,16 +924,20 @@ WorldPosition TravelPath::getNextPoint(WorldPosition startPos, float maxDist, Tr
         return startP->point;
     }
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     // We are moving towards a transport. Return the physical departure point and wait for the matching transport.
     if (startP->type == NODE_TRANSPORT)
     {
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         auto departure = startP;
         if (departure != beg)
         {
+            // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
             auto previous = std::prev(departure);
             if (previous->type == NODE_TRANSPORT && previous->entry == departure->entry)
                 departure = previous;
         }
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 
         pathType = TravelNodePathType::transport;
         entry = departure->entry;
@@ -1446,6 +1458,7 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     std::vector<WorldPosition> beginPath, endPath;
 
+    // PLB-LOCAL(8ba3eed46d03): fix(travel): attach graph routes through the bot pathfinder
     beginPath = endPos.getPathFromPath({startPos}, bot, 40);
 
     if (endPos.isPathTo(beginPath))
@@ -1454,6 +1467,7 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
     //[[Node pathfinding system]]
     // We try to find nodes near the bot and near the end position that have a route between them.
     // Then bot has to move towards/along the route.
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     std::shared_lock lock(TravelNodeMap::instance().m_nMapMtx);
 
     // Find the route of nodes starting at a node closest to the start position and ending at a node closest to the
@@ -1472,6 +1486,7 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
         }
     }
 
+    // PLB-LOCAL(8ba3eed46d03): fix(travel): attach graph routes through the bot pathfinder
     endPath = route.getNodes().back()->getPosition()->getPathTo(endPos, bot);
     movePath = route.buildPath(beginPath, endPath);
 

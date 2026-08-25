@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "GenericActions.h"
 #include "CharmInfo.h"
 #include "CreatureAI.h"
@@ -51,6 +55,7 @@ bool MeleeAction::isUseful()
     if (botAI->IsInVehicle() && !botAI->IsInVehicle(false, false, true))
         return false;
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Do not start autoattack while prowled , let opener spells break stealth intentionally.
     // Future rogue stealth implementation should use this instead:
     // return !(botAI->HasAura("stealth", bot) || botAI->HasAura("prowl", bot));
@@ -124,6 +129,7 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
 
 bool PetAttackAction::Execute(Event /*event*/)
 {
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     if (!botAI->CanInitiateCombat())
         return false;
 

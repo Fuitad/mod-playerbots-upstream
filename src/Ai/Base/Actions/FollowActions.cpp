@@ -3,6 +3,10 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "FollowActions.h"
 #include "Event.h"
 #include "Formations.h"
@@ -100,6 +104,7 @@ bool FollowAction::Execute(Event /*event*/)
     Formation* formation = AI_VALUE(Formation*, "formation");
     std::string const target = formation->GetTargetName();
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     // Transport handling for boats, zeppelins, elevators, and trams.
     Player* master = botAI->GetMaster();
     if (master && master->IsInWorld() && bot->IsInWorld() && bot->GetMapId() == master->GetMapId())

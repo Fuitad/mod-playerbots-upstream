@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "ExternalEventHelper.h"
 #include "ChatHelper.h"
 #include "Playerbots.h"
@@ -42,6 +46,7 @@ bool ExternalEventHelper::ParseChatCommand(std::string const command, Player* ow
     return true;
 }
 
+// PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
 bool ExternalEventHelper::IsChatCommand(std::string const& command)
 {
     if (aiObjectContext->GetTrigger(command))

@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "GenericActions.h"
 #include "GenericSpellActions.h"
 #include "ICCActions.h"
@@ -82,6 +86,7 @@ bool IccRotfaceTankPositionAction::PositionMainTankAndMelee(Unit* boss, Unit*)
 
         if (!bossInPosition)
         {
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             // Step 2y in the direction from boss toward center , tank leads, boss follows
             float dirX = ICC_ROTFACE_CENTER_POSITION_BOSS.GetPositionX() - boss->GetPositionX();
             float dirY = ICC_ROTFACE_CENTER_POSITION_BOSS.GetPositionY() - boss->GetPositionY();
@@ -104,6 +109,7 @@ bool IccRotfaceTankPositionAction::PositionMainTankAndMelee(Unit* boss, Unit*)
         }
         else
         {
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             if (bot->GetVictim() != boss && botAI->CanInitiateCombat())
                 bot->Attack(boss, true);
         }
@@ -430,6 +436,7 @@ bool IccRotfaceGroupPositionAction::HandleOozeTargeting()
 
     Aura* infectionAura = botAI->GetAura("Mutated Infection", bot, false, false);
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     // Find assist tank currently kiting a Big Ooze , preferred merge point
     Player* assistTankKiting = nullptr;
     if (Group* group = bot->GetGroup())

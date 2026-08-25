@@ -3,12 +3,17 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 21 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "PlayerbotFactory.h"
 #include "AccountMgr.h"
 #include "AiFactory.h"
 #include "AiObjectContext.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "Bot/Factory/PlayerbotTrainerLearningPolicy.h"
 #include "DBCStores.h"
@@ -641,6 +646,7 @@ void PlayerbotFactory::Randomize(bool incremental)
             ClearAllItems();
         }
     }
+    // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
     // With EconomyManagedSupplies on, no randomization empties the bags or creates goods or gold.
     // Bags, ammo, food, potions, reagents, class consumables, enchants, mounts and the level based
     // gold are all things the economy module expects bots to buy, craft or earn. See Refresh.
@@ -730,6 +736,7 @@ void PlayerbotFactory::Randomize(bool incremental)
 
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Mounts");
     LOG_DEBUG("playerbots", "Initializing mounts...");
+    // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
     if (!economyManaged)
         InitMounts();
     // bot->SaveToDB(false, false);
@@ -762,6 +769,7 @@ void PlayerbotFactory::Randomize(bool incremental)
     //         pmo->finish();
     // }
 
+    // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
     if (!economyManaged)
     {
         pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Bags");
@@ -771,24 +779,28 @@ void PlayerbotFactory::Randomize(bool incremental)
         if (pmo)
             pmo->finish();
 
+        // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
         pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Ammo");
         LOG_DEBUG("playerbots", "Initializing ammo...");
         InitAmmo();
         if (pmo)
             pmo->finish();
 
+        // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
         pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Food");
         LOG_DEBUG("playerbots", "Initializing food...");
         InitFood();
         if (pmo)
             pmo->finish();
 
+        // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
         pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Potions");
         LOG_DEBUG("playerbots", "Initializing potions...");
         InitPotions();
         if (pmo)
             pmo->finish();
 
+        // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
         pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Reagents");
         LOG_DEBUG("playerbots", "Initializing reagents...");
         InitReagents();
@@ -808,6 +820,7 @@ void PlayerbotFactory::Randomize(bool incremental)
     // if (pmo)
     //     pmo->finish();
 
+    // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
     if (!economyManaged && bot->GetLevel() >= sPlayerbotAIConfig.minEnchantingBotLevel)
     {
         ApplyEnchantAndGemsNew();
@@ -828,12 +841,14 @@ void PlayerbotFactory::Randomize(bool incremental)
 
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Consumable");
     LOG_DEBUG("playerbots", "Initializing consumables...");
+    // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
     if (!economyManaged)
         InitConsumables();
     if (pmo)
         pmo->finish();
 
     LOG_DEBUG("playerbots", "Initializing glyphs...");
+    // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
     if (!economyManaged)
         InitGlyphs();
     // bot->SaveToDB(false, false);
@@ -877,6 +892,7 @@ void PlayerbotFactory::Randomize(bool incremental)
 
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Save");
     LOG_DEBUG("playerbots", "Saving to DB...");
+    // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
     if (!economyManaged)
         bot->SetMoney(urand(level * 100000, level * 5 * 100000));
     bot->SetHealth(bot->GetMaxHealth());
@@ -896,6 +912,7 @@ void PlayerbotFactory::Refresh()
     //     InitEquipment(true);
     // }
     InitAttunementQuests();
+    // PLB-LOCAL(6ddb7413ab72): feat(factory): add EconomyManagedSupplies to stop the refresh conjuring goods
     // With EconomyManagedSupplies on, the refresh neither empties the bags nor creates goods or gold.
     // The clear destroyed everything a bot gathered, bought or crafted since the previous refresh, and
     // the refills (ammo, food, reagents, class consumables, potions), the free mounts, enchants and
@@ -918,6 +935,7 @@ void PlayerbotFactory::Refresh()
     InitAvailableSpells();
     InitReputation();
     InitSpecialSpells();
+    // PLB-LOCAL(6ddb7413ab72): feat(factory): add EconomyManagedSupplies to stop the refresh conjuring goods
     if (!economyManaged)
         InitMounts();
     InitKeyring();
@@ -926,6 +944,7 @@ void PlayerbotFactory::Refresh()
     {
         InitTalentsTree(true, true, true);
     }
+    // PLB-LOCAL(6ddb7413ab72): feat(factory): add EconomyManagedSupplies to stop the refresh conjuring goods
     if (bot->isDead())
         bot->ResurrectPlayer(1.0f, false);
     if (economyManaged)
@@ -2780,6 +2799,7 @@ bool PlayerbotFactory::CanEquipUnseenItem(uint8 slot, uint16& dest, uint32 item)
 
 void PlayerbotFactory::InitTradeSkills()
 {
+    // PLB-LOCAL(ae1931575f9f): feat(extensions): add generic module seams
     if (GetPlayerbotExtensionRegistry().InitializeTradeSkills(bot))
         return;
 
@@ -2796,6 +2816,7 @@ void PlayerbotFactory::InitTradeSkills()
 
     if (professionRollType != ProfessionRollType::Class && professionRollType != ProfessionRollType::Random)
     {
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         professionRollType = urand(1, 100) <= 30u ? ProfessionRollType::Class : ProfessionRollType::Random;
         sRandomPlayerbotMgr.SetValue(bot, "professionRollType", static_cast<uint32>(professionRollType));
     }
@@ -2841,6 +2862,7 @@ void PlayerbotFactory::InitTradeSkills()
         sRandomPlayerbotMgr.SetValue(bot, "secondSkill", secondSkill);
     }
 
+    // PLB-LOCAL(c684f1aa7dd8): fix(factory): stop granting professions and learn them from trainers
     // The profession pair chosen above is the bot's plan, recorded for the career system to act on. It
     // is deliberately not granted here. Professions are learned from a trainer the way a player learns
     // them, because that visit is the only place the starter recipes are sold: granting the skill
@@ -3041,6 +3063,7 @@ void PlayerbotFactory::InitSkills()
     //uint32 maxValue = level * 5; //not used, line marked for removal.
     bot->UpdateSkillsForLevel();
 
+    // PLB-LOCAL(9b0d39cf749b): feat(economy): gate level-up resupply and free riding on EconomyManagedSupplies
     // Riding is trained for gold like the mounts themselves, so it is left to the bot under
     // EconomyManagedSupplies.
     if (!sPlayerbotAIConfig.economyManagedSupplies)
@@ -3224,6 +3247,7 @@ void PlayerbotFactory::InitAvailableSpells()
             if (!trainer)
                 continue;
 
+            // PLB-LOCAL(07c6a40bf937): fix(factory): preserve native profession skill ranks
             if (!playerbots::IsTrainerAutoLearned(trainer->GetTrainerType()))
                 continue;
 
@@ -3697,6 +3721,7 @@ void PlayerbotFactory::AutoGear(Player* bot, uint32 itemQuality, uint32 ilvl, bo
     PlayerbotFactory factory(bot, bot->GetLevel(), itemQuality, gs);
     factory.InitEquipment(incremental, secondChance);
 
+    // PLB-LOCAL(96ceceb8de07): feat(factory): gate Randomize and AutoGear supplies on EconomyManagedSupplies
     if (!applyFinishers || sPlayerbotAIConfig.economyManagedSupplies)
         return;
 

@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_PLAYERBOTAICONFIG_H
 #define PLAYERBOTS_PLAYERBOTAICONFIG_H
 
@@ -293,6 +297,7 @@ public:
     std::string randomBotAccountPrefix;
     uint32 randomBotAccountCount;
     bool randomBotRandomPassword;
+    // PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
     bool preserveRandomBotAdmissions;
     uint32 randomBotGuildCount, randomBotGuildSizeMax;
     bool deleteRandomBotGuilds;
@@ -408,6 +413,7 @@ public:
     uint32 selfBotLevel;
     bool downgradeMaxLevelBot;
     bool equipAndSpecPersistence;
+    // PLB-LOCAL(6ddb7413ab72): feat(factory): add EconomyManagedSupplies to stop the refresh conjuring goods
     bool economyManagedSupplies;
     uint32 economyRepairThreshold;
     int32 equipAndSpecPersistenceLevel;

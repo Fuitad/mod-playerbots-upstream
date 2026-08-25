@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "PlayerbotAIConfig.h"
 #include "BisListMgr.h"
 #include "Config.h"
@@ -571,6 +575,7 @@ bool PlayerbotAIConfig::Initialize()
 
     randomBotAccountPrefix = sConfigMgr->GetOption<std::string>("AiPlayerbot.RandomBotAccountPrefix", "rndbot");
     randomBotAccountCount = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotAccountCount", 0);
+    // PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
     preserveRandomBotAdmissions = sConfigMgr->GetOption<bool>("AiPlayerbot.PreserveRandomBotAdmissions", false);
     randomBotGuildCount = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotGuildCount", 20);
     randomBotGuildSizeMax = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotGuildSizeMax", 15);
@@ -626,6 +631,7 @@ bool PlayerbotAIConfig::Initialize()
     downgradeMaxLevelBot = sConfigMgr->GetOption<bool>("AiPlayerbot.DowngradeMaxLevelBot", true);
     equipAndSpecPersistence = sConfigMgr->GetOption<bool>("AiPlayerbot.EquipAndSpecPersistence", true);
     equipAndSpecPersistenceLevel = sConfigMgr->GetOption<int32>("AiPlayerbot.EquipAndSpecPersistenceLevel", 1);
+    // PLB-LOCAL(6ddb7413ab72): feat(factory): add EconomyManagedSupplies to stop the refresh conjuring goods
     economyManagedSupplies = sConfigMgr->GetOption<bool>("AiPlayerbot.EconomyManagedSupplies", false);
     economyRepairThreshold = sConfigMgr->GetOption<uint32>("AiPlayerbot.EconomyRepairThreshold", 80);
     groupInvitationPermission = sConfigMgr->GetOption<int32>("AiPlayerbot.GroupInvitationPermission", 1);

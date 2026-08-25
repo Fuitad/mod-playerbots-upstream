@@ -4,9 +4,15 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "AcceptResurrectAction.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
 #include "Event.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "GameTime.h"
 #include "Playerbots.h"
 
@@ -25,9 +31,13 @@ bool AcceptResurrectAction::Execute(Event event)
     packet << uint8(1);                                        // accept
     bot->GetSession()->HandleResurrectResponseOpcode(packet);  // queue the packet to get around race condition
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     bool const success = bot->IsAlive();
     if (success)
         botAI->StartPostReviveRepairSafety();
-    botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(), success, bot->IsAlive());
+    // PLB-LOCAL(revive-outcome): same verdict as upstream, expressed as an outcome.
+    botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(),
+                               success ? PlayerbotReviveOutcome::Succeeded : PlayerbotReviveOutcome::Failed,
+                               bot->IsAlive());
     return success;
 }

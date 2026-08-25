@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_EXTERNALEVENTHELPER_H
 #define PLAYERBOTS_EXTERNALEVENTHELPER_H
 
@@ -23,6 +27,7 @@ public:
     void HandlePacket(std::map<uint16, std::string>& handlers, WorldPacket const& packet, Player* owner = nullptr);
     bool HandleCommand(std::string const name, std::string const param, Player* owner = nullptr);
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     // Non-executing mirror of ParseChatCommand: true when the text would be consumed
     // as a chat command (trigger lookup or item-link auto trade), without firing any
     // trigger. Must stay in sync with ParseChatCommand's resolution order.

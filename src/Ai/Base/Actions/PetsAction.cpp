@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "PetsAction.h"
 #include "CharmInfo.h"
 #include "Creature.h"
@@ -118,6 +122,7 @@ bool PetsAction::Execute(Event event)
     // The "attack" command forces pets/guardians to attack the master's selected target.
     else if (param == "attack")
     {
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
         if (!botAI->CanInitiateCombat())
             return false;
 

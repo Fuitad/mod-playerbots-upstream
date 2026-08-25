@@ -4,7 +4,12 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 52 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "RandomPlayerbotMgr.h"
+// PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
 
 #include <algorithm>
 #include <boost/thread/thread.hpp>
@@ -16,10 +21,12 @@
 #include "AiFactory.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "Cell.h"
 #include "CellImpl.h"
 #include "ChannelMgr.h"
+// PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
 #include "CharacterCache.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
@@ -38,6 +45,7 @@
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "PlayerbotRecoveryPolicy.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
@@ -59,6 +67,7 @@ struct GuidClassRaceInfo
     uint32 rRace;
 };
 
+// PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
 namespace
 {
 void AppendAdmissionEvent(PlayerbotsDatabaseTransaction& transaction, std::uint32_t characterGuid,
@@ -360,6 +369,7 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
     uint32 updateIntervalTurboBoost = _isBotInitializing ? 1 : sPlayerbotAIConfig.randomBotUpdateInterval;
     SetNextCheckDelay(updateIntervalTurboBoost * (onlineBotFocus + 25) * 10);
 
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_TOTAL, onlineBotCount < maxAllowedBotCount
                                                                        ? "RandomPlayerbotMgr::Login"
                                                                        : "RandomPlayerbotMgr::UpdateAIInternal");
@@ -528,11 +538,13 @@ void RandomPlayerbotMgr::AssignAccountTypes()
     rndBotTypeAccounts.clear();
     addClassTypeAccounts.clear();
 
+    // PLB-LOCAL(e2f737f3466d): fix(population): hydrate frozen random bot accounts
     // First, get ALL randombot accounts from the database and reconcile the runtime classification cache.
     std::vector<uint32> const allRandomBotAccounts = DiscoverAndHydrateRandomPlayerbotAccountCache(
         sPlayerbotAIConfig.randomBotAccounts,
         []()
         {
+            // PLB-LOCAL(e2f737f3466d): fix(population): hydrate frozen random bot accounts
             std::vector<uint32> accountIds;
             QueryResult accounts = LoginDatabase.Query("SELECT id FROM account WHERE username LIKE '{}%%' ORDER BY id",
                                                        sPlayerbotAIConfig.randomBotAccountPrefix.c_str());
@@ -549,6 +561,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
     LOG_INFO("playerbots", "Found {} total randombot accounts in database", allRandomBotAccounts.size());
 
     // Check existing assignments
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     QueryResult existingAssignments =
         PlayerbotsDatabase.Query("SELECT account_id, account_type FROM playerbots_account_type");
     std::map<uint32, uint8> currentAssignments;
@@ -569,6 +582,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
     {
         if (currentAssignments.find(accountId) == currentAssignments.end())
         {
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             PlayerbotsDatabase.Execute(
                 "INSERT INTO playerbots_account_type (account_id, account_type) VALUES ({}, 0) ON DUPLICATE KEY UPDATE "
                 "account_type = account_type",
@@ -590,6 +604,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
             maxBots *= sPlayerbotAIConfig.periodicOnlineOfflineRatio;
         }
 
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         // Calculate base accounts needed for RNDbots, ensuring round up for maxBots not cleanly divisible by the
         // divisor
         neededRndBotAccounts = (maxBots + divisor - 1) / divisor;
@@ -601,12 +616,14 @@ void RandomPlayerbotMgr::AssignAccountTypes()
 
     for (auto const& [accountId, accountType] : currentAssignments)
     {
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         if (accountType == 1)
             existingRndBotAccounts++;
         else if (accountType == 2)
             existingAddClassAccounts++;
     }
 
+    // PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
     neededRndBotAccounts = ResolveRandomPlayerbotAccountCount(sPlayerbotAIConfig.preserveRandomBotAdmissions,
                                                               existingRndBotAccounts, neededRndBotAccounts);
 
@@ -619,8 +636,10 @@ void RandomPlayerbotMgr::AssignAccountTypes()
         for (uint32 i = 0; i < allRandomBotAccounts.size() && assigned < toAssign; i++)
         {
             uint32 accountId = allRandomBotAccounts[i];
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             if (currentAssignments[accountId] == 0)  // Unassigned
             {
+                // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
                 PlayerbotsDatabase.Execute(
                     "UPDATE playerbots_account_type SET account_type = 1, assignment_date = NOW() WHERE account_id = "
                     "{}",
@@ -632,6 +651,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
 
         if (assigned < toAssign)
         {
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             LOG_ERROR("playerbots",
                       "Not enough unassigned accounts to fulfill RNDbot requirements. Need {} more accounts.",
                       toAssign - assigned);
@@ -649,8 +669,10 @@ void RandomPlayerbotMgr::AssignAccountTypes()
         for (size_t idx = allRandomBotAccounts.size(); idx-- > 0 && assigned < toAssign;)
         {
             uint32 accountId = allRandomBotAccounts[idx];
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             if (currentAssignments[accountId] == 0)  // Unassigned
             {
+                // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
                 PlayerbotsDatabase.Execute(
                     "UPDATE playerbots_account_type SET account_type = 2, assignment_date = NOW() WHERE account_id = "
                     "{}",
@@ -662,6 +684,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
 
         if (assigned < toAssign)
         {
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             LOG_ERROR("playerbots",
                       "Not enough unassigned accounts to fulfill AddClass requirements. Need {} more accounts.",
                       toAssign - assigned);
@@ -671,6 +694,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
     // Populate filtered account lists with ALL accounts of each type
     for (auto const& [accountId, accountType] : currentAssignments)
     {
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         if (accountType == 1)
             rndBotTypeAccounts.push_back(accountId);
         else if (accountType == 2)
@@ -684,11 +708,13 @@ void RandomPlayerbotMgr::AssignAccountTypes()
 
 bool RandomPlayerbotMgr::IsAccountType(uint32 accountId, uint8 accountType)
 {
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     QueryResult result = PlayerbotsDatabase.Query(
         "SELECT 1 FROM playerbots_account_type WHERE account_id = {} AND account_type = {}", accountId, accountType);
     return result != nullptr;
 }
 
+// PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
 std::string RandomPlayerbotMgr::AdmitExactBots(std::vector<RandomPlayerbotAdmission> const& admissions)
 {
     if (std::string error = ValidateRandomPlayerbotAdmissions(admissions); !error.empty())
@@ -791,6 +817,7 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
         if (sPlayerbotAIConfig.enablePeriodicOnlineOffline)
         {
             // Calculate how many accounts can be used
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             // With enablePeriodicOnlineOffline, don't use all of rndBotTypeAccounts right away. Fraction results are
             // rounded up
             uint32 accountsToUseCount =
@@ -861,6 +888,7 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
         // Lambda to handle bot login logic
         auto tryLoginBot = [&](const CharacterInfo& charInfo) -> bool
         {
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             if (GetEventValue(charInfo.guid, "add") || GetEventValue(charInfo.guid, "logout") ||
                 GetPlayerBot(charInfo.guid) || currentBots.contains(charInfo.guid) ||
                 (sPlayerbotAIConfig.disableDeathKnightLogin && charInfo.rClass == CLASS_DEATH_KNIGHT))
@@ -868,6 +896,7 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
                 return false;
             }
 
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             uint32 add_time =
                 sPlayerbotAIConfig.enablePeriodicOnlineOffline
                     ? urand(sPlayerbotAIConfig.minRandomBotInWorldTime, sPlayerbotAIConfig.maxRandomBotInWorldTime)
@@ -923,6 +952,7 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
             {
                 int divisor = RandomPlayerbotFactory::CalculateAvailableCharsPerAccount();
                 uint32 moreAccountsNeeded = (maxAllowedBotCount + divisor - 1) / divisor;
+                // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
                 LOG_ERROR(
                     "playerbots",
                     "Can't log-in all the requested bots. Try increasing RandomBotAccountCount in your conf file.\n"
@@ -933,11 +963,13 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
         }
         else
         {
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             missingBotsTimer = 0;  // Reset timer if logins for this interval were successful
         }
     }
     else
     {
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         missingBotsTimer = 0;  // Reset timer if there's enough bots
     }
 
@@ -1452,6 +1484,7 @@ void RandomPlayerbotMgr::ScheduleTeleport(uint32 bot, uint32 time)
 void RandomPlayerbotMgr::ScheduleChangeStrategy(uint32 bot, uint32 time)
 {
     if (!time)
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         time =
             urand(sPlayerbotAIConfig.minRandomBotChangeStrategyTime, sPlayerbotAIConfig.maxRandomBotChangeStrategyTime);
 
@@ -1578,6 +1611,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
     if (bot->InBattlegroundQueue())
         return false;
 
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     uint32 botId = bot->GetGUID().GetCounter();
 
     // if death revive
@@ -1587,6 +1621,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
         {
             uint32 randomTime =
                 urand(sPlayerbotAIConfig.minRandomBotReviveTime, sPlayerbotAIConfig.maxRandomBotReviveTime);
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             LOG_DEBUG("playerbots", "Mark bot {} as dead, will be revived in {}s.", bot->GetName().c_str(), randomTime);
             SetEventValue(botId, "dead", 1, sPlayerbotAIConfig.maxRandomBotInWorldTime);
             SetEventValue(botId, "revive", 1, randomTime);
@@ -1674,6 +1709,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
             LOG_DEBUG("playerbots", "Bot #{} <{}>: teleport for level and refresh", botId, bot->GetName());
             Refresh(bot);
             RandomTeleportForLevel(bot);
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
             uint32 time =
                 urand(sPlayerbotAIConfig.minRandomBotTeleportInterval, sPlayerbotAIConfig.maxRandomBotTeleportInterval);
             ScheduleTeleport(botId, time);
@@ -1686,6 +1722,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
 
 void RandomPlayerbotMgr::Revive(Player* player)
 {
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     if (!RecoverAtHomebind(player))
         LOG_WARN("playerbots", "Bot recovery at homebind failed for {}", player ? player->GetName() : "unknown");
 }
@@ -1695,23 +1732,25 @@ bool RandomPlayerbotMgr::RecoverAtHomebind(Player* player)
     if (!player)
         return false;
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
     if (!botAI)
         return false;
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     uint64 const timestampMs = GameTime::GetGameTimeMS().count();
     Refresh(player);
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     if (!player->IsAlive())
     {
-        botAI->RecordReviveAttempt(timestampMs, false, false);
+        botAI->RecordReviveAttempt(timestampMs, PlayerbotReviveOutcome::Failed, false);
         return false;
     }
 
     player->CombatStopWithPets(true);
     botAI->StartPostReviveRepairSafety();
-    bool const teleportAccepted = player->TeleportTo(player->m_homebindMapId, player->m_homebindX,
-                                                     player->m_homebindY, player->m_homebindZ,
-                                                     player->GetOrientation());
+    bool const teleportAccepted = player->TeleportTo(player->m_homebindMapId, player->m_homebindX, player->m_homebindY,
+                                                     player->m_homebindZ, player->GetOrientation());
     bool const success = playerbots::recovery::IsHomebindRecoverySuccessful(player->IsAlive(), teleportAccepted);
     if (success)
     {
@@ -1720,7 +1759,8 @@ bool RandomPlayerbotMgr::RecoverAtHomebind(Player* player)
         SetEventValue(botId, "revive", 0, 0);
     }
 
-    botAI->RecordReviveAttempt(timestampMs, success, player->IsAlive());
+    botAI->RecordReviveAttempt(
+        timestampMs, success ? PlayerbotReviveOutcome::Succeeded : PlayerbotReviveOutcome::Failed, player->IsAlive());
     return success;
 }
 
@@ -1898,6 +1938,7 @@ void RandomPlayerbotMgr::PrepareAddclassCache()
                 } while (results->NextRow());
             }
         }
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     }
 
     LOG_INFO("playerbots", ">> {} characters collected for addclass command from {} AddClass accounts.", collected,
@@ -1910,6 +1951,7 @@ void RandomPlayerbotMgr::Init()
         sRandomPlayerbotMgr.PrepareAddclassCache();
 
     if (sPlayerbotAIConfig.randomBotJoinBG)
+        // PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
         sRandomPlayerbotMgr.LoadBattleMastersCache();
 
     if (ShouldClearRandomPlayerbotAdmissions(sPlayerbotAIConfig.preserveRandomBotAdmissions))
@@ -2088,6 +2130,7 @@ void RandomPlayerbotMgr::RandomizeFirst(Player* bot)
     PlayerbotFactory factory(bot, level);
     factory.Randomize(false);
 
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     uint32 randomTime =
         urand(sPlayerbotAIConfig.minRandomBotRandomizeTime, sPlayerbotAIConfig.maxRandomBotRandomizeTime);
     uint32 inworldTime = urand(sPlayerbotAIConfig.minRandomBotInWorldTime, sPlayerbotAIConfig.maxRandomBotInWorldTime);
@@ -2128,6 +2171,7 @@ void RandomPlayerbotMgr::RandomizeMin(Player* bot)
     PlayerbotFactory factory(bot, level);
     factory.Randomize(false);
 
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     uint32 randomTime =
         urand(sPlayerbotAIConfig.minRandomBotRandomizeTime, sPlayerbotAIConfig.maxRandomBotRandomizeTime);
     uint32 inworldTime = urand(sPlayerbotAIConfig.minRandomBotInWorldTime, sPlayerbotAIConfig.maxRandomBotInWorldTime);
@@ -2212,6 +2256,7 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
 
     PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "Refresh");
 
+    // PLB-LOCAL(6ddb7413ab72): feat(factory): add EconomyManagedSupplies to stop the refresh conjuring goods
     botAI->Reset();
 
     if (!sPlayerbotAIConfig.economyManagedSupplies)
@@ -2225,6 +2270,7 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
         bot->SetPower(POWER_MANA, bot->GetMaxPower(POWER_MANA));
 
     if (bot->GetMaxPower(POWER_ENERGY) > 0)
+        // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
         bot->SetPower(POWER_ENERGY, bot->GetMaxPower(POWER_ENERGY));
 
     if (!sPlayerbotAIConfig.economyManagedSupplies)
@@ -2299,6 +2345,7 @@ bool RandomPlayerbotMgr::IsAddclassBot(ObjectGuid::LowType bot)
         }
     }
 
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     // If not in cache, check the account type
     uint32 accountId = sCharacterCache->GetCharacterAccountIdByGuid(guid);
     if (accountId && IsAccountType(accountId, 2))  // Type 2 = AddClass
@@ -2510,6 +2557,7 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
         return false;
     }
 
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     if (!args || !*args)
     {
         LOG_ERROR("playerbots", "Usage: rndbot stats/update/reset/init/refresh/autogear/add/remove");
@@ -2549,6 +2597,7 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
     // handlers["initmin"] = &RandomPlayerbotMgr::RandomizeMin;
     handlers["init"] = &RandomPlayerbotMgr::RandomizeFirst;
     handlers["clear"] = &RandomPlayerbotMgr::Clear;
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     handlers["levelup"] = handlers["level"] = &RandomPlayerbotMgr::IncreaseLevel;
     handlers["refresh"] = &RandomPlayerbotMgr::Refresh;
     handlers["autogear"] = &RandomPlayerbotMgr::AutoGearBot;
@@ -2623,6 +2672,7 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
     //     LOG_INFO("playerbots", "{}", i->c_str());
     // }
     return true;
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
 }
 
 // Console counterpart of the whisper autogear command, for bots that have no master to whisper
@@ -2684,6 +2734,7 @@ void RandomPlayerbotMgr::OnPlayerLogout(Player* player)
 
 void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
 {
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     if (_isBotLogging)
     {
         LOG_INFO("playerbots", "{}/{} Bot {} logged in", playerBots.size(), sRandomPlayerbotMgr.GetMaxAllowedBotCount(),
@@ -2740,6 +2791,7 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
             {
                 if (!bot->InBattleground())
                 {
+                    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
                     botAI->SetMaster(player);
                     botAI->ResetStrategies();
                     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "Hello", {}));
@@ -2763,6 +2815,7 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
         {
             botPos.GetReachableRandomPointOnGround(player, sPlayerbotAIConfig.reactDistance * 2, true);
         }
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         else
         {
             std::vector<TravelDestination*> dests =
@@ -2851,6 +2904,7 @@ void RandomPlayerbotMgr::PrintStats()
 
     uint32 dps = 0;
     uint32 heal = 0;
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     uint32 tank = 0;
     uint32 active = 0;
     /*    uint32 update = 0;
@@ -2888,6 +2942,7 @@ void RandomPlayerbotMgr::PrintStats()
         lvlPerRace[bot->getRace()] += bot->GetLevel();
 
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         if (!botAI)
         {
             LOG_ERROR("playerbots", "Player/Bot {} is registered in sRandomPlayerbotMgr playerBots and has no bot AI!",
@@ -3116,6 +3171,7 @@ uint32 RandomPlayerbotMgr::GetTradeDiscount(Player* bot, Player* master)
     return GetEventValue(botId, name.str());
 }
 
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 std::string const RandomPlayerbotMgr::HandleRemoteCommand(std::string const request)
 {
     std::string extensionResponse;

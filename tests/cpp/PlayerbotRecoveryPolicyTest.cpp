@@ -4,6 +4,14 @@
  * or (at your option), any later version.
  */
 
+/*
+ * PLB-LOCAL FILE. This file does not exist upstream and never conflicts on a merge.
+ *
+ * Local additions live here by preference precisely for that reason: every symbol this file owns
+ * is one that an upstream pull cannot touch. Prefer adding to a file like this over editing an
+ * upstream one, and keep the edit in the upstream file down to the call that reaches in here.
+ */
+
 #include "Ai/Base/Actions/AcceptResurrectAction.h"
 #include "Ai/Base/Actions/GenericActions.h"
 #include "Ai/Base/Actions/PhysicalDeathCountPolicy.h"
@@ -137,19 +145,21 @@ TEST(PlayerbotRecoveryPolicyTest, RejectedAndSuccessfulAttemptsRemainTruthful)
     EXPECT_FALSE(snapshot.currentCycle);
 
     tracker.RecordPhysicalDeath();
-    tracker.Record(1000, false, false);
+    tracker.Record(1000, PlayerbotReviveOutcome::Failed, false);
     snapshot = tracker.Inspect();
     EXPECT_TRUE(snapshot.available);
     EXPECT_EQ(snapshot.timestampMs, 1000u);
+    EXPECT_EQ(snapshot.outcome, PlayerbotReviveOutcome::Failed);
     EXPECT_FALSE(snapshot.success);
     EXPECT_FALSE(snapshot.aliveAfter);
     EXPECT_EQ(snapshot.attemptGeneration, 1u);
     EXPECT_EQ(snapshot.currentDeathGeneration, 1u);
     EXPECT_TRUE(snapshot.currentCycle);
 
-    tracker.Record(2000, true, true);
+    tracker.Record(2000, PlayerbotReviveOutcome::Succeeded, true);
     snapshot = tracker.Inspect();
     EXPECT_EQ(snapshot.timestampMs, 2000u);
+    EXPECT_EQ(snapshot.outcome, PlayerbotReviveOutcome::Succeeded);
     EXPECT_TRUE(snapshot.success);
     EXPECT_TRUE(snapshot.aliveAfter);
     EXPECT_TRUE(snapshot.currentCycle);
@@ -159,6 +169,106 @@ TEST(PlayerbotRecoveryPolicyTest, RejectedAndSuccessfulAttemptsRemainTruthful)
     EXPECT_EQ(snapshot.attemptGeneration, 1u);
     EXPECT_EQ(snapshot.currentDeathGeneration, 2u);
     EXPECT_FALSE(snapshot.currentCycle);
+}
+
+/*
+ * `success` is derived from the outcome rather than passed alongside it, so the two cannot
+ * disagree on the wire. Only Succeeded is a success; the other three are not, and two of them are
+ * not failures either.
+ */
+/*
+ * The defect this whole change exists for.
+ *
+ * A ghost standing at its own corpse with the reclaim delay still running is doing exactly what
+ * the timer asks of it. The corpse revive action runs on a `corpse near` trigger, so it reaches
+ * this state every tick for at least thirty seconds and far longer after repeated deaths. Calling
+ * that a failed revive is what made two healthy bots read as stuck in a revive loop.
+ */
+TEST(PlayerbotRecoveryPolicyTest, WaitingOutAReclaimDelayIsIneligibleRatherThanFailed)
+{
+    playerbots::recovery::CorpseReclaimEligibility waiting{
+        .playerAlive = false,
+        .inArena = false,
+        .ghost = true,
+        .hasCorpse = true,
+        .reclaimDelayElapsed = false,
+        .corpseInMap = true,
+        .withinReclaimRadius = true,
+    };
+    EXPECT_EQ(playerbots::recovery::CorpseReviveOutcome(waiting, false, false), PlayerbotReviveOutcome::Ineligible);
+
+    // Every other way of not being able to reclaim yet reads the same way, for the same reason.
+    playerbots::recovery::CorpseReclaimEligibility outOfRange = waiting;
+    outOfRange.reclaimDelayElapsed = true;
+    outOfRange.withinReclaimRadius = false;
+    EXPECT_EQ(playerbots::recovery::CorpseReviveOutcome(outOfRange, false, false), PlayerbotReviveOutcome::Ineligible);
+
+    playerbots::recovery::CorpseReclaimEligibility noCorpse = waiting;
+    noCorpse.reclaimDelayElapsed = true;
+    noCorpse.hasCorpse = false;
+    EXPECT_EQ(playerbots::recovery::CorpseReviveOutcome(noCorpse, false, false), PlayerbotReviveOutcome::Ineligible);
+}
+
+TEST(PlayerbotRecoveryPolicyTest, AnEligibleBotDecliningForItsLeaderIsNotAFailure)
+{
+    playerbots::recovery::CorpseReclaimEligibility const eligible{
+        .playerAlive = false,
+        .inArena = false,
+        .ghost = true,
+        .hasCorpse = true,
+        .reclaimDelayElapsed = true,
+        .corpseInMap = true,
+        .withinReclaimRadius = true,
+    };
+    ASSERT_TRUE(playerbots::recovery::CanReclaimCorpse(eligible));
+
+    EXPECT_EQ(playerbots::recovery::CorpseReviveOutcome(eligible, true, false), PlayerbotReviveOutcome::Declined);
+
+    // Only an issued reclaim that left the bot dead is a failure.
+    EXPECT_EQ(playerbots::recovery::CorpseReviveOutcome(eligible, false, false), PlayerbotReviveOutcome::Failed);
+    EXPECT_EQ(playerbots::recovery::CorpseReviveOutcome(eligible, false, true), PlayerbotReviveOutcome::Succeeded);
+}
+
+/*
+ * Ineligibility outranks the deferral: a bot that cannot act has not chosen anything, so reporting
+ * a choice it never made would be its own untruth.
+ */
+TEST(PlayerbotRecoveryPolicyTest, IneligibilityOutranksDecliningToTheLeader)
+{
+    playerbots::recovery::CorpseReclaimEligibility const waiting{
+        .playerAlive = false,
+        .inArena = false,
+        .ghost = true,
+        .hasCorpse = true,
+        .reclaimDelayElapsed = false,
+        .corpseInMap = true,
+        .withinReclaimRadius = true,
+    };
+    EXPECT_EQ(playerbots::recovery::CorpseReviveOutcome(waiting, true, false), PlayerbotReviveOutcome::Ineligible);
+}
+
+TEST(PlayerbotRecoveryPolicyTest, SuccessIsDerivedFromTheOutcomeAndOnlySucceededCounts)
+{
+    PlayerbotReviveAttemptTracker tracker;
+    for (PlayerbotReviveOutcome const outcome :
+         {PlayerbotReviveOutcome::Ineligible, PlayerbotReviveOutcome::Declined, PlayerbotReviveOutcome::Failed})
+    {
+        tracker.Record(1000, outcome, false);
+        PlayerbotReviveAttemptSnapshot const snapshot = tracker.Inspect();
+        EXPECT_EQ(snapshot.outcome, outcome);
+        EXPECT_FALSE(snapshot.success) << PlayerbotReviveOutcomeName(outcome);
+    }
+
+    tracker.Record(2000, PlayerbotReviveOutcome::Succeeded, true);
+    EXPECT_TRUE(tracker.Inspect().success);
+}
+
+TEST(PlayerbotRecoveryPolicyTest, EveryReviveOutcomeHasItsOwnWireName)
+{
+    EXPECT_STREQ(PlayerbotReviveOutcomeName(PlayerbotReviveOutcome::Ineligible), "ineligible");
+    EXPECT_STREQ(PlayerbotReviveOutcomeName(PlayerbotReviveOutcome::Declined), "declined");
+    EXPECT_STREQ(PlayerbotReviveOutcomeName(PlayerbotReviveOutcome::Failed), "failed");
+    EXPECT_STREQ(PlayerbotReviveOutcomeName(PlayerbotReviveOutcome::Succeeded), "succeeded");
 }
 
 TEST(PlayerbotRecoveryPolicyTest, PhysicalDeathCountsOnceBeforeRelease)

@@ -17,6 +17,11 @@
     <img src="https://github.com/mod-playerbots/mod-playerbots/actions/workflows/windows_build.yml/badge.svg">
 </div>
 
+<!-- PLB-LOCAL(fork-notice): added by this fork. Upstream has no such note. Keep on merge. -->
+> **This is a fork.** Local changes are marked in the code with `PLB-LOCAL` so an upstream merge
+> can tell them apart. Read [docs/local-changes.md](docs/local-changes.md) before editing any file
+> that exists upstream.
+
 # Playerbots Module
 `mod-playerbots` is an [AzerothCore](https://www.azerothcore.org/) module that adds player-like bots to a server. The project is based off [IKE3's Playerbots](https://github.com/ike3/mangosbot).
 

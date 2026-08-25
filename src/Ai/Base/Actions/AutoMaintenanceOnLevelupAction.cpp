@@ -4,10 +4,15 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "AutoMaintenanceOnLevelupAction.h"
 #include "BroadcastHelper.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "RandomBotMaintenancePolicy.h"
 #include "RandomPlayerbotMgr.h"
 #include "SharedDefines.h"
@@ -161,6 +166,7 @@ std::string const AutoMaintenanceOnLevelupAction::FormatSpell(SpellInfo const* s
 
 void AutoMaintenanceOnLevelupAction::AutoUpgradeEquip()
 {
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     playerbots::maintenance::LevelupMaintenancePlan const plan =
         playerbots::maintenance::BuildLevelupMaintenancePlan(sRandomPlayerbotMgr.IsRandomBot(bot),
                                                              sPlayerbotAIConfig.economyManagedSupplies,
@@ -170,9 +176,11 @@ void AutoMaintenanceOnLevelupAction::AutoUpgradeEquip()
 
     PlayerbotFactory factory(bot, bot->GetLevel());
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     if (plan.cleanupConsumables)
         factory.CleanupConsumables();
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     if (plan.provisionConsumables)
     {
         factory.InitAmmo();
@@ -182,6 +190,7 @@ void AutoMaintenanceOnLevelupAction::AutoUpgradeEquip()
         factory.InitPotions();
     }
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     if (plan.upgradeEquipment)
         factory.InitEquipment(true);
 }

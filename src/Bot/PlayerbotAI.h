@@ -3,6 +3,10 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 11 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_PLAYERBOTAI_H
 #define PLAYERBOTS_PLAYERBOTAI_H
 
@@ -16,12 +20,14 @@
 #include "NewRpgStrategy.h"
 #include "PlayerbotAIBase.h"
 #include "PlayerbotAIConfig.h"
-#include "Recovery/PlayerbotRecoveryPolicy.h"
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "PlayerbotSecurity.h"
 #include "PlayerbotTextMgr.h"
+#include "Recovery/PlayerbotRecoveryPolicy.h"
 #include "SpellAuras.h"
 #include "Util.h"
 #include "WorldPacket.h"
+// PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases
 #include <atomic>
 #include <mutex>
 #include <stack>
@@ -31,6 +37,7 @@ class Creature;
 class Engine;
 class ExternalEventHelper;
 class Group;
+// PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
 class Channel;
 class Gameobject;
 class Item;
@@ -80,6 +87,7 @@ enum BotState
     BOT_STATE_MAX
 };
 
+// PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases
 inline constexpr uint32 PLAYERBOT_ACTIVITY_LEASE_MAX_SECONDS = 45u * 60u;
 
 struct PlayerbotActivityLeaseState
@@ -200,64 +208,64 @@ enum ChatChannelId
 
 enum RoguePoisonId
 {
-    INSTANT_POISON      = 6947,
-    INSTANT_POISON_II   = 6949,
-    INSTANT_POISON_III  = 6950,
-    INSTANT_POISON_IV   = 8926,
-    INSTANT_POISON_V    = 8927,
-    INSTANT_POISON_VI   = 8928,
-    INSTANT_POISON_VII  = 21927,
+    INSTANT_POISON = 6947,
+    INSTANT_POISON_II = 6949,
+    INSTANT_POISON_III = 6950,
+    INSTANT_POISON_IV = 8926,
+    INSTANT_POISON_V = 8927,
+    INSTANT_POISON_VI = 8928,
+    INSTANT_POISON_VII = 21927,
     INSTANT_POISON_VIII = 43230,
-    INSTANT_POISON_IX   = 43231,
-    DEADLY_POISON       = 2892,
-    DEADLY_POISON_II    = 2893,
-    DEADLY_POISON_III   = 8984,
-    DEADLY_POISON_IV    = 8985,
-    DEADLY_POISON_V     = 20844,
-    DEADLY_POISON_VI    = 22053,
-    DEADLY_POISON_VII   = 22054,
-    DEADLY_POISON_VIII  = 43232,
-    DEADLY_POISON_IX    = 43233
+    INSTANT_POISON_IX = 43231,
+    DEADLY_POISON = 2892,
+    DEADLY_POISON_II = 2893,
+    DEADLY_POISON_III = 8984,
+    DEADLY_POISON_IV = 8985,
+    DEADLY_POISON_V = 20844,
+    DEADLY_POISON_VI = 22053,
+    DEADLY_POISON_VII = 22054,
+    DEADLY_POISON_VIII = 43232,
+    DEADLY_POISON_IX = 43233
 };
 
 enum SharpeningStoneId
 {
-    ROUGH_SHARPENING_STONE      = 2862,
-    COARSE_SHARPENING_STONE     = 2863,
-    HEAVY_SHARPENING_STONE      = 2871,
-    SOLID_SHARPENING_STONE      = 7964,
-    DENSE_SHARPENING_STONE      = 12404,
-    ELEMENTAL_SHARPENING_STONE  = 18262,
-    FEL_SHARPENING_STONE        = 23528,
+    ROUGH_SHARPENING_STONE = 2862,
+    COARSE_SHARPENING_STONE = 2863,
+    HEAVY_SHARPENING_STONE = 2871,
+    SOLID_SHARPENING_STONE = 7964,
+    DENSE_SHARPENING_STONE = 12404,
+    ELEMENTAL_SHARPENING_STONE = 18262,
+    FEL_SHARPENING_STONE = 23528,
     ADAMANTITE_SHARPENING_STONE = 23529
 };
 
 enum WeightstoneId
 {
-    ROUGH_WEIGHTSTONE      = 3239,
-    COARSE_WEIGHTSTONE     = 3240,
-    HEAVY_WEIGHTSTONE      = 3241,
-    SOLID_WEIGHTSTONE      = 7965,
-    DENSE_WEIGHTSTONE      = 12643,
-    FEL_WEIGHTSTONE        = 28420,
+    ROUGH_WEIGHTSTONE = 3239,
+    COARSE_WEIGHTSTONE = 3240,
+    HEAVY_WEIGHTSTONE = 3241,
+    SOLID_WEIGHTSTONE = 7965,
+    DENSE_WEIGHTSTONE = 12643,
+    FEL_WEIGHTSTONE = 28420,
     ADAMANTITE_WEIGHTSTONE = 28421
 };
 
 enum WizardOilId
 {
-    MINOR_WIZARD_OIL      = 20744,
-    LESSER_WIZARD_OIL     = 20746,
-    WIZARD_OIL            = 20750,
-    BRILLIANT_WIZARD_OIL  = 20749,
-    SUPERIOR_WIZARD_OIL   = 22522
+    MINOR_WIZARD_OIL = 20744,
+    LESSER_WIZARD_OIL = 20746,
+    WIZARD_OIL = 20750,
+    BRILLIANT_WIZARD_OIL = 20749,
+    SUPERIOR_WIZARD_OIL = 22522
 };
 
 enum ManaOilId
 {
-    MINOR_MANA_OIL        = 20745,
-    LESSER_MANA_OIL       = 20747,
-    BRILLIANT_MANA_OIL    = 20748,
-    SUPERIOR_MANA_OIL     = 22521
+    MINOR_MANA_OIL = 20745,
+    LESSER_MANA_OIL = 20747,
+    BRILLIANT_MANA_OIL = 20748,
+    SUPERIOR_MANA_OIL = 22521
 };
 
 enum class BotTypeNumber : uint8
@@ -433,6 +441,7 @@ public:
     void HandleMasterIncomingPacket(WorldPacket const& packet);
     void HandleMasterOutgoingPacket(WorldPacket const& packet);
     void HandleTeleportAck();
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     void HandleCombatStart();
     void ChangeEngine(BotState type);
     void ChangeEngineOnCombat();
@@ -505,6 +514,7 @@ public:
     bool SayToGuild(const std::string& msg);
     bool SayToWorld(const std::string& msg);
     bool SayToChannel(const std::string& msg, const ChatChannelId& chanId);
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     bool IsOnChannel(ChatChannelId const& chanId);
     bool SayToParty(const std::string& msg);
     bool SayToRaid(const std::string& msg);
@@ -512,6 +522,7 @@ public:
     bool Say(const std::string& msg);
     bool Whisper(const std::string& msg, const std::string& receiverName);
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
     Channel* FindZoneChannel(ChatChannelId const& chanId);
 
     void SpellInterrupted(uint32 spellid);
@@ -551,8 +562,7 @@ public:
     bool CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell = true, Item* itemTarget = nullptr,
                       Item* castItem = nullptr);
     bool CanCastSpell(uint32 spellid, GameObject* goTarget, bool checkHasSpell = true);
-    bool CanCastSpell(uint32 spellid, float x, float y, float z, bool checkHasSpell = true,
-                      Item* itemTarget = nullptr);
+    bool CanCastSpell(uint32 spellid, float x, float y, float z, bool checkHasSpell = true, Item* itemTarget = nullptr);
 
     Aura* GetAura(std::string const spellName, Unit* unit, bool checkIsOwner = false, bool checkDuration = false,
                   int checkStack = -1);
@@ -567,7 +577,7 @@ public:
                      bool fixed = false);
 
     uint32 GetEquipGearScore(Player* player);
-    //uint32 GetEquipGearScore(Player* player, bool withBags, bool withBank);
+    // uint32 GetEquipGearScore(Player* player, bool withBags, bool withBank);
     static uint32 GetMixedGearScore(Player* player, bool withBags, bool withBank, uint32 topN = 0);
     bool HasSkill(SkillType skill);
     bool IsAllowedCommand(std::string const text);
@@ -590,11 +600,14 @@ public:
     bool AllowActive(ActivityType activityType);
     bool AllowActivity(ActivityType activityType = ALL_ACTIVITY, bool checkNow = false);
     bool IsActivityAllowedCached() const { return allowActive[ALL_ACTIVITY]; }
+    // PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases
     PlayerbotActivityLeaseAcquireResult HoldActivityLease(std::string const& token, uint32 durationSeconds, uint64 now);
     PlayerbotActivityLeaseState InspectActivityLease(uint64 now) const;
     PlayerbotActivityLeaseReleaseOutcome ReleaseActivityLease(std::string const& token, uint64 now);
     bool IsActivityLeaseActive(uint64 now) const;
-    void RecordReviveAttempt(uint64 timestampMs, bool success, bool aliveAfter);
+    // PLB-LOCAL(revive-outcome): signature widened from `bool success` to a four value outcome.
+    // Upstream: void RecordReviveAttempt(uint64, bool success, bool aliveAfter);
+    void RecordReviveAttempt(uint64 timestampMs, PlayerbotReviveOutcome outcome, bool aliveAfter);
     [[nodiscard]] PlayerbotReviveAttemptSnapshot InspectReviveAttempt() const;
     void StartPostReviveRepairSafety();
     [[nodiscard]] bool IsPostReviveRepairPending();
@@ -606,12 +619,11 @@ public:
     bool IsSafe(WorldObject* obj);
     ChatChannelSource GetChatChannelSource(Player* bot, uint32 type, std::string channelName);
 
-    bool StarterLevelDistanceCheck(Player* player, const WorldLocation &loc, bool fromStartUp = false);
+    bool StarterLevelDistanceCheck(Player* player, const WorldLocation& loc, bool fromStartUp = false);
 
     bool HasCheat(BotCheatMask mask)
     {
-        return ((uint32)mask & (uint32)cheatMask) != 0 ||
-               ((uint32)mask & (uint32)sPlayerbotAIConfig.botCheatMask) != 0;
+        return ((uint32)mask & (uint32)cheatMask) != 0 || ((uint32)mask & (uint32)sPlayerbotAIConfig.botCheatMask) != 0;
     }
     BotCheatMask GetCheat() { return cheatMask; }
     void SetCheat(BotCheatMask mask) { cheatMask = mask; }
@@ -660,9 +672,11 @@ private:
     static void _fillGearScoreData(Player* player, Item* item, std::vector<uint32>* gearScore, uint32& twoHandScore,
                                    bool mixed = false);
     bool IsTellAllowed(PlayerbotSecurityLevel securityLevel = PLAYERBOT_SECURITY_ALLOW_ALL);
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     void UpdateAIGroupMaster();
     Item* FindItemInInventory(std::function<bool(ItemTemplate const*)> checkItem) const;
     [[nodiscard]] bool HasBrokenEquipment() const;
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     void HandleCommands();
     void HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang = LANG_UNIVERSAL);
     void HandlePendingGroupInvite();
@@ -675,6 +689,7 @@ private:
         return player && player->GetSession() && player->IsInWorld() && !player->IsDuringRemoveFromWorld() &&
                !player->IsBeingTeleported();
     }
+
 protected:
     Player* bot;
     Player* master;
@@ -694,6 +709,7 @@ protected:
     std::map<std::string, time_t> whispers;
     std::pair<ChatMsg, time_t> currentChat;
     static std::set<std::string> unsecuredCommands;
+    // PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases
     bool allowActive[MAX_ACTIVITY_TYPE];
     time_t allowActiveCheckTimer[MAX_ACTIVITY_TYPE];
     mutable std::mutex activityLeaseMutex;

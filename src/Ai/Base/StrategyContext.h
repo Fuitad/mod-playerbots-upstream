@@ -4,6 +4,10 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_STRATEGYCONTEXT_H
 #define PLAYERBOTS_STRATEGYCONTEXT_H
 
@@ -42,6 +46,7 @@
 #include "QuestStrategies.h"
 #include "RTSCStrategy.h"
 #include "RacialsStrategy.h"
+// PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
 #include "RandomBotMaintenanceStrategy.h"
 #include "RangedCombatStrategy.h"
 #include "ReturnStrategy.h"
@@ -119,6 +124,7 @@ public:
         creators["debug spell"] = &StrategyContext::debug_spell;
         creators["debug quest"] = &StrategyContext::debug_quest;
         creators["maintenance"] = &StrategyContext::maintenance;
+        // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
         creators["random bot maintenance"] = &StrategyContext::random_bot_maintenance;
         creators["group"] = &StrategyContext::group;
         creators["guild"] = &StrategyContext::guild;
@@ -194,6 +200,7 @@ private:
     static Strategy* debug_spell(PlayerbotAI* botAI) { return new DebugSpellStrategy(botAI); }
     static Strategy* debug_quest(PlayerbotAI* botAI) { return new DebugQuestStrategy(botAI); }
     static Strategy* maintenance(PlayerbotAI* botAI) { return new MaintenanceStrategy(botAI); }
+    // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
     static Strategy* random_bot_maintenance(PlayerbotAI* botAI) { return new RandomBotMaintenanceStrategy(botAI); }
     static Strategy* group(PlayerbotAI* botAI) { return new GroupStrategy(botAI); }
     static Strategy* guild (PlayerbotAI* botAI) { return new GuildStrategy(botAI); }

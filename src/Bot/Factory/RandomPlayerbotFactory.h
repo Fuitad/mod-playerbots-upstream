@@ -4,11 +4,16 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_RANDOMPLAYERBOTFACTORY_H
 #define PLAYERBOTS_RANDOMPLAYERBOTFACTORY_H
 
 #include "Common.h"
 #include "DBCEnums.h"
+// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "SharedDefines.h"
 #include <map>
 #include <unordered_map>
@@ -24,6 +29,7 @@ class RandomPlayerbotFactory
 public:
     enum class NameRaceAndGender : uint8
     {
+        // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
         // Generic categories are global pools shared by every playable race.
         GenericMale = 0,
         GenericFemale,
@@ -45,6 +51,7 @@ public:
         BloodelfFemale
     };
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     static constexpr NameRaceAndGender CombineRaceAndGender(uint8 /*race*/, uint8 gender)
     {
         return gender == GENDER_FEMALE ? NameRaceAndGender::GenericFemale : NameRaceAndGender::GenericMale;
@@ -53,6 +60,7 @@ public:
     RandomPlayerbotFactory() {};
     virtual ~RandomPlayerbotFactory() {}
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     Player* CreateRandomBot(WorldSession* session, uint8 cls, bool alliance,
                             std::unordered_map<NameRaceAndGender, std::vector<std::string>>& names);
     static void CreateRandomBots();
@@ -63,6 +71,7 @@ public:
 
 private:
     static bool IsValidRaceClassCombination(uint8 race, uint8 class_, uint32 expansion);
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     static std::vector<uint8> GetAvailableClasses(bool alliance);
     static std::vector<uint8> GetAvailableRaces(uint8 class_, bool alliance);
     std::string const CreateRandomBotName(NameRaceAndGender raceAndGender);

@@ -4,8 +4,13 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 8 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #include "AcceptQuestAction.h"
 #include "Event.h"
+// PLB-LOCAL(9c25a8714983): fix(playerbots): clear stale quest share state
 #include "ObjectAccessor.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
@@ -103,6 +108,7 @@ bool AcceptQuestAction::Execute(Event event)
 bool AcceptQuestShareAction::Execute(Event event)
 {
     Player* bot = botAI->GetBot();
+    // PLB-LOCAL(9c25a8714983): fix(playerbots): clear stale quest share state
     if (!bot)
         return false;
 
@@ -121,10 +127,12 @@ bool AcceptQuestShareAction::Execute(Event event)
     p >> quest;
 
     Quest const* qInfo = sObjectMgr->GetQuestTemplate(quest);
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     if (!qInfo)
     {
         bot->SetDivider(ObjectGuid::Empty);
         return false;
+    // PLB-LOCAL(9c25a8714983): fix(playerbots): clear stale quest share state
     }
 
     quest = qInfo->GetQuestId();
@@ -147,6 +155,7 @@ bool AcceptQuestShareAction::Execute(Event event)
         return false;
     }
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     if (!bot->CanAddQuest(qInfo, false))
     {
         bot->SetDivider(ObjectGuid::Empty);
@@ -160,11 +169,14 @@ bool AcceptQuestShareAction::Execute(Event event)
         bot->SetDivider(ObjectGuid::Empty);
     }
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     bot->AddQuestAndCheckCompletion(qInfo, master);
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     if (qInfo->GetSrcSpell() > 0)
         bot->CastSpell(bot, qInfo->GetSrcSpell(), true);
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("quest_accept", "Quest accepted", {}));
     return true;
 }
