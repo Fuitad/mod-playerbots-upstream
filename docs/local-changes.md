@@ -63,9 +63,55 @@ upstream's, or reconcile. Record which, by updating the marker.
 
 `grep -rn 'PLB-LOCAL' src tests` lists every local region under the marker convention.
 
-## Known gap
+## Coverage as of the backfill (2026-08-25)
 
-The convention starts from `revive-outcome` (2026-08-25). The fork was already 39 commits and
-about 194 files diverged from `upstream/master` at that point, and none of that is marked.
-Backfilling is worth doing and has not been done. Until it is, absence of a marker does NOT mean
-a region is untouched by this fork.
+`tools/plb_local_markers.py --apply` backfilled the convention across the whole fork:
+
+| | |
+|---|---|
+| Local only files bannered | 38 |
+| Upstream files carrying a file delta header | 62 |
+| Regions found in those files | 358 |
+| Marked inline with the commit that introduced them | 351 |
+| Unmarkable, listed in the inventory for hand checking | 5 |
+
+The five unmarkable regions begin mid expression, so a comment could not be inserted above them
+without splitting an argument list or an initialiser. The tool reports them rather than guessing,
+and `docs/local-changes-inventory.md` names them. Those are the regions to read by hand during a
+merge.
+
+Coverage is measured against the merge base, not against `upstream/master`. This matters: a plain
+`git diff upstream/master..HEAD` also contains upstream's own commits, so it overstates what this
+fork changed. Use the base:
+
+```bash
+MB=$(git merge-base upstream/master HEAD)
+git diff --name-only $MB..HEAD
+```
+
+At the time of the backfill that is 104 files, where `upstream/master..HEAD` reported 194.
+
+## Before the next upstream merge
+
+Read this section first. It records decisions taken while the convention was built, so the merge
+does not have to rediscover them.
+
+1. **Regenerate first.** `python3 tools/plb_local_markers.py --check` reports drift, and `--apply`
+   refreshes markers and the inventory. Do this before starting the merge and again after, so the
+   region counts in the file headers describe the tree you actually have.
+2. **Resolve against the marker, not the diff alone.** A `PLB-LOCAL` region upstream has since
+   rewritten needs a decision: keep local behaviour, adopt upstream's, or reconcile. Record which
+   by updating the marker. Git's own conflict markers tell you which side is yours; `PLB-LOCAL`
+   tells you why yours is that way, and it is also there in the regions that do NOT conflict,
+   which is where an upstream change silently undoes local intent.
+3. **Do not reformat upstream files before a merge.** 951 of this module's files violate the
+   `.clang-format` it ships, so non conformance is upstream wide rather than a local lapse.
+   Reformatting adds conflict surface wherever upstream also touched those lines, and the same
+   reformat costs nothing once the merge has landed. Five files were reformatted deliberately on
+   2026-08-25; anything broader waits.
+4. **The root AzerothCore checkout is a separate question.** Its `upstream` remote is
+   `mod-playerbots/azerothcore-wotlk`, which as of 2026-08-25 is zero commits ahead of the local
+   `Playerbot` branch, so there is nothing to merge from it. The local branch is about 1323 commits
+   and 1734 files ahead of the shared base, which is a different scale of job from this module and
+   has NOT been marked. Merging real upstream AzerothCore would mean adding a different remote,
+   which is a deliberate act rather than an assumption.
