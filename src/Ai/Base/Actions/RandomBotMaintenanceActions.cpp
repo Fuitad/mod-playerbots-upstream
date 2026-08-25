@@ -367,6 +367,50 @@ bool playerbots::maintenance::NeedsRepair(PlayerbotAI* botAI)
     return repairCost && repairCost <= AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair));
 }
 
+/*
+ * Whether any equipped item is actually at zero durability, as opposed to merely worn.
+ *
+ * NeedsRepair covers both, because passing a repairer with a scuffed sword is worth a stop. This
+ * is the urgent half: at zero durability the item contributes nothing, so a bot in this state
+ * cannot win a fight and will keep dying until it is repaired. Only this justifies a hearth.
+ */
+bool playerbots::maintenance::HasBrokenEquipment(PlayerbotAI* botAI)
+{
+    if (!IsEligible(botAI))
+        return false;
+
+    Player* bot = botAI->GetBot();
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+    {
+        Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+        if (item && item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY) > 0 &&
+            item->GetUInt32Value(ITEM_FIELD_DURABILITY) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * Whether the hearth can actually be spent right now: the bot holds one and it is off cooldown.
+ *
+ * Checked before choosing the plan rather than after, so a bot with no hearth is reported Stranded
+ * and logged, instead of silently attempting an action that cannot fire and looking like it simply
+ * declined to repair.
+ */
+bool playerbots::maintenance::HearthstoneReady(Player* bot)
+{
+    if (!bot || bot->InBattleground())
+        return false;
+
+    Item* const hearthstone = bot->GetItemByEntry(HEARTHSTONE_ITEM_ID);
+    if (!hearthstone)
+        return false;
+
+    return !bot->HasSpellCooldown(HEARTHSTONE_SPELL_ID);
+}
+
 bool playerbots::maintenance::NeedsVendor(PlayerbotAI* botAI)
 {
     if (!IsEligible(botAI))
@@ -412,25 +456,53 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
     if (!targetEntry)
     {
         NpcDestination destination;
-        if (!FindNearestDestination(
-                botAI, [](uint32 entry) { return HasNpcFlag(entry, UNIT_NPC_FLAG_REPAIR); }, destination))
-        {
-            LOG_DEBUG("playerbots", "[Maintenance] {} repair: no repair destination from map {} zone {}",
-                      bot->GetName(), bot->GetMapId(), bot->GetZoneId());
-            return false;
-        }
+        bool const found = FindNearestDestination(
+            botAI, [](uint32 entry) { return HasNpcFlag(entry, UNIT_NPC_FLAG_REPAIR); }, destination);
+        float const distance = found ? bot->GetDistance(destination.position) : 0.0f;
+        RepairPlan const plan =
+            ChooseRepairPlan(true, HasBrokenEquipment(botAI), found, distance, HearthstoneReady(bot));
 
-        targetEntry = destination.entry;
-        targetPosition = destination.position;
-        LOG_DEBUG("playerbots", "[Maintenance] {} repair: heading to npc {} at {:.0f} yd", bot->GetName(),
-                  targetEntry, bot->GetDistance(targetPosition));
+        switch (plan)
+        {
+            case RepairPlan::Travel:
+                targetEntry = destination.entry;
+                targetPosition = destination.position;
+                LOG_DEBUG("playerbots", "[Maintenance] {} repair: heading to npc {} at {:.0f} yd", bot->GetName(),
+                          targetEntry, distance);
+                break;
+            case RepairPlan::Hearth:
+                /*
+                 * Nothing within walking distance and the gear is broken, so the bot cannot fight
+                 * its way anywhere. An inn always has a repairer, so the hearth converts an
+                 * unreachable errand into a reachable one instead of a long march it will die on.
+                 */
+                LOG_INFO("playerbots",
+                         "[Maintenance] {} repair: nearest repairer {:.0f} yd away with broken gear, hearthing",
+                         bot->GetName(), found ? distance : -1.0f);
+                return botAI->DoSpecificAction("hearthstone", Event("random bot repair"), true);
+            case RepairPlan::Stranded:
+                LOG_WARN("playerbots",
+                         "[Maintenance] {} repair: broken gear, nearest repairer {:.0f} yd, hearth unavailable",
+                         bot->GetName(), found ? distance : -1.0f);
+                return false;
+            case RepairPlan::None:
+                LOG_DEBUG("playerbots", "[Maintenance] {} repair: no reachable repair destination from map {} zone {}",
+                          bot->GetName(), bot->GetMapId(), bot->GetZoneId());
+                return false;
+        }
     }
 
     bool const moving = MoveFarTo(targetPosition);
     if (!moving)
         LOG_DEBUG("playerbots", "[Maintenance] {} repair: MoveFarTo returned false, npc {} at {:.0f} yd, isMoving={}",
                   bot->GetName(), targetEntry, bot->GetDistance(targetPosition), bot->isMoving());
-    return moving;
+
+    /*
+     * Still on the way counts as working. MoveFarTo reports false while the bot is closing normally
+     * (observed at six yards from the vendor), so returning it verbatim told every caller the repair
+     * had failed while it was in fact about to succeed.
+     */
+    return moving || bot->isMoving();
 }
 
 bool RandomBotVendorAction::Execute(Event /*event*/)

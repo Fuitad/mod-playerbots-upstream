@@ -7,6 +7,8 @@
 // PLB-LOCAL FILE. Not present upstream, so it can never conflict on a merge.
 // Prefer adding here over editing an upstream file. See docs/local-changes.md.
 
+#include <limits>
+
 #include "Ai/Base/Actions/RandomBotMaintenancePolicy.h"
 #include "gtest/gtest.h"
 
@@ -15,6 +17,7 @@ namespace
 using playerbots::maintenance::MountLevelThresholds;
 using playerbots::maintenance::MountTier;
 using playerbots::maintenance::MountVendorCandidate;
+using playerbots::maintenance::RepairPlan;
 
 TEST(RandomBotMaintenancePolicyTest, ManagedLevelupKeepsEquipmentFloorWithoutSyntheticConsumables)
 {
@@ -122,5 +125,70 @@ TEST(RandomBotMaintenancePolicyTest, RaceAndFactionSelectTheirOwnTrainersAndMoun
     EXPECT_FALSE(playerbots::maintenance::MountMeetsTier(MountTier::FastGround, false, 59));
     EXPECT_TRUE(playerbots::maintenance::MountMeetsTier(MountTier::Flying, true, 149));
     EXPECT_FALSE(playerbots::maintenance::MountMeetsTier(MountTier::Flying, false, 279));
+}
+
+/*
+ * The live incident this exists to prevent: on 2026-08-25 a level 28 hunter with a zero durability
+ * bow was handed a repair NPC 13906 yards away and walked toward it, dying the whole way. "Nearest"
+ * is not "reachable", and a bot that cannot fight cannot make that journey.
+ */
+TEST(RandomBotRepairPlanTest, AnUnreachableRepairerWithBrokenGearHearthsInsteadOfWalking)
+{
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true, 13906.0f, true), RepairPlan::Hearth);
+
+    // Just past the walking bound is already too far; the bound itself is still walkable.
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(
+                  true, true, true, playerbots::maintenance::MAINTENANCE_MAX_WALK_YARDS + 1.0f, true),
+              RepairPlan::Hearth);
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true,
+                                                        playerbots::maintenance::MAINTENANCE_MAX_WALK_YARDS, true),
+              RepairPlan::Travel);
+}
+
+TEST(RandomBotRepairPlanTest, AReachableRepairerIsWalkedToWhateverTheGearState)
+{
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true, 6.0f, true), RepairPlan::Travel);
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, false, true, 915.0f, true), RepairPlan::Travel);
+
+    // A hearth is never spent on a walk the bot can make, even when it is available.
+    EXPECT_NE(playerbots::maintenance::ChooseRepairPlan(true, true, true, 100.0f, true), RepairPlan::Hearth);
+}
+
+/*
+ * Worn gear is not an emergency. A bot with a chipped sword can still fight, so it waits to pass a
+ * repairer on its own business rather than burning a hearth it may need when something is broken.
+ */
+TEST(RandomBotRepairPlanTest, OnlyBrokenGearJustifiesSpendingTheHearth)
+{
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, false, true, 99999.0f, true), RepairPlan::None);
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, false, false, 0.0f, true), RepairPlan::None);
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, false, 0.0f, true), RepairPlan::Hearth);
+}
+
+TEST(RandomBotRepairPlanTest, NoHearthLeavesTheBotStrandedRatherThanSilent)
+{
+    // Reported rather than swallowed: this is the state a human needs to see in the log.
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true, 13906.0f, false), RepairPlan::Stranded);
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, false, 0.0f, false), RepairPlan::Stranded);
+}
+
+TEST(RandomBotRepairPlanTest, NothingToRepairAlwaysDoesNothing)
+{
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(false, true, true, 10.0f, true), RepairPlan::None);
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(false, false, false, 0.0f, false), RepairPlan::None);
+}
+
+/*
+ * A non finite or negative distance is a broken measurement, not a short walk. Treating it as
+ * reachable would send the bot walking toward a position it can never arrive at.
+ */
+TEST(RandomBotRepairPlanTest, AnUnusableDistanceIsNotTreatedAsReachable)
+{
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true, std::numeric_limits<float>::infinity(), true),
+              RepairPlan::Hearth);
+    EXPECT_EQ(
+        playerbots::maintenance::ChooseRepairPlan(true, true, true, std::numeric_limits<float>::quiet_NaN(), true),
+        RepairPlan::Hearth);
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true, -1.0f, true), RepairPlan::Hearth);
 }
 }  // namespace

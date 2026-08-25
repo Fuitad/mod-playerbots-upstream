@@ -21,6 +21,8 @@ namespace playerbots::maintenance
 [[nodiscard]] bool NeedsRepair(PlayerbotAI* botAI);
 [[nodiscard]] bool NeedsVendor(PlayerbotAI* botAI);
 [[nodiscard]] bool NeedsMount(PlayerbotAI* botAI);
+[[nodiscard]] bool HasBrokenEquipment(PlayerbotAI* botAI);
+[[nodiscard]] bool HearthstoneReady(Player* bot);
 }  // namespace playerbots::maintenance
 
 class RandomBotRepairAction : public NewRpgBaseAction

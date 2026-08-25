@@ -10,6 +10,7 @@
 #include "RandomBotMaintenancePolicy.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace playerbots::maintenance
 {
@@ -238,5 +239,29 @@ std::uint32_t SelectMountItem(std::uint8_t race, std::uint8_t team, MountTier ti
     }
 
     return selected ? selected->itemId : 0;
+}
+
+RepairPlan ChooseRepairPlan(bool needsRepair, bool hasBrokenEquipment, bool destinationFound,
+                            float destinationDistanceYards, bool hearthReady)
+{
+    if (!needsRepair)
+        return RepairPlan::None;
+
+    // Reachable on foot: walk, whatever the state of the gear. This is the ordinary case and it
+    // must stay cheap, so a bot with a chipped sword never burns a hearth it might need later.
+    bool const reachable = destinationFound && std::isfinite(destinationDistanceYards) &&
+                           destinationDistanceYards >= 0.0f && destinationDistanceYards <= MAINTENANCE_MAX_WALK_YARDS;
+    if (reachable)
+        return RepairPlan::Travel;
+
+    /*
+     * Nothing reachable. Only broken gear justifies the hearth: worn gear can wait for the bot to
+     * pass a repairer on its own business, but a bot that cannot fight will not get anywhere on its
+     * own business, and every attempt costs it another death and more durability.
+     */
+    if (!hasBrokenEquipment)
+        return RepairPlan::None;
+
+    return hearthReady ? RepairPlan::Hearth : RepairPlan::Stranded;
 }
 }  // namespace playerbots::maintenance
