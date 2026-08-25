@@ -453,6 +453,25 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
         return true;
     }
 
+    /*
+     * A latched target is re-checked, not trusted. The plan used to be consulted only when there was
+     * no target at all, so a repairer chosen while the bot stood next to it stayed selected after the
+     * bot travelled away on other business, and the walking bound never applied again. Live on
+     * 2026-08-25 that left a bot calling MoveFarTo against a repairer 6978 yards away, stationary,
+     * every tick: the exact march this action exists to prevent, reached by the back door.
+     */
+    if (targetEntry)
+    {
+        RepairPlan const latched = ChooseRepairPlan(true, HasBrokenEquipment(botAI), true,
+                                                   bot->GetDistance(targetPosition), HearthstoneReady(bot));
+        if (latched != RepairPlan::Travel)
+        {
+            LOG_DEBUG("playerbots", "[Maintenance] {} repair: dropping stale target {} now {:.0f} yd away",
+                      bot->GetName(), targetEntry, bot->GetDistance(targetPosition));
+            targetEntry = 0;
+        }
+    }
+
     if (!targetEntry)
     {
         NpcDestination destination;

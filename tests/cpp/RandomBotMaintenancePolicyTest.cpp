@@ -145,6 +145,28 @@ TEST(RandomBotRepairPlanTest, AnUnreachableRepairerWithBrokenGearHearthsInsteadO
               RepairPlan::Travel);
 }
 
+/*
+ * A target latched while the bot stood next to it, re-evaluated after the bot travelled away.
+ *
+ * The action used to consult the plan only when it had no target at all, so the walking bound was
+ * applied once at selection and never again. Live on 2026-08-25 a bot with merely worn gear sat
+ * calling MoveFarTo against a repairer 6978 yards away, stationary, every tick. The plan itself was
+ * always right about that distance; nothing asked it a second time.
+ */
+TEST(RandomBotRepairPlanTest, AStaleTargetThatDriftedOutOfRangeIsNoLongerWalkable)
+{
+    // Worn gear, no longer reachable: not worth a hearth, and definitely not worth the walk.
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, false, true, 6978.0f, true), RepairPlan::None);
+    EXPECT_NE(playerbots::maintenance::ChooseRepairPlan(true, false, true, 6978.0f, true), RepairPlan::Travel);
+
+    // The same target while the bot is still beside it stays walkable, so re-checking every tick
+    // cannot thrash a bot that is legitimately on its way.
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, false, true, 12.0f, true), RepairPlan::Travel);
+
+    // Broken gear at that distance hearths rather than marching.
+    EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true, 6978.0f, true), RepairPlan::Hearth);
+}
+
 TEST(RandomBotRepairPlanTest, AReachableRepairerIsWalkedToWhateverTheGearState)
 {
     EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true, 6.0f, true), RepairPlan::Travel);
