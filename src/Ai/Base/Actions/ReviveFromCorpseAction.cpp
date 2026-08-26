@@ -386,6 +386,23 @@ bool SpiritHealerAction::Execute(Event /*event*/)
                 return success;
             }
         }
+
+        // PLB-LOCAL BEGIN(stranded-ghost): the search found no spirit healer. When the bot is already
+        // standing on the graveyard there is nothing left to walk toward, so the move and teleport
+        // fallbacks below cannot change anything: MoveNear to a point the bot occupies is a no op, and
+        // the teleport sends it where it already is. Reporting either as success is what let a stranded
+        // ghost log "spirit healer succeeded" on every tick for 35 minutes while it stayed dead and
+        // stationary, so no telemetry and no loop classifier ever saw a failure. Report it truthfully and
+        // let the recovery module's stranded ghost watch take the bot from here.
+        // Upstream: fell straight through to the fallbacks below and returned true from them.
+        if (bot->GetMapId() == ClosestGrave->Map &&
+            bot->GetDistance2d(ClosestGrave->x, ClosestGrave->y) <= sPlayerbotAIConfig.tooCloseDistance)
+        {
+            botAI->RecordReviveAttempt(GameTime::GetGameTimeMS().count(), PlayerbotReviveOutcome::Failed,
+                                       bot->IsAlive());
+            return false;
+        }
+        // PLB-LOCAL END(stranded-ghost)
     }
 
     bool moved = false;
