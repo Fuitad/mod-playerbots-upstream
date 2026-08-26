@@ -4,7 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 9 region(s) of this upstream file.
 // Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
 // tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
@@ -1106,17 +1106,35 @@ bool NewRpgBaseAction::SelectRandomFlightTaxiNode(uint32& flightMasterEntry, Wor
 bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateStatus)
 {
     std::vector<NewRpgStatus> availableStatus;
+    // PLB-LOCAL BEGIN(rpg-status-probe-reuse): keep what each availability probe already selected, so
+    // the switch below can act on it. Upstream declared no such state and called the same selection a
+    // second time in each case, meaning every status change ran the full scan twice.
+    NewRpgStatusPreparation grindPrep;
+    NewRpgStatusPreparation campPrep;
+    NewRpgStatusPreparation flightPrep;
+    // PLB-LOCAL END(rpg-status-probe-reuse)
     uint32 probSum = 0;
     for (NewRpgStatus status : candidateStatus)
     {
         if (sPlayerbotAIConfig.RpgStatusProbWeight[status] == 0)
             continue;
 
-        if (CheckRpgStatusAvailable(status))
+        // PLB-LOCAL BEGIN(rpg-status-probe-reuse): capture the probe's selection for the statuses whose
+        // probe and use do identical work. Upstream: CheckRpgStatusAvailable(status).
+        NewRpgStatusPreparation* prepared = nullptr;
+        if (status == RPG_GO_GRIND)
+            prepared = &grindPrep;
+        else if (status == RPG_GO_CAMP)
+            prepared = &campPrep;
+        else if (status == RPG_TRAVEL_FLIGHT)
+            prepared = &flightPrep;
+
+        if (CheckRpgStatusAvailable(status, prepared))
         {
             availableStatus.push_back(status);
             probSum += sPlayerbotAIConfig.RpgStatusProbWeight[status];
         }
+        // PLB-LOCAL END(rpg-status-probe-reuse)
     }
     // Safety check. Default to "rest" if all RPG weights = 0
     if (availableStatus.empty() || probSum == 0)
@@ -1150,9 +1168,13 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             botAI->rpgInfo.ChangeToWanderNpc();
             return true;
         }
+        // PLB-LOCAL BEGIN(rpg-status-probe-reuse): use the position the probe already selected.
+        // Upstream called SelectRandomGrindPos(bot) / SelectRandomCampPos(bot) again here. A status can
+        // only be chosen after its probe returned true, so the position is always set; the guard keeps
+        // upstream's exact fallback.
         case RPG_GO_GRIND:
         {
-            WorldPosition pos = SelectRandomGrindPos(bot);
+            WorldPosition const& pos = grindPrep.pos;
             if (pos != WorldPosition())
             {
                 botAI->rpgInfo.ChangeToGoGrind(pos);
@@ -1162,7 +1184,7 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
         }
         case RPG_GO_CAMP:
         {
-            WorldPosition pos = SelectRandomCampPos(bot);
+            WorldPosition const& pos = campPrep.pos;
             if (pos != WorldPosition())
             {
                 botAI->rpgInfo.ChangeToGoCamp(pos);
@@ -1170,6 +1192,7 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             }
             return false;
         }
+        // PLB-LOCAL END(rpg-status-probe-reuse)
         case RPG_DO_QUEST:
         {
             std::vector<uint32> availableQuests;
@@ -1197,18 +1220,19 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             }
             return false;
         }
+        // PLB-LOCAL BEGIN(rpg-status-probe-reuse): use the taxi node the probe already selected.
+        // Upstream called SelectRandomFlightTaxiNode again here, repeating the flight destination search.
         case RPG_TRAVEL_FLIGHT:
         {
-            uint32 flightMasterEntry = 0;
-            WorldPosition flightMasterPos;
-            std::vector<uint32> path;
-            if (SelectRandomFlightTaxiNode(flightMasterEntry, flightMasterPos, path))
+            if (!flightPrep.flightPath.empty())
             {
-                botAI->rpgInfo.ChangeToTravelFlight(flightMasterEntry, flightMasterPos, path);
+                botAI->rpgInfo.ChangeToTravelFlight(flightPrep.flightMasterEntry, flightPrep.flightMasterPos,
+                                                    flightPrep.flightPath);
                 return true;
             }
             return false;
         }
+        // PLB-LOCAL END(rpg-status-probe-reuse)
         case RPG_IDLE:
         {
             botAI->rpgInfo.ChangeToIdle();
@@ -1235,7 +1259,7 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
     return false;
 }
 
-bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
+bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status, NewRpgStatusPreparation* prepared)
 {
     switch (status)
     {
@@ -1247,16 +1271,23 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
             Unit* target = AI_VALUE(Unit*, "grind target");
             return target != nullptr;
         }
+        // PLB-LOCAL BEGIN(rpg-status-probe-reuse): hand the selection back to the caller instead of
+        // discarding it. Upstream computed the position, compared it, and dropped it.
         case RPG_GO_GRIND:
         {
             WorldPosition pos = SelectRandomGrindPos(bot);
+            if (prepared)
+                prepared->pos = pos;
             return pos != WorldPosition();
         }
         case RPG_GO_CAMP:
         {
             WorldPosition pos = SelectRandomCampPos(bot);
+            if (prepared)
+                prepared->pos = pos;
             return pos != WorldPosition();
         }
+        // PLB-LOCAL END(rpg-status-probe-reuse)
         case RPG_WANDER_NPC:
         {
             GuidVector possibleTargets = AI_VALUE(GuidVector, "possible new rpg targets");
@@ -1279,13 +1310,25 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
             }
             return false;
         }
+        // PLB-LOCAL BEGIN(rpg-status-probe-reuse): hand the selected taxi node back to the caller.
+        // Upstream selected it, returned only the boolean, and dropped the node.
         case RPG_TRAVEL_FLIGHT:
         {
             uint32 flightMasterEntry = 0;
             WorldPosition flightMasterPos;
             std::vector<uint32> path;
-            return SelectRandomFlightTaxiNode(flightMasterEntry, flightMasterPos, path);
+            if (!SelectRandomFlightTaxiNode(flightMasterEntry, flightMasterPos, path))
+                return false;
+
+            if (prepared)
+            {
+                prepared->flightMasterEntry = flightMasterEntry;
+                prepared->flightMasterPos = flightMasterPos;
+                prepared->flightPath = std::move(path);
+            }
+            return true;
         }
+        // PLB-LOCAL END(rpg-status-probe-reuse)
         case RPG_OUTDOOR_PVP:
         {
             if (!bot->IsPvP())

@@ -4,12 +4,19 @@
  * or (at your option) any later version.
  */
 
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<tag>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+
 #ifndef PLAYERBOTS_NEWRPGBASEACTION_H
 #define PLAYERBOTS_NEWRPGBASEACTION_H
 
 #include "LastMovementValue.h"
 #include "MovementActions.h"
 #include "NewRpgInfo.h"
+// PLB-LOCAL(rpg-status-probe-reuse): carries what CheckRpgStatusAvailable already computed.
+// Upstream has no such header and no such include.
+#include "NewRpgStatusPreparation.h"
 #include "NewRpgStrategy.h"
 #include "Object.h"
 #include "ObjectDefines.h"
@@ -61,7 +68,10 @@ protected:
     static WorldPosition SelectRandomCampPos(Player* bot);
     bool SelectRandomFlightTaxiNode(uint32& flightMasterEntry, WorldPosition& flightMasterPos, std::vector<uint32>& path);
     bool RandomChangeStatus(std::vector<NewRpgStatus> candidateStatus);
-    bool CheckRpgStatusAvailable(NewRpgStatus status);
+    // PLB-LOCAL(rpg-status-probe-reuse): optional out parameter so RandomChangeStatus can reuse the
+    // selection this probe already made instead of repeating it. Passing nullptr keeps the probe
+    // pure. Upstream: bool CheckRpgStatusAvailable(NewRpgStatus status);
+    bool CheckRpgStatusAvailable(NewRpgStatus status, NewRpgStatusPreparation* prepared = nullptr);
 
 protected:
     /* FOR MOVE FAR */
