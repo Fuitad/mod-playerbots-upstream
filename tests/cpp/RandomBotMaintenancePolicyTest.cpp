@@ -15,6 +15,7 @@
 namespace
 {
 using playerbots::maintenance::MountLevelThresholds;
+using playerbots::maintenance::MountSpellEffects;
 using playerbots::maintenance::MountTier;
 using playerbots::maintenance::MountVendorCandidate;
 using playerbots::maintenance::RepairPlan;
@@ -71,6 +72,46 @@ TEST(RandomBotMaintenancePolicyTest, MountTierAndRidingProgressFollowConfiguredL
     EXPECT_EQ(playerbots::maintenance::NextRidingSpell(150, MountTier::FastFlying), 34090u);
     EXPECT_EQ(playerbots::maintenance::NextRidingSpell(225, MountTier::FastFlying), 34091u);
     EXPECT_EQ(playerbots::maintenance::NextRidingSpell(300, MountTier::FastFlying), 0u);
+}
+
+TEST(RandomBotMaintenancePolicyTest, MountSpellMeetsTierClassifiesLearnedMountsByTier)
+{
+    // A learned 100% ground mount.
+    MountSpellEffects ground;
+    ground.mountAura = true;
+    ground.speed1 = 100;
+
+    EXPECT_TRUE(playerbots::maintenance::MountSpellMeetsTier(MountTier::Ground, ground));
+    EXPECT_TRUE(playerbots::maintenance::MountSpellMeetsTier(MountTier::FastGround, ground));
+    EXPECT_FALSE(playerbots::maintenance::MountSpellMeetsTier(MountTier::Flying, ground));
+
+    // Not a mount at all: no SPELL_AURA_MOUNTED on the first effect.
+    MountSpellEffects notAMount = ground;
+    notAMount.mountAura = false;
+    EXPECT_FALSE(playerbots::maintenance::MountSpellMeetsTier(MountTier::Ground, notAMount));
+
+    // Passive and removed/inactive spells are not ridable.
+    MountSpellEffects passive = ground;
+    passive.passive = true;
+    EXPECT_FALSE(playerbots::maintenance::MountSpellMeetsTier(MountTier::Ground, passive));
+
+    MountSpellEffects inactive = ground;
+    inactive.active = false;
+    EXPECT_FALSE(playerbots::maintenance::MountSpellMeetsTier(MountTier::Ground, inactive));
+
+    // Flight is recognised from either the flight-speed aura or the 54729 special case, and the
+    // faster of the two speed effects is the one that counts.
+    MountSpellEffects flying;
+    flying.mountAura = true;
+    flying.flightSpeedAura = true;
+    flying.speed1 = 0;
+    flying.speed2 = 280;
+    EXPECT_TRUE(playerbots::maintenance::MountSpellMeetsTier(MountTier::FastFlying, flying));
+
+    MountSpellEffects specialCase = flying;
+    specialCase.flightSpeedAura = false;
+    specialCase.alwaysFlying = true;
+    EXPECT_TRUE(playerbots::maintenance::MountSpellMeetsTier(MountTier::FastFlying, specialCase));
 }
 
 TEST(RandomBotMaintenancePolicyTest, MountSelectionRejectsOtherRacesAndUnaffordableItems)

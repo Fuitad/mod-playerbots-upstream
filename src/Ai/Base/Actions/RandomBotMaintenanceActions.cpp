@@ -200,17 +200,24 @@ bool LearnedMountMeetsTier(Player* bot, MountTier tier)
     for (auto const& entry : bot->GetSpellMap())
     {
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(entry.first);
-        if (!spellInfo || spellInfo->Effects[0].ApplyAuraName != SPELL_AURA_MOUNTED ||
-            entry.second->State == PLAYERSPELL_REMOVED || !entry.second->Active || spellInfo->IsPassive())
-        {
+        if (!spellInfo)
             continue;
-        }
 
-        bool const flying = spellInfo->Effects[1].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
-                            spellInfo->Effects[2].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
-                            spellInfo->Id == 54729;
-        int32 const speed = std::max(spellInfo->Effects[1].BasePoints, spellInfo->Effects[2].BasePoints);
-        if (MountMeetsTier(tier, flying, speed))
+        // The tier decision lives in MountSpellMeetsTier, which is pure and unit tested; only the
+        // SpellInfo probing is local. Any other reader of the spellbook should call that predicate
+        // rather than repeat the effect-index layout below.
+        MountSpellEffects effects;
+        effects.mountAura = spellInfo->Effects[0].ApplyAuraName == SPELL_AURA_MOUNTED;
+        effects.passive = spellInfo->IsPassive();
+        effects.active = entry.second->State != PLAYERSPELL_REMOVED && entry.second->Active;
+        effects.flightSpeedAura =
+            spellInfo->Effects[1].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
+            spellInfo->Effects[2].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED;
+        effects.alwaysFlying = spellInfo->Id == 54729;
+        effects.speed1 = spellInfo->Effects[1].BasePoints;
+        effects.speed2 = spellInfo->Effects[2].BasePoints;
+
+        if (MountSpellMeetsTier(tier, effects))
             return true;
     }
 

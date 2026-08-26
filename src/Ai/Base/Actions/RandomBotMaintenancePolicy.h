@@ -105,6 +105,30 @@ enum class RepairPlan : std::uint8_t
 [[nodiscard]] std::uint32_t RidingTrainerEntry(std::uint8_t race, std::uint8_t team, std::uint32_t ridingSpellId);
 [[nodiscard]] std::vector<std::uint32_t> AllowedMountSpells(std::uint8_t race, std::uint8_t team, MountTier tier);
 [[nodiscard]] bool MountMeetsTier(MountTier tier, bool flying, std::int32_t speed);
+/*
+ * One learned spell, reduced to the facts that decide whether it is a mount of a given tier.
+ *
+ * Deliberately booleans rather than raw aura ids: the caller does the comparison against the core's
+ * SPELL_AURA_* constants, which keeps this file free of core headers and therefore testable with
+ * plain structs and no fixture.
+ *
+ * Extracted from LearnedMountMeetsTier so the rule can be tested at all. That function takes a
+ * Player and walks its spellbook, so it needed a fixture nothing here has, and the tier rule went
+ * uncovered as a result. Split this way the probing stays in the caller and the decision is a pure
+ * function over plain data.
+ */
+struct MountSpellEffects
+{
+    bool mountAura = false;
+    bool passive = false;
+    bool active = true;
+    bool flightSpeedAura = false;
+    bool alwaysFlying = false;
+    std::int32_t speed1 = 0;
+    std::int32_t speed2 = 0;
+};
+
+[[nodiscard]] bool MountSpellMeetsTier(MountTier tier, MountSpellEffects const& effects);
 [[nodiscard]] std::uint32_t SelectMountItem(std::uint8_t race, std::uint8_t team, MountTier tier, std::uint32_t budget,
                                             std::vector<MountVendorCandidate> const& candidates);
 }  // namespace playerbots::maintenance

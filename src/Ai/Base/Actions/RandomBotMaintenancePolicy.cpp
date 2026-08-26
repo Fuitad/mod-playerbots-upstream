@@ -218,6 +218,15 @@ bool MountMeetsTier(MountTier tier, bool flying, std::int32_t speed)
     return false;
 }
 
+bool MountSpellMeetsTier(MountTier tier, MountSpellEffects const& effects)
+{
+    if (!effects.mountAura || effects.passive || !effects.active)
+        return false;
+
+    bool const flying = effects.flightSpeedAura || effects.alwaysFlying;
+    return MountMeetsTier(tier, flying, std::max(effects.speed1, effects.speed2));
+}
+
 std::uint32_t SelectMountItem(std::uint8_t race, std::uint8_t team, MountTier tier, std::uint32_t budget,
                               std::vector<MountVendorCandidate> const& candidates)
 {
