@@ -4,7 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 6 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 7 region(s) of this upstream file.
 // Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
 // tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
@@ -1521,6 +1521,14 @@ void TravelTarget::copyTarget(TravelTarget* target)
     setTarget(target->tDestination, target->wPosition);
     groupCopy = target->isGroupCopy();
     forced = target->forced;
+    // PLB-LOCAL(travel-copy-radius): carry the requested arrival radius across the copy.
+    // Upstream: copied every other field but not radius, and setTarget above zeroes it, so
+    // isTraveling fell back to the destination's radiusMin and every setRadius call in the tree
+    // was dead. A caller that must stand off further than radiusMin (the economy runtime parks a
+    // bot 16 yards from a lava ringed forge) then never registered arrival: the target stayed
+    // TRAVEL_STATUS_TRAVEL for its full hour, the bot walked to a point it already stood on every
+    // tick, and the owning runtime never released the forced target or its suspended strategies.
+    radius = target->radius;
     extendRetryCount = target->extendRetryCount;
 }
 

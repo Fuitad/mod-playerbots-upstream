@@ -243,4 +243,32 @@ TEST_F(PlayerbotTravelTargetTest, LegacyRpgTargetsRejectBattlemasterGossipNpcs)
     emissary->SetNpcFlag(UNIT_NPC_FLAG_BATTLEMASTER);
     EXPECT_FALSE(targets.AcceptUnit(emissary));
 }
+
+TEST_F(PlayerbotTravelTargetTest, AppliedForcedTargetKeepsTheArrivalRadiusItAskedFor)
+{
+    // A caller that has to stand further off than the destination's own radiusMin states that reach
+    // in the target's radius: the economy runtime parks a bot 16 yards from a lava-ringed Ironforge
+    // forge because every closer point is magma. Applying the target has to carry that radius, or
+    // arrival never registers and the bot walks to a point it is already standing on forever.
+    WorldPosition object(bot->GetMapId(), 16.0f, 0.0f, 0.0f);
+    TravelDestination travelDestination(5.0f, 40.0f);
+    travelDestination.addPoint(&object);
+
+    WorldPosition stand(bot->GetMapId(), 0.0f, 0.0f, 0.0f);
+    TravelTarget requested(botAI);
+    requested.setTarget(&travelDestination, &stand);
+    requested.setRadius(17.0f);
+    requested.setForced(true);
+
+    botAI->ChangeStrategy("+travel", BOT_STATE_NON_COMBAT);
+    TravelTarget* target = botAI->GetAiObjectContext()->GetValue<TravelTarget*>("travel target")->Get();
+    target->copyTarget(&requested);
+
+    EXPECT_FALSE(target->isTraveling());
+    EXPECT_EQ(target->getStatus(), TRAVEL_STATUS_WORK);
+
+    requested.releaseVisitors();
+    target->releaseVisitors();
+}
+
 }  // namespace
