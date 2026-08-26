@@ -17,19 +17,21 @@
 #include "Ai/Base/Value/PossibleRpgTargetsValue.h"
 #include "Bot/Engine/AiObjectContext.h"
 #include "Bot/Engine/WorldPacket/Event.h"
+#include "Bot/Movement/PlayerbotTaxiFlight.h"
 #include "Bot/PlayerbotAI.h"
 #include "Bot/PlayerbotMgr.h"
 #include "IntegrationTestFixture.h"
 #include "PathGenerator.h"
 #include "PlayerbotAIConfig.h"
+#include "WaypointMovementGenerator.h"
 
 namespace
 {
 class TestPossibleRpgTargetsValue : public PossibleRpgTargetsValue
 {
 public:
-    using PossibleRpgTargetsValue::PossibleRpgTargetsValue;
     using PossibleRpgTargetsValue::AcceptUnit;
+    using PossibleRpgTargetsValue::PossibleRpgTargetsValue;
 };
 
 class TestChooseTravelTargetAction : public ChooseTravelTargetAction
@@ -37,6 +39,16 @@ class TestChooseTravelTargetAction : public ChooseTravelTargetAction
 public:
     using ChooseTravelTargetAction::ChooseTravelTargetAction;
     using ChooseTravelTargetAction::SetNullTarget;
+};
+
+class TestFlightPathMovementGenerator final : public FlightPathMovementGenerator
+{
+public:
+    TestFlightPathMovementGenerator(TaxiPathNodeEntry const* current, TaxiPathNodeEntry const* next)
+        : FlightPathMovementGenerator(0)
+    {
+        i_path = {current, next};
+    }
 };
 
 class PlayerbotTravelTargetTest : public IntegrationTestFixture
@@ -105,6 +117,24 @@ TEST_F(PlayerbotTravelTargetTest, AllWalkTravelPathMovesToItsReachableWaypoint)
     EXPECT_FLOAT_EQ(movement.lastMoveToZ, waypoint.GetPositionZ());
 
     target->releaseVisitors();
+}
+
+TEST_F(PlayerbotTravelTargetTest, CrossMapTaxiHandoffPlansFirstDestinationMapNode)
+{
+    // Path 775 crosses from Eastern Plaguelands on map 0 to Ghostlands on map 530.
+    // Node 12 is the last point on map 0, where a headless bot used to wait forever
+    // because it cannot send the game client's CMSG_MOVE_SPLINE_DONE acknowledgment.
+    TaxiPathNodeEntry const current = {775, 12, 0, 3491.8157f, -4514.1235f, 152.76979f, 0, 0, 0, 0};
+    TaxiPathNodeEntry const next = {775, 13, 530, 6155.3f, -7014.8f, 158.4f, 0, 0, 0, 0};
+    TestFlightPathMovementGenerator flight(&current, &next);
+    std::optional<PlayerbotTaxiMapHandoffPlan> const plan = PlanPlayerbotTaxiMapHandoff(flight, 530);
+
+    ASSERT_TRUE(plan.has_value());
+    EXPECT_EQ(plan->nodeIndex, 1U);
+    EXPECT_EQ(plan->mapId, 530U);
+    EXPECT_NEAR(plan->x, 6155.3f, 0.1f);
+    EXPECT_NEAR(plan->y, -7014.8f, 0.1f);
+    EXPECT_NEAR(plan->z, 158.4f, 0.1f);
 }
 
 TEST_F(PlayerbotTravelTargetTest, SinglePointForcedTravelPathKeepsForcedMovementPriority)

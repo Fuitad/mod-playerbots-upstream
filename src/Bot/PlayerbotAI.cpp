@@ -14,6 +14,7 @@
 #include <cmath>
 
 #include "Bot/Extension/PlayerbotExtension.h"
+#include "Bot/Movement/PlayerbotTaxiFlight.h"
 #include "BudgetValues.h"
 #include "ChannelMgr.h"
 #include "CharacterPackets.h"
@@ -299,6 +300,12 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     }
 
     if (!CanUpdateAI())
+        return;
+
+    // PLB-LOCAL(playerbot-taxi-map-handoff): a headless bot has no game client to send
+    // CMSG_MOVE_SPLINE_DONE at a cross-map taxi boundary. Continue the flight server-side
+    // through the same state transition used by WorldSession's client packet handler.
+    if (ContinuePlayerbotTaxiFlightAcrossMap(bot) != PlayerbotTaxiMapHandoffResult::NotNeeded)
         return;
 
     // Handle a spell that is still in its preparing phase (including channeled spells).

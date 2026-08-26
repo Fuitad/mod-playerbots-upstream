@@ -12,6 +12,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_LIST_DIR}/src/Ai/Base/Actions/RandomBotMaintenancePolicy.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/src/Bot/Recovery/PlayerbotRecoveryPolicy.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/src/Bot/Population/RandomPlayerbotAdmission.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/src/Bot/Movement/PlayerbotTaxiFlight.cpp"
     )
     set_property(GLOBAL APPEND PROPERTY ACORE_MODULE_TEST_INCLUDES
         "${CMAKE_CURRENT_LIST_DIR}/src"
