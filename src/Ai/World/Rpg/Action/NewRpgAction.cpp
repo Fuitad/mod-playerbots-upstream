@@ -5,6 +5,9 @@
  */
 
 #include "NewRpgAction.h"
+
+// PLB-LOCAL(quest-poi-approach): approach policy for a POI the bot has drifted away from.
+#include "Ai/World/Rpg/QuestPoiApproachPolicy.h"
 #include "AreaDefines.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
@@ -508,7 +511,12 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                   bot->GetName(), questId, rndIdx, poiInfo.size(), objectiveIdx, bot->GetDistance2d(dx, dy), dz);
     }
 
-    if (bot->GetDistance(data.pos) > 10.0f && !data.lastReachPOI)
+    // PLB-LOCAL BEGIN(quest-poi-approach): also walk back when the bot has drifted off a POI it had
+    // already reached. Upstream: `bot->GetDistance(data.pos) > 10.0f && !data.lastReachPOI`, where
+    // lastReachPOI latches on first arrival and permanently disables this branch. See
+    // QuestPoiApproachPolicy.h for the measurements.
+    if (QuestPoiNeedsApproach({bot->GetDistance(data.pos), data.lastReachPOI != 0, 10.0f,
+                               sPlayerbotAIConfig.grindDistance}))
     {
         if (MoveFarTo(data.pos))
             return true;
@@ -517,6 +525,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         // different position instead of sitting idle.
         return MoveRandomNear(10.0f);
     }
+    // PLB-LOCAL END(quest-poi-approach)
     // Now we are near the quest objective
     // kill mobs and looting quest should be done automatically by grind strategy
 
@@ -622,12 +631,15 @@ bool NewRpgDoQuestAction::DoCompletedQuest(NewRpgInfo::DoQuest& data)
     if (data.pos == WorldPosition())
         return false;
 
-    if (bot->GetDistance(data.pos) > 10.0f && !data.lastReachPOI)
+    // PLB-LOCAL BEGIN(quest-poi-approach): same latch, same fix, on the turn-in walk.
+    if (QuestPoiNeedsApproach({bot->GetDistance(data.pos), data.lastReachPOI != 0, 10.0f,
+                               sPlayerbotAIConfig.grindDistance}))
     {
         if (MoveFarTo(data.pos))
             return true;
         return MoveRandomNear(10.0f);
     }
+    // PLB-LOCAL END(quest-poi-approach)
 
     // Now we are near the qoi of reward
     // the quest should be rewarded by SearchQuestGiverAndAcceptOrReward
