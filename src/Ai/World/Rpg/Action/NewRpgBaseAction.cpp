@@ -9,6 +9,9 @@
 // tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
 #include "NewRpgBaseAction.h"
+
+// PLB-LOCAL(quest-poi-real-point): which surveyed POI point to aim at.
+#include "Ai/World/Rpg/QuestPoiPointPolicy.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
@@ -861,14 +864,15 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
             if (qPoi.points.size() == 0)
                 continue;
 
-            float dx = 0, dy = 0;
-            std::vector<float> weights = GenerateRandomWeights(qPoi.points.size());
-            for (size_t i = 0; i < qPoi.points.size(); i++)
-            {
-                const QuestPOIPoint& point = qPoi.points[i];
-                dx += point.x * weights[i];
-                dy += point.y * weights[i];
-            }
+            // PLB-LOCAL BEGIN(quest-poi-real-point): same rule as the objective path. Turn-in POIs
+            // are 98% single point, so this is almost always identical to upstream's average.
+            std::vector<std::pair<float, float>> poiPoints;
+            poiPoints.reserve(qPoi.points.size());
+            for (QuestPOIPoint const& point : qPoi.points)
+                poiPoints.emplace_back(static_cast<float>(point.x), static_cast<float>(point.y));
+            size_t const nearest = NearestPoiPointIndex(poiPoints, bot->GetPositionX(), bot->GetPositionY());
+            float dx = poiPoints[nearest].first, dy = poiPoints[nearest].second;
+            // PLB-LOCAL END(quest-poi-real-point)
 
             if (bot->GetDistance2d(dx, dy) >= 1500.0f)
                 continue;
@@ -937,14 +941,19 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
             continue;
         if (qPoi.points.size() == 0)
             continue;
-        float dx = 0, dy = 0;
-        std::vector<float> weights = GenerateRandomWeights(qPoi.points.size());
-        for (size_t i = 0; i < qPoi.points.size(); i++)
-        {
-            const QuestPOIPoint& point = qPoi.points[i];
-            dx += point.x * weights[i];
-            dy += point.y * weights[i];
-        }
+        // PLB-LOCAL BEGIN(quest-poi-real-point): aim at a real surveyed POI point, the one nearest the
+        // bot, instead of a random weighted average of the polygon's vertices. See
+        // QuestPoiPointPolicy.h for the measurements.
+        // Upstream:
+        //     std::vector<float> weights = GenerateRandomWeights(qPoi.points.size());
+        //     for (i) { dx += point.x * weights[i]; dy += point.y * weights[i]; }
+        std::vector<std::pair<float, float>> poiPoints;
+        poiPoints.reserve(qPoi.points.size());
+        for (QuestPOIPoint const& point : qPoi.points)
+            poiPoints.emplace_back(static_cast<float>(point.x), static_cast<float>(point.y));
+        size_t const nearest = NearestPoiPointIndex(poiPoints, bot->GetPositionX(), bot->GetPositionY());
+        float dx = poiPoints[nearest].first, dy = poiPoints[nearest].second;
+        // PLB-LOCAL END(quest-poi-real-point)
 
         if (bot->GetDistance2d(dx, dy) >= 1500.0f)
             continue;
