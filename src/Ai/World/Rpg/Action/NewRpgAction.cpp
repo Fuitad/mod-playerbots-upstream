@@ -484,23 +484,9 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }
-        // PLB-LOCAL BEGIN(quest-poi-cross-zone): take the nearest POI, preferring one in the bot's
-        // own zone, so a bot exhausts local work before walking to another zone and does not cross a
-        // zone for an objective it could have reached on foot next door.
-        // Upstream: `uint32 rndIdx = urand(0, poiInfo.size() - 1);` picked a POI at random despite
-        // naming the result nearestPoi, which scattered bots across a quest's POI clusters.
-        size_t bestIdx = 0;
-        for (size_t i = 1; i < poiInfo.size(); i++)
-        {
-            if (QuestPoiPreferred(poiInfo[i].reach, poiInfo[i].distanceYards, poiInfo[bestIdx].reach,
-                                  poiInfo[bestIdx].distanceYards, true))
-            {
-                bestIdx = i;
-            }
-        }
-        G3D::Vector2 nearestPoi = poiInfo[bestIdx].pos;
-        int32 objectiveIdx = poiInfo[bestIdx].objectiveIdx;
-        // PLB-LOCAL END(quest-poi-cross-zone)
+        uint32 rndIdx = urand(0, poiInfo.size() - 1);
+        G3D::Vector2 nearestPoi = poiInfo[rndIdx].pos;
+        int32 objectiveIdx = poiInfo[rndIdx].objectiveIdx;
 
         float dx = nearestPoi.x, dy = nearestPoi.y;
 
