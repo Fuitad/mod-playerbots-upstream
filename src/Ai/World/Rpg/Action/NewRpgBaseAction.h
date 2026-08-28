@@ -4,7 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
 // Each is tagged PLB-LOCAL(<tag>) where a marker could be placed safely; run
 // tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
@@ -84,6 +84,9 @@ protected:
     // the teleport fires, but long enough that a genuine long
     // walk that is slowly making progress never triggers it.
     const uint32 stuckTime = 90 * 1000;
+    // PLB-LOCAL(movefar-stuck): how long a bot may stand still while something
+    // keeps asking it to travel far, before it is teleported to the destination.
+    const uint32 moveFarStuckTime = 120 * 1000;
 };
 
 #endif

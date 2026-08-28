@@ -1,0 +1,83 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
+/*
+ * PLB-LOCAL FILE. This file does not exist upstream and never conflicts on a merge.
+ */
+
+#include "Ai/World/Rpg/MoveFarStuckPolicy.h"
+#include "gtest/gtest.h"
+
+namespace
+{
+MoveFarStuckFacts Sample(float displacement, uint32 elapsedMs)
+{
+    MoveFarStuckFacts facts;
+    facts.tracking = true;
+    facts.sameMap = true;
+    facts.displacementYards = displacement;
+    facts.elapsedMs = elapsedMs;
+    return facts;
+}
+}  // namespace
+
+TEST(PlayerbotMoveFarStuckPolicyTest, WithNothingTrackedYetTheCallerTakesTheFirstSample)
+{
+    MoveFarStuckFacts fresh;
+    fresh.tracking = false;
+    fresh.elapsedMs = 10 * 60 * 1000;
+    EXPECT_EQ(MoveFarStuckVerdict::Resample, EvaluateMoveFarStuck(fresh));
+}
+
+TEST(PlayerbotMoveFarStuckPolicyTest, RealMovementRestartsTheWindow)
+{
+    // Moving further than the reset radius is progress, however long the window had been open.
+    EXPECT_EQ(MoveFarStuckVerdict::Resample, EvaluateMoveFarStuck(Sample(5.1f, 0)));
+    EXPECT_EQ(MoveFarStuckVerdict::Resample, EvaluateMoveFarStuck(Sample(400.0f, 10 * 60 * 1000)));
+}
+
+TEST(PlayerbotMoveFarStuckPolicyTest, StandingStillBrieflyIsNotYetStuck)
+{
+    // A bot may legitimately stand still: fighting, looting, waiting on a movement cooldown. The
+    // window has to expire before that counts as stuck.
+    EXPECT_EQ(MoveFarStuckVerdict::Wait, EvaluateMoveFarStuck(Sample(0.0f, 0)));
+    EXPECT_EQ(MoveFarStuckVerdict::Wait, EvaluateMoveFarStuck(Sample(5.0f, 119999)));
+}
+
+TEST(PlayerbotMoveFarStuckPolicyTest, StandingStillPastTheWindowIsStuck)
+{
+    // The defect this exists for: MoveFarTo's own tracker is keyed on the destination and is reset
+    // whenever a different subsystem asks for a different one. A bot that quest travel and vendor
+    // maintenance both want to move alternates destinations every tick and is never rescued.
+    // Measured on the live realm: 1517 quest pathing failures plus 490 vendor pathing failures from
+    // one stationary bot over fifty minutes, and zero teleport recoveries.
+    EXPECT_EQ(MoveFarStuckVerdict::Rescue, EvaluateMoveFarStuck(Sample(0.0f, 120 * 1000)));
+    EXPECT_EQ(MoveFarStuckVerdict::Rescue, EvaluateMoveFarStuck(Sample(4.9f, 50 * 60 * 1000)));
+}
+
+TEST(PlayerbotMoveFarStuckPolicyTest, ACrossMapDisplacementIsNotComparable)
+{
+    // Distance between two maps is meaningless, so a map change can only mean "resample", never
+    // "rescue" -- otherwise a bot that took a boat would be teleported back on arrival.
+    MoveFarStuckFacts moved = Sample(0.0f, 50 * 60 * 1000);
+    moved.sameMap = false;
+    EXPECT_EQ(MoveFarStuckVerdict::Resample, EvaluateMoveFarStuck(moved));
+}
+
+TEST(PlayerbotMoveFarStuckPolicyTest, TheThresholdsAreConfigurable)
+{
+    MoveFarStuckFacts patient = Sample(0.0f, 120 * 1000);
+    patient.rescueAfterMs = 300 * 1000;
+    EXPECT_EQ(MoveFarStuckVerdict::Wait, EvaluateMoveFarStuck(patient));
+
+    // The same three yard drift is "stood still" under the default reset radius and "made progress"
+    // under a tighter one, so this pair fails unless the radius is read from the facts.
+    EXPECT_EQ(MoveFarStuckVerdict::Rescue, EvaluateMoveFarStuck(Sample(3.0f, 120 * 1000)));
+
+    MoveFarStuckFacts strict = Sample(3.0f, 120 * 1000);
+    strict.resetRadius = 1.0f;
+    EXPECT_EQ(MoveFarStuckVerdict::Resample, EvaluateMoveFarStuck(strict));
+}

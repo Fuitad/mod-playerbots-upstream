@@ -4,7 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 9 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 11 region(s) of this upstream file.
 // Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
 // tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
@@ -12,6 +12,8 @@
 
 // PLB-LOCAL(quest-poi-real-point): which surveyed POI point to aim at.
 #include "Ai/World/Rpg/QuestPoiPointPolicy.h"
+// PLB-LOCAL(movefar-stuck)
+#include "Ai/World/Rpg/MoveFarStuckPolicy.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
@@ -50,6 +52,56 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {
     if (dest == WorldPosition())
         return false;
+
+    // PLB-LOCAL(movefar-stuck) BEGIN: rescue a bot that no single destination can rescue.
+    // The stuck tracker further down is keyed on `dest` and is cleared by the
+    // guard immediately below whenever a caller passes a different one. Quest
+    // travel and random bot maintenance alternate destinations tick by tick, so
+    // a bot both subsystems want to move never accumulates attempts against
+    // either destination and is never teleported out. Watch the bot's own
+    // displacement instead, which no caller can reset.
+    // See src/Ai/World/Rpg/MoveFarStuckPolicy.h.
+    if (bot->IsAlive() && !bot->IsInCombat())
+    {
+        MoveFarStuckFacts facts;
+        facts.tracking = botAI->rpgInfo.moveFarSampled;
+        facts.sameMap = botAI->rpgInfo.moveFarSamplePos.GetMapId() == bot->GetMapId();
+        facts.displacementYards = bot->GetDistance(botAI->rpgInfo.moveFarSamplePos);
+        facts.elapsedMs = GetMSTimeDiffToNow(botAI->rpgInfo.moveFarSampleTs);
+        facts.rescueAfterMs = moveFarStuckTime;
+
+        switch (EvaluateMoveFarStuck(facts))
+        {
+            case MoveFarStuckVerdict::Resample:
+                botAI->rpgInfo.moveFarSampled = true;
+                botAI->rpgInfo.moveFarSampleTs = getMSTime();
+                botAI->rpgInfo.moveFarSamplePos = WorldPosition(bot);
+                break;
+            case MoveFarStuckVerdict::Rescue:
+            {
+                botAI->rpgInfo.moveFarSampled = false;
+                const AreaTableEntry* stuckArea = sAreaTableStore.LookupEntry(bot->GetZoneId());
+                LOG_DEBUG("playerbots",
+                          "[New RPG] Teleport {} from ({},{},{},{}) to ({},{},{},{}) as it has not moved in {}s "
+                          "while being asked to travel far - Zone: {} ({})",
+                          bot->GetName(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(),
+                          bot->GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(),
+                          dest.GetMapId(), facts.elapsedMs / 1000, bot->GetZoneId(),
+                          PlayerbotAI::GetLocalizedAreaName(stuckArea));
+                bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
+                return bot->TeleportTo(dest);
+            }
+            case MoveFarStuckVerdict::Wait:
+                break;
+        }
+    }
+    else
+    {
+        // Fighting and being dead are legitimate reasons to stand still. Do not
+        // let either accumulate into a rescue.
+        botAI->rpgInfo.moveFarSampled = false;
+    }
+    // PLB-LOCAL(movefar-stuck) END
 
     if (dest != botAI->rpgInfo.moveFarPos)
     {

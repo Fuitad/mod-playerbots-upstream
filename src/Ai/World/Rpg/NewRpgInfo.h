@@ -3,6 +3,9 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 1 region(s) of this upstream file.
+// Each is tagged PLB-LOCAL(<tag>) where a marker could be placed safely; run
+// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
 #ifndef PLAYERBOTS_NEWRPGINFO_H
 #define PLAYERBOTS_NEWRPGINFO_H
@@ -81,6 +84,14 @@ struct NewRpgInfo
     uint32 stuckTs{0};
     uint32 stuckAttempts{0};
     WorldPosition moveFarPos;
+    // PLB-LOCAL(movefar-stuck) BEGIN: destination-independent stuck sampling.
+    // Deliberately NOT cleared by SetMoveFarTo. The three fields above are, and
+    // that is precisely why they never fire when two subsystems alternate
+    // destinations. See src/Ai/World/Rpg/MoveFarStuckPolicy.h.
+    bool moveFarSampled{false};
+    uint32 moveFarSampleTs{0};
+    WorldPosition moveFarSamplePos;
+    // PLB-LOCAL(movefar-stuck) END
     // END MOVE_FAR
 
     using RpgData = std::variant<
