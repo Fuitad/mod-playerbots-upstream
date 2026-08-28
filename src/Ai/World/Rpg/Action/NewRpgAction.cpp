@@ -520,6 +520,13 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
     {
         if (MoveFarTo(data.pos))
             return true;
+        // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. The quest path swallows a MoveFarTo
+        // failure and degrades to a random 10 yard nudge, which produces movement with no progress.
+        // Only the maintenance vendor path logs its failures, so a quest bot that cannot path to its
+        // POI looks identical to one that is walking. Remove with the rest of the probe.
+        LOG_DEBUG("playerbots", "[QuestProbe] {} NOPATH quest {} obj {} dist {:.0f}y reached {}",
+                  bot->GetName(), questId, data.objectiveIdx, bot->GetDistance(data.pos),
+                  data.lastReachPOI ? 1 : 0);
         // Long-range sampler couldn't land a candidate — nudge the
         // bot a short distance so the next tick retries from a
         // different position instead of sitting idle.
