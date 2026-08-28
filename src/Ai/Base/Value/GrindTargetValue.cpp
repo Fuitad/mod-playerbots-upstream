@@ -5,9 +5,6 @@
  */
 
 #include "GrindTargetValue.h"
-
-// PLB-LOCAL(grind-quest-priority): ranking policy for eligible grind candidates.
-#include "GrindTargetPolicy.h"
 #include "NewRpgInfo.h"
 #include "Playerbots.h"
 #include "ReputationMgr.h"
@@ -57,12 +54,6 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
     float distance = 0;
     Unit* result = nullptr;
     std::unordered_map<uint32, bool> needForQuestMap;
-    // PLB-LOCAL BEGIN(grind-quest-priority): carry the incumbent's quest relevance alongside its
-    // distance, and note once whether the bot is working a quest at all.
-    // Upstream: neither existed, because selection compared distance only.
-    bool resultNeededForQuest = false;
-    bool const questPriorityActive = botAI->rpgInfo.GetStatus() == RPG_DO_QUEST;
-    // PLB-LOCAL END(grind-quest-priority)
 
     for (ObjectGuid const guid : targets)
     {
@@ -129,21 +120,6 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
                 continue;
         }
 
-        // PLB-LOCAL BEGIN(grind-quest-priority): while the bot is working a quest, rank a candidate
-        // that advances that quest above a merely nearer one. The eligibility rules above are
-        // untouched; only the choice between survivors changes, and only when a quest is in hand.
-        // Upstream: both branches below picked purely by smallest distance, so at a POI where the
-        // objective creature is a minority of the local spawns the bot kept attacking bystanders,
-        // made no objective progress, and NewRpgDoQuestAction abandoned the quest after its five
-        // minute poiStayTime. See GrindTargetPolicy.h for the measurements.
-        bool candidateNeededForQuest = false;
-        if (questPriorityActive)
-        {
-            if (needForQuestMap.find(unit->GetEntry()) == needForQuestMap.end())
-                needForQuestMap[unit->GetEntry()] = needForQuest(unit);
-            candidateNeededForQuest = needForQuestMap[unit->GetEntry()];
-        }
-
         if (group)
         {
             Group::MemberSlotList const& groupSlot = group->GetMemberSlots();
@@ -154,27 +130,22 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
                     continue;
 
                 float d = member->GetDistance(unit);
-                if (GrindCandidatePreferred({candidateNeededForQuest, d}, {resultNeededForQuest, distance},
-                                            questPriorityActive, result != nullptr))
+                if (!result || d < distance)
                 {
                     distance = d;
                     result = unit;
-                    resultNeededForQuest = candidateNeededForQuest;
                 }
             }
         }
         else
         {
             float newdistance = bot->GetDistance(unit);
-            if (GrindCandidatePreferred({candidateNeededForQuest, newdistance}, {resultNeededForQuest, distance},
-                                        questPriorityActive, result != nullptr))
+            if (!result || (newdistance < distance))
             {
                 distance = newdistance;
                 result = unit;
-                resultNeededForQuest = candidateNeededForQuest;
             }
         }
-        // PLB-LOCAL END(grind-quest-priority)
     }
 
     return result;
