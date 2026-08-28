@@ -201,13 +201,6 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     {
         return MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true);
     }
-    // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. This is the ONLY genuine pathing failure
-    // in MoveFarTo: mmap could not route to the destination and neither cone sample found a
-    // stepping stone. The other `return false` above is a routine movement cooldown and says nothing
-    // about reachability, so counting failures at the call site conflates the two. Remove with the
-    // rest of the probe.
-    LOG_DEBUG("playerbots", "[QuestProbe] {} PATHFAIL dist {:.0f}y map {} zone {}", bot->GetName(),
-              bot->GetDistance(dest), bot->GetMapId(), bot->GetZoneId());
     return false;
 }
 
