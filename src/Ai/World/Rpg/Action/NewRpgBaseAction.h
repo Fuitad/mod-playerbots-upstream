@@ -25,10 +25,19 @@
 #include "QuestDef.h"
 #include "TravelMgr.h"
 
+// PLB-LOCAL(quest-poi-cross-zone): QuestPoiReach lives here.
+#include "Ai/World/Rpg/QuestPoiReachPolicy.h"
+
 struct POIInfo
 {
     G3D::Vector2 pos;
     int32 objectiveIdx;
+    // PLB-LOCAL BEGIN(quest-poi-cross-zone): how the bot reaches this POI, and how far it is, so the
+    // caller can take local work before walking to another zone.
+    // Upstream: neither field existed, because only same-zone POIs were ever collected.
+    QuestPoiReach reach = QuestPoiReach::Local;
+    float distanceYards = 0.0f;
+    // PLB-LOCAL END(quest-poi-cross-zone)
 };
 
 /// A base (composition) class for all new rpg actions

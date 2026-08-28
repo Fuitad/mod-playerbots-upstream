@@ -9,6 +9,9 @@
 // tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
 #include "NewRpgBaseAction.h"
+
+// PLB-LOCAL(quest-poi-cross-zone): reachability policy for quest POIs outside the bot's zone.
+#include "Ai/World/Rpg/QuestPoiReachPolicy.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
@@ -828,6 +831,27 @@ static std::vector<float> GenerateRandomWeights(int n)
     return weights;
 }
 
+// PLB-LOCAL BEGIN(quest-poi-cross-zone): gather the facts the reach policy needs for one POI.
+// Upstream had no equivalent: it inlined three hard filters (same map, under 1500 yards, same zone)
+// and dropped anything that failed, which stranded every quest whose objective was one zone away.
+namespace
+{
+QuestPoiReachFacts BuildQuestPoiReachFacts(Player* bot, uint32 poiMapId, float dx, float dy, float dz)
+{
+    QuestPoiReachFacts facts;
+    facts.sameMap = poiMapId == bot->GetMapId();
+    facts.sameZone = bot->GetZoneId() == bot->GetMap()->GetZoneId(bot->GetPhaseMask(), dx, dy, dz);
+    facts.distanceYards = bot->GetDistance2d(dx, dy);
+    facts.botLevel = bot->GetLevel();
+    facts.botAtMaxLevel = bot->GetLevel() >= DEFAULT_MAX_LEVEL;
+    uint32 const areaId = bot->GetMap()->GetAreaId(bot->GetPhaseMask(), dx, dy, dz);
+    if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(areaId))
+        facts.destinationAreaLevel = area->area_level;
+    return facts;
+}
+}  // namespace
+// PLB-LOCAL END(quest-poi-cross-zone)
+
 bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector<POIInfo>& poiInfo, bool toComplete)
 {
     Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
@@ -870,18 +894,21 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
                 dy += point.y * weights[i];
             }
 
-            if (bot->GetDistance2d(dx, dy) >= 1500.0f)
-                continue;
-
             float dz = std::max(bot->GetMap()->GetHeight(dx, dy, MAX_HEIGHT), bot->GetMap()->GetWaterLevel(dx, dy));
 
             if (dz == INVALID_HEIGHT || dz == VMAP_INVALID_HEIGHT_VALUE)
                 continue;
 
-            if (bot->GetZoneId() != bot->GetMap()->GetZoneId(bot->GetPhaseMask(), dx, dy, dz))
+            // PLB-LOCAL BEGIN(quest-poi-cross-zone): a completed quest whose giver stands one zone
+            // away is still worth walking to, provided the destination is level appropriate.
+            // Upstream: refused anything past 1500 yards or outside the current zone, so such a
+            // quest could never be handed in and sat completed in the log forever.
+            QuestPoiReach const reach = ClassifyQuestPoiReach(BuildQuestPoiReachFacts(bot, qPoi.MapId, dx, dy, dz));
+            if (!QuestPoiAdmissible(reach))
                 continue;
+            // PLB-LOCAL END(quest-poi-cross-zone)
 
-            poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex});
+            poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex, reach, bot->GetDistance2d(dx, dy)});
         }
 
         if (poiInfo.empty())
@@ -946,18 +973,23 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
             dy += point.y * weights[i];
         }
 
-        if (bot->GetDistance2d(dx, dy) >= 1500.0f)
-            continue;
-
         float dz = std::max(bot->GetMap()->GetHeight(dx, dy, MAX_HEIGHT), bot->GetMap()->GetWaterLevel(dx, dy));
 
         if (dz == INVALID_HEIGHT || dz == VMAP_INVALID_HEIGHT_VALUE)
             continue;
 
-        if (bot->GetZoneId() != bot->GetMap()->GetZoneId(bot->GetPhaseMask(), dx, dy, dz))
+        // PLB-LOCAL BEGIN(quest-poi-cross-zone): admit an objective in another zone on this map when
+        // the destination is level appropriate, so a bot works its whole quest log rather than only
+        // the part that happens to sit in the zone it is standing in. Local POIs still rank first,
+        // so a bot only walks once nothing nearby is left, and an unsafe destination simply leaves
+        // it doing local work.
+        // Upstream: same map, under 1500 yards and same zone, all three mandatory.
+        QuestPoiReach const reach = ClassifyQuestPoiReach(BuildQuestPoiReachFacts(bot, qPoi.MapId, dx, dy, dz));
+        if (!QuestPoiAdmissible(reach))
             continue;
+        // PLB-LOCAL END(quest-poi-cross-zone)
 
-        poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex});
+        poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex, reach, bot->GetDistance2d(dx, dy)});
     }
 
     if (poiInfo.size() == 0)
@@ -1195,7 +1227,15 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
         // PLB-LOCAL END(rpg-status-probe-reuse)
         case RPG_DO_QUEST:
         {
-            std::vector<uint32> availableQuests;
+            // PLB-LOCAL BEGIN(quest-poi-cross-zone): rank the log instead of drawing from it at
+            // random. Work reachable without leaving the zone comes first, then the lower level
+            // quest, then the nearer one.
+            // Upstream: `availableQuests[urand(0, availableQuests.size() - 1)]`, level and locality
+            // blind. Harmless while every POI was in the bot's own zone; once cross-zone objectives
+            // are admitted it would send a bot on a trip while local work sat untouched.
+            uint32 bestQuestId = 0;
+            QuestChoiceFacts bestChoice;
+            bool haveBest = false;
             for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
             {
                 uint32 questId = bot->GetQuestSlotQuestId(slot);
@@ -1203,22 +1243,45 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
                     continue;
 
                 std::vector<POIInfo> poiInfo;
-                if (GetQuestPOIPosAndObjectiveIdx(questId, poiInfo, true))
+                if (!GetQuestPOIPosAndObjectiveIdx(questId, poiInfo, true) || poiInfo.empty())
+                    continue;
+
+                Quest const* candidateQuest = sObjectMgr->GetQuestTemplate(questId);
+                if (!candidateQuest)
+                    continue;
+
+                size_t bestPoi = 0;
+                for (size_t i = 1; i < poiInfo.size(); i++)
                 {
-                    availableQuests.push_back(questId);
+                    if (QuestPoiPreferred(poiInfo[i].reach, poiInfo[i].distanceYards, poiInfo[bestPoi].reach,
+                                          poiInfo[bestPoi].distanceYards, true))
+                    {
+                        bestPoi = i;
+                    }
+                }
+
+                QuestChoiceFacts choice;
+                choice.reach = poiInfo[bestPoi].reach;
+                choice.questLevel = static_cast<uint32>(std::max(0, candidateQuest->GetQuestLevel()));
+                choice.distanceYards = poiInfo[bestPoi].distanceYards;
+                if (QuestChoicePreferred(choice, bestChoice, haveBest))
+                {
+                    bestChoice = choice;
+                    bestQuestId = questId;
+                    haveBest = true;
                 }
             }
-            if (availableQuests.size())
+            if (haveBest)
             {
-                uint32 questId = availableQuests[urand(0, availableQuests.size() - 1)];
-                const Quest* quest = sObjectMgr->GetQuestTemplate(questId);
+                const Quest* quest = sObjectMgr->GetQuestTemplate(bestQuestId);
                 if (quest)
                 {
-                    botAI->rpgInfo.ChangeToDoQuest(questId, quest);
+                    botAI->rpgInfo.ChangeToDoQuest(bestQuestId, quest);
                     return true;
                 }
             }
             return false;
+            // PLB-LOCAL END(quest-poi-cross-zone)
         }
         // PLB-LOCAL BEGIN(rpg-status-probe-reuse): use the taxi node the probe already selected.
         // Upstream called SelectRandomFlightTaxiNode again here, repeating the flight destination search.
