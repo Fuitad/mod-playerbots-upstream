@@ -501,6 +501,11 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         data.lastReachPOI = 0;
         data.pos = pos;
         data.objectiveIdx = objectiveIdx;
+        // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. Records which POI of the candidate
+        // set was drawn, how far it is, and the guessed z, so the abandon record below can be read
+        // against it. Upstream logs nothing here. Remove once the abandon cause is settled.
+        LOG_DEBUG("playerbots", "[QuestProbe] {} PICK quest {} poi {}/{} obj {} dist {:.0f}y z {:.1f}",
+                  bot->GetName(), questId, rndIdx, poiInfo.size(), objectiveIdx, bot->GetDistance2d(dx, dy), dz);
     }
 
     if (bot->GetDistance(data.pos) > 10.0f && !data.lastReachPOI)
@@ -518,6 +523,10 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
     if (!data.lastReachPOI)
     {
         data.lastReachPOI = getMSTime();
+        // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. Marks the moment the five minute
+        // stay timer starts, which is the only point at which the bot counts as having arrived.
+        LOG_DEBUG("playerbots", "[QuestProbe] {} REACH quest {} obj {} dist {:.0f}y", bot->GetName(), questId,
+                  data.objectiveIdx, bot->GetExactDist(data.pos));
         return true;
     }
     // stayed at this POI for more than 5 minutes
@@ -547,6 +556,19 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             botAI->lowPriorityQuest.insert(questId);
             botAI->rpgStatistic.questAbandoned++;
             LOG_DEBUG("playerbots", "[New RPG] {} marked as abandoned quest {}", bot->GetName(), questId);
+            // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. Where the bot actually was when
+            // it gave up, versus the POI it was assigned, plus the objective counter it judged
+            // itself on. Distinguishes "never arrived", "arrived then wandered off" and "stood on
+            // the objective and still made no progress", which no reading of the code settles.
+            uint32 const probeCount = currentObjective < QUEST_OBJECTIVES_COUNT
+                                          ? q_status.CreatureOrGOCount[currentObjective]
+                                          : (currentObjective < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT
+                                                 ? q_status.ItemCount[currentObjective - QUEST_OBJECTIVES_COUNT]
+                                                 : 0u);
+            LOG_DEBUG("playerbots",
+                      "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {}",
+                      bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
+                      GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel());
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }
