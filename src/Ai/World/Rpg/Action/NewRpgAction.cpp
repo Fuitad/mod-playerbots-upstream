@@ -601,12 +601,16 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                                                  : 0u);
             LOG_DEBUG("playerbots",
                       "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
-                      "kills {} targets {} grind {}",
+                      "kills {} targets {} grind {} curtgt {}",
                       bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
                       GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel(),
                       QuestStayKillProbe::KillsSinceStayStart(bot),
                       AI_VALUE(GuidVector, "possible targets").size(),
-                      AI_VALUE(Unit*, "grind target") ? 1 : 0);
+                      AI_VALUE(Unit*, "grind target") ? 1 : 0,
+                      [this] {
+                          Unit* sel = AI_VALUE(Unit*, "current target");
+                          return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
+                      }());
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }
@@ -614,11 +618,16 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         // ended with objective progression instead of an abandon, with the same kill delta the
         // abandon record carries. Comparing kills between the two groups separates "the bot never
         // fights during a stay" from "it fights but the wrong things or the drops never come".
-        LOG_DEBUG("playerbots", "[QuestProbe] {} STAYOK quest {} obj {} stayed {}s kills {} lvl {} targets {} grind {}",
+        LOG_DEBUG("playerbots",
+                  "[QuestProbe] {} STAYOK quest {} obj {} stayed {}s kills {} lvl {} targets {} grind {} curtgt {}",
                   bot->GetName(), questId, currentObjective, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
                   QuestStayKillProbe::KillsSinceStayStart(bot), bot->GetLevel(),
                   AI_VALUE(GuidVector, "possible targets").size(),
-                  AI_VALUE(Unit*, "grind target") ? 1 : 0);
+                  AI_VALUE(Unit*, "grind target") ? 1 : 0,
+                  [this] {
+                      Unit* sel = AI_VALUE(Unit*, "current target");
+                      return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
+                  }());
         // clear and select another poi later
         data.lastReachPOI = 0;
         data.pos = WorldPosition();
