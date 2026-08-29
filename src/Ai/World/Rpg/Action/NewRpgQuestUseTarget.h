@@ -33,9 +33,18 @@ struct QuestUseTarget
     uint32 toolId = 0;
 };
 
+// Filled when a diag pointer is passed: why the seek did or did not produce a target.
+struct QuestUseSeekDiag
+{
+    QuestUseMode mode = QuestUseMode::None;
+    uint32 nearbyUnits = 0;
+    uint32 matchingEntry = 0;
+    uint32 aliveMatching = 0;
+};
+
 [[nodiscard]] QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx,
                                                 GuidVector const& nearbyUnits, float anchorX, float anchorY,
-                                                float anchorRadius);
+                                                float anchorRadius, QuestUseSeekDiag* diag = nullptr);
 
 // Uses the tool on the target. Item mode goes through PlayerbotAI::ImbueItem (CMSG_USE_ITEM on a
 // unit target); spell mode through PlayerbotAI::CastSpell. Returns true when the use was

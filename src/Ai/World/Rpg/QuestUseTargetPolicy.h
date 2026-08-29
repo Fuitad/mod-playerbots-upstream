@@ -52,7 +52,8 @@ enum class QuestUseMode : uint8
     switch (questId)
     {
         case 9283:  // Rescue the Survivors! - Gift of the Naaru, one spell id per class
-            return {28880, 59542, 59543, 59544, 59545, 59547, 59548};
+            // The full family as found in this server's own Spell.dbc (8 ids).
+            return {28880, 57901, 59542, 59543, 59544, 59545, 59547, 59548};
         case 8346:  // Thirst Unending - Mana Tap
             return {28734};
         default:

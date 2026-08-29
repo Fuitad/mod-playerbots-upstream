@@ -609,9 +609,18 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                                           : (currentObjective < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT
                                                  ? q_status.ItemCount[currentObjective - QUEST_OBJECTIVES_COUNT]
                                                  : 0u);
+            // PLB-LOCAL(quest-use-target): sample the use-seek's view once at abandon so a
+            // use-credited quest that died without a QUSE line explains itself: no tool, no
+            // matching creature nearby, or none of them alive.
+            QuestUseSeekDiag useDiag;
+            if (Quest const* diagQuest = sObjectMgr->GetQuestTemplate(questId))
+                (void)FindQuestUseTarget(botAI, diagQuest, data.objectiveIdx,
+                                         context->GetValue<GuidVector>("nearest npcs")->Get(),
+                                         data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                         sPlayerbotAIConfig.grindDistance, &useDiag);
             LOG_DEBUG("playerbots",
                       "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
-                      "kills {} targets {} grind {} curtgt {}",
+                      "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}",
                       bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
                       GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel(),
                       QuestStayKillProbe::KillsSinceStayStart(bot),
@@ -620,7 +629,9 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                       [this] {
                           Unit* sel = AI_VALUE(Unit*, "current target");
                           return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
-                      }());
+                      }(),
+                      static_cast<uint32>(useDiag.mode), useDiag.nearbyUnits, useDiag.matchingEntry,
+                      useDiag.aliveMatching);
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }

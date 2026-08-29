@@ -52,7 +52,7 @@ uint32 KnownQuestSpell(Player* bot, uint32 questId)
 
 QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx,
                                   GuidVector const& nearbyUnits, float anchorX, float anchorY,
-                                  float anchorRadius)
+                                  float anchorRadius, QuestUseSeekDiag* diag)
 {
     if (!botAI || !quest)
         return {};
@@ -80,6 +80,9 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
     else
         return {};  // no tool: a genuine kill quest, the grind strategy owns it
 
+    if (diag)
+        diag->mode = mode;
+
     std::vector<QuestUseCandidateFacts> facts;
     std::vector<QuestUseTarget> targets;
     facts.reserve(nearbyUnits.size());
@@ -94,6 +97,16 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
         QuestUseCandidateFacts candidate;
         candidate.matchesEntry = unit->GetEntry() == uint32(requiredEntry);
         candidate.alive = unit->IsAlive();
+        if (diag)
+        {
+            ++diag->nearbyUnits;
+            if (candidate.matchesEntry)
+            {
+                ++diag->matchingEntry;
+                if (candidate.alive)
+                    ++diag->aliveMatching;
+            }
+        }
         candidate.distanceSq = bot->GetExactDistSq(unit);
         candidate.anchorDistanceSq = unit->GetExactDist2dSq(anchorX, anchorY);
 
