@@ -22,6 +22,10 @@ namespace playerbots::maintenance
 [[nodiscard]] bool NeedsVendor(PlayerbotAI* botAI);
 [[nodiscard]] bool NeedsMount(PlayerbotAI* botAI);
 [[nodiscard]] bool HasBrokenEquipment(PlayerbotAI* botAI);
+// Facts feeding DeferRoutineMaintenanceDuringQuest: whether the bot is in RPG_DO_QUEST right now,
+// and whether its bags are too full to keep looting (the vendor urgency).
+[[nodiscard]] bool DoingQuestNow(PlayerbotAI* botAI);
+[[nodiscard]] bool CriticallyFullBags(PlayerbotAI* botAI);
 [[nodiscard]] bool HearthstoneReady(Player* bot);
 }  // namespace playerbots::maintenance
 

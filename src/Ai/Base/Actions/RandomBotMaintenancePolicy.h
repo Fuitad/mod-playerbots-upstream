@@ -131,6 +131,14 @@ struct MountSpellEffects
 [[nodiscard]] bool MountSpellMeetsTier(MountTier tier, MountSpellEffects const& effects);
 [[nodiscard]] std::uint32_t SelectMountItem(std::uint8_t race, std::uint8_t team, MountTier tier, std::uint32_t budget,
                                             std::vector<MountVendorCandidate> const& candidates);
+
+// Whether a routine maintenance trip must wait because the bot is working a quest. Maintenance
+// triggers run at relevance 103 to 105 and own the bot outright, so a vendor errand fired
+// mid-quest drags the bot straight off its objective: measured live 2026-08-29, a bot that had
+// just reached the Lazy Peons POI at 0 yards was pulled 157 yards to a trash vendor before it
+// could swing once. Urgent needs (broken gear, bags too full to loot) still go immediately;
+// everything else keeps until the quest status ends.
+[[nodiscard]] bool DeferRoutineMaintenanceDuringQuest(bool doingQuest, bool urgent);
 }  // namespace playerbots::maintenance
 
 #endif

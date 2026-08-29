@@ -273,4 +273,6 @@ RepairPlan ChooseRepairPlan(bool needsRepair, bool hasBrokenEquipment, bool dest
 
     return hearthReady ? RepairPlan::Hearth : RepairPlan::Stranded;
 }
+
+bool DeferRoutineMaintenanceDuringQuest(bool doingQuest, bool urgent) { return doingQuest && !urgent; }
 }  // namespace playerbots::maintenance

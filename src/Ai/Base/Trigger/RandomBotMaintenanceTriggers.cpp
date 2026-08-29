@@ -11,8 +11,26 @@
 
 #include "RandomBotMaintenanceActions.h"
 
-bool RandomBotRepairTrigger::IsActive() { return playerbots::maintenance::NeedsRepair(botAI); }
+// Routine maintenance yields to quest work: these triggers run at relevance 103 to 105 and own
+// the bot outright, so firing one mid-quest drags the bot off its objective (see
+// DeferRoutineMaintenanceDuringQuest). Broken gear and bags too full to loot stay urgent.
+bool RandomBotRepairTrigger::IsActive()
+{
+    return playerbots::maintenance::NeedsRepair(botAI) &&
+           !playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(
+               playerbots::maintenance::DoingQuestNow(botAI), playerbots::maintenance::HasBrokenEquipment(botAI));
+}
 
-bool RandomBotVendorTrigger::IsActive() { return playerbots::maintenance::NeedsVendor(botAI); }
+bool RandomBotVendorTrigger::IsActive()
+{
+    return playerbots::maintenance::NeedsVendor(botAI) &&
+           !playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(
+               playerbots::maintenance::DoingQuestNow(botAI), playerbots::maintenance::CriticallyFullBags(botAI));
+}
 
-bool RandomBotMountTrigger::IsActive() { return playerbots::maintenance::NeedsMount(botAI); }
+bool RandomBotMountTrigger::IsActive()
+{
+    return playerbots::maintenance::NeedsMount(botAI) &&
+           !playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(
+               playerbots::maintenance::DoingQuestNow(botAI), false);
+}

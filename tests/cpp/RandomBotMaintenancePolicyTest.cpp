@@ -254,4 +254,16 @@ TEST(RandomBotRepairPlanTest, AnUnusableDistanceIsNotTreatedAsReachable)
         RepairPlan::Hearth);
     EXPECT_EQ(playerbots::maintenance::ChooseRepairPlan(true, true, true, -1.0f, true), RepairPlan::Hearth);
 }
+
+TEST(RandomBotMaintenancePolicyTest, RoutineMaintenanceWaitsForTheQuestButUrgentNeedsGoNow)
+{
+    // The defect this pins: a vendor errand fired mid-quest dragged a bot straight off the Lazy
+    // Peons objective it had just reached. Routine trips defer while a quest is being worked;
+    // broken gear or bags too full to loot must still go immediately, and outside quest work
+    // nothing defers.
+    EXPECT_TRUE(playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(true, false));
+    EXPECT_FALSE(playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(true, true));
+    EXPECT_FALSE(playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(false, false));
+    EXPECT_FALSE(playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(false, true));
+}
 }  // namespace

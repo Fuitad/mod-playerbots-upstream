@@ -381,6 +381,20 @@ bool playerbots::maintenance::NeedsRepair(PlayerbotAI* botAI)
  * is the urgent half: at zero durability the item contributes nothing, so a bot in this state
  * cannot win a fight and will keep dying until it is repaired. Only this justifies a hearth.
  */
+bool playerbots::maintenance::DoingQuestNow(PlayerbotAI* botAI)
+{
+    return botAI && botAI->rpgInfo.GetStatus() == RPG_DO_QUEST;
+}
+
+bool playerbots::maintenance::CriticallyFullBags(PlayerbotAI* botAI)
+{
+    if (!botAI)
+        return false;
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    return AI_VALUE(uint8, "bag space") > 95;
+}
+
 bool playerbots::maintenance::HasBrokenEquipment(PlayerbotAI* botAI)
 {
     if (!IsEligible(botAI))
