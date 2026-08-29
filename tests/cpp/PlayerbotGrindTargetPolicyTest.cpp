@@ -65,3 +65,26 @@ TEST(PlayerbotGrindTargetPolicyTest, AnEqualDistanceDoesNotDisplaceTheIncumbent)
     EXPECT_FALSE(GrindCandidatePreferred(Candidate(false, 10.0f), Candidate(false, 10.0f), true, true));
     EXPECT_FALSE(GrindCandidatePreferred(Candidate(true, 10.0f), Candidate(true, 10.0f), true, true));
 }
+
+TEST(PlayerbotGrindTargetPolicyTest, DuringAPoiStayAnyEligibleCandidateMayBeGround)
+{
+    // The defect this pins: bots stood idle at their POIs for whole five-minute stays (71% of
+    // abandons with zero kills) because every out-of-aggro bystander was filtered as not
+    // quest-relevant. Once the stay is running, the relevance demand must lift.
+    EXPECT_FALSE(GrindCandidateNeedsQuestRelevance(true, true, true));
+}
+
+TEST(PlayerbotGrindTargetPolicyTest, TravellingToThePoiStillDemandsQuestRelevance)
+{
+    // Before the stay starts (still walking to the POI) upstream's focus rule stands: an
+    // out-of-aggro candidate must advance the quest, or the bot detours off its journey.
+    EXPECT_TRUE(GrindCandidateNeedsQuestRelevance(true, true, false));
+}
+
+TEST(PlayerbotGrindTargetPolicyTest, ActiveGrindingAndInAggroCandidatesNeverNeededRelevance)
+{
+    // Upstream never demanded relevance for wander/idle grinding or for candidates inside aggro
+    // range; the stay exemption must not change either.
+    EXPECT_FALSE(GrindCandidateNeedsQuestRelevance(false, true, false));
+    EXPECT_FALSE(GrindCandidateNeedsQuestRelevance(true, false, false));
+}

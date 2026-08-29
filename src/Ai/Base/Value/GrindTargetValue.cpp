@@ -63,6 +63,14 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
     bool resultNeededForQuest = false;
     bool const questPriorityActive = botAI->rpgInfo.GetStatus() == RPG_DO_QUEST;
     // PLB-LOCAL END(grind-quest-priority)
+    // PLB-LOCAL BEGIN(grind-poi-stay-engage): once the POI stay is running, the eligibility gate
+    // below stops demanding quest relevance. See GrindCandidateNeedsQuestRelevance for the
+    // measurements. Upstream: no such state was read here.
+    bool stayingAtQuestPoi = false;
+    if (questPriorityActive)
+        if (auto const* doQuest = std::get_if<NewRpgInfo::DoQuest>(&botAI->rpgInfo.data))
+            stayingAtQuestPoi = doQuest->lastReachPOI != 0;
+    // PLB-LOCAL END(grind-poi-stay-engage)
 
     for (ObjectGuid const guid : targets)
     {
@@ -120,7 +128,12 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
         if (unit->ToCreature())
             aggroRange = std::min(30.0f, unit->ToCreature()->GetAggroRange(bot) + 10.0f);
         bool outOfAggro = unit->ToCreature() && bot->GetDistance(unit) > aggroRange;
-        if (inactiveGrindStatus && outOfAggro)
+        // PLB-LOCAL BEGIN(grind-poi-stay-engage): during a POI stay any eligible candidate may be
+        // ground; the quest-priority ranking still puts objective creatures first. Upstream:
+        // `if (inactiveGrindStatus && outOfAggro)`, which left bots idle at their POIs whenever no
+        // quest-relevant creature was in sight.
+        if (GrindCandidateNeedsQuestRelevance(inactiveGrindStatus, outOfAggro, stayingAtQuestPoi))
+        // PLB-LOCAL END(grind-poi-stay-engage)
         {
             if (needForQuestMap.find(unit->GetEntry()) == needForQuestMap.end())
                 needForQuestMap[unit->GetEntry()] = needForQuest(unit);

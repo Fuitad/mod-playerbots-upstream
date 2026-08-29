@@ -52,4 +52,23 @@ struct GrindCandidateFacts
     return candidate.distance < incumbent.distance;
 }
 
+// Whether an out-of-aggro candidate must be quest-relevant to stay eligible at all.
+//
+// Upstream demands quest relevance for every out-of-aggro candidate whenever the bot is in any
+// focused RPG status, which includes the whole POI stay of RPG_DO_QUEST. Measured on the live
+// realm on 2026-08-29: 71% of abandoned quests saw ZERO creature kills during the entire five
+// minute stay, and the largest zero-kill bucket (19 of 35) had visible candidates with grind
+// target selection returning null - the bot stood in a field of creatures it refused to attack
+// because none advanced the quest, and only fought when something aggroed it first.
+//
+// So once the bot has REACHED its POI (the stay is running), any eligible creature in range may
+// be ground: the quest-priority ranking above still puts objective creatures first whenever they
+// exist, so this only stops the bot idling when they do not. While still travelling to the POI,
+// and in every other focused status, upstream's relevance requirement stands unchanged.
+[[nodiscard]] inline bool GrindCandidateNeedsQuestRelevance(bool inactiveGrindStatus, bool outOfAggro,
+                                                            bool stayingAtQuestPoi)
+{
+    return inactiveGrindStatus && outOfAggro && !stayingAtQuestPoi;
+}
+
 #endif
