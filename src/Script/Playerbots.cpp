@@ -20,6 +20,8 @@
 // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
 #include "ModuleMgr.h"
 #include "PlayerScript.h"
+// PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner.
+#include "Ai/World/Rpg/QuestStayKillProbe.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotCommandScript.h"
 #include "PlayerbotGuildMgr.h"
@@ -559,6 +561,8 @@ void AddPlayerbotsScripts()
     new PlayerbotsBattlefieldScript();
     new PlayerbotsDatabaseScript();
     new PlayerbotsPlayerScript();
+    // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic registration, removed with the probe.
+    new QuestStayKillProbeScript();
     new PlayerbotsMiscScript();
     new PlayerbotsServerScript();
     new PlayerbotsWorldScript();

@@ -11,6 +11,8 @@
 
 // PLB-LOCAL(quest-poi-approach): approach policy for a POI the bot has drifted away from.
 #include "Ai/World/Rpg/QuestPoiApproachPolicy.h"
+// PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner.
+#include "Ai/World/Rpg/QuestStayKillProbe.h"
 #include "AreaDefines.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
@@ -522,6 +524,11 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         data.lastReachPOI = 0;
         data.pos = pos;
         data.objectiveIdx = objectiveIdx;
+        // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. Records which POI of the candidate
+        // set was drawn, how far it is, and the guessed z, so the abandon record below can be read
+        // against it. Upstream logs nothing here. Remove once the abandon cause is settled.
+        LOG_DEBUG("playerbots", "[QuestProbe] {} PICK quest {} poi {}/{} obj {} dist {:.0f}y z {:.1f}",
+                  bot->GetName(), questId, rndIdx, poiInfo.size(), objectiveIdx, bot->GetDistance2d(dx, dy), dz);
     }
 
     // PLB-LOCAL BEGIN(quest-poi-approach): also walk back when the bot has drifted off a POI it had
@@ -545,6 +552,13 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
     if (!data.lastReachPOI)
     {
         data.lastReachPOI = getMSTime();
+        // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. Marks the moment the five minute
+        // stay timer starts, which is the only point at which the bot counts as having arrived.
+        LOG_DEBUG("playerbots", "[QuestProbe] {} REACH quest {} obj {} dist {:.0f}y", bot->GetName(), questId,
+                  data.objectiveIdx, bot->GetExactDist(data.pos));
+        // PLB-LOCAL(quest-stay-kill-probe): snapshot the kill counter so the stay-end records can
+        // report how many creatures the bot killed between arrival and the stay verdict.
+        QuestStayKillProbe::MarkStayStart(bot);
         return true;
     }
     // stayed at this POI for more than 5 minutes
@@ -574,9 +588,31 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             botAI->lowPriorityQuest.insert(questId);
             botAI->rpgStatistic.questAbandoned++;
             LOG_DEBUG("playerbots", "[New RPG] {} marked as abandoned quest {}", bot->GetName(), questId);
+            // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. Where the bot actually was when
+            // it gave up, versus the POI it was assigned, plus the objective counter it judged
+            // itself on. Distinguishes "never arrived", "arrived then wandered off" and "stood on
+            // the objective and still made no progress", which no reading of the code settles.
+            uint32 const probeCount = currentObjective < QUEST_OBJECTIVES_COUNT
+                                          ? q_status.CreatureOrGOCount[currentObjective]
+                                          : (currentObjective < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT
+                                                 ? q_status.ItemCount[currentObjective - QUEST_OBJECTIVES_COUNT]
+                                                 : 0u);
+            LOG_DEBUG("playerbots",
+                      "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
+                      "kills {}",
+                      bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
+                      GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel(),
+                      QuestStayKillProbe::KillsSinceStayStart(bot));
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }
+        // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic. The contrast group: a stay that
+        // ended with objective progression instead of an abandon, with the same kill delta the
+        // abandon record carries. Comparing kills between the two groups separates "the bot never
+        // fights during a stay" from "it fights but the wrong things or the drops never come".
+        LOG_DEBUG("playerbots", "[QuestProbe] {} STAYOK quest {} obj {} stayed {}s kills {} lvl {}",
+                  bot->GetName(), questId, currentObjective, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
+                  QuestStayKillProbe::KillsSinceStayStart(bot), bot->GetLevel());
         // clear and select another poi later
         data.lastReachPOI = 0;
         data.pos = WorldPosition();
