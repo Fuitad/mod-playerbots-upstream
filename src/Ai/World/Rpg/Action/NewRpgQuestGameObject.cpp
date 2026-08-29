@@ -14,6 +14,7 @@
 #include "Ai/World/Rpg/QuestGameObjectPolicy.h"
 #include "GameObject.h"
 #include "LootMgr.h"
+#include "LootObjectStack.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Opcodes.h"
@@ -86,6 +87,23 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
         candidate.usable = go->isSpawned() && go->GetGoState() == GO_STATE_READY &&
                            !go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE) &&
                            !go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE) && go->ActivateToQuest(bot);
+
+        // A chest is only a candidate when the loot pipeline itself would open it. Without this
+        // agreement the seek and the pipeline can disagree forever: measured live 2026-08-29, a
+        // bot on "Webwood Venom" (spider drops) was parked at a Moonpetal Lily for a full stay,
+        // re-queueing it 120 times while the pipeline kept refusing. LootObject::Refresh (run by
+        // the constructor) applies the pipeline's needed-quest-item rule; IsLootPossible adds the
+        // lock, skill and vertical-offset gates. The offset gate compares the bot's own z, which
+        // is meaningless for a candidate still tens of yards away, so the full check applies only
+        // within interaction range; a far candidate that fails it on arrival simply drops out of
+        // the candidate set next tick instead of looping.
+        if (candidate.usable && candidate.interaction == QuestGoInteraction::Loot)
+        {
+            LootObject lootProbe(bot, guid);
+            candidate.usable = !lootProbe.IsEmpty() &&
+                               (!go->IsWithinDistInMap(bot, go->GetInteractionDistance()) ||
+                                lootProbe.IsLootPossible(bot));
+        }
 
         if (requiredGoEntry)
             candidate.matchesObjective = go->GetEntry() == requiredGoEntry;
