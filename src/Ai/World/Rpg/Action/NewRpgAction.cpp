@@ -11,6 +11,10 @@
 
 // PLB-LOCAL(quest-poi-approach): approach policy for a POI the bot has drifted away from.
 #include "Ai/World/Rpg/QuestPoiApproachPolicy.h"
+// PLB-LOCAL(quest-gameobject-objective): operate the gameobject the current quest objective
+// needs while standing at its POI. Pure decisions live in QuestGameObjectPolicy.h, world glue
+// in NewRpgQuestGameObject.cpp; this file carries only the call site.
+#include "Ai/World/Rpg/Action/NewRpgQuestGameObject.h"
 // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner. Playerbots.h is
 // pulled in for AI_VALUE so the stay-end records can sample the grind pipeline's own values.
 #include "Ai/World/Rpg/QuestStayKillProbe.h"
@@ -20,6 +24,8 @@
 #include "ChatHelper.h"
 #include "GossipDef.h"
 #include "IVMapMgr.h"
+// PLB-LOCAL(quest-gameobject-objective): LootObjectStack::Add hands quest chests to the loot pipeline.
+#include "LootObjectStack.h"
 #include "NewRpgInfo.h"
 #include "NewRpgStrategy.h"
 #include "Object.h"
@@ -634,6 +640,55 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         data.objectiveIdx = 0;
         return true;
     }
+
+    // PLB-LOCAL BEGIN(quest-gameobject-objective): operate the gameobject the current objective
+    // needs. Upstream idles here on the comment "kill mobs and looting quest should be done
+    // automatically by grind strategy", but the grind strategy only kills creatures: a gameobject
+    // objective (RequiredNpcOrGo < 0; every low-level case is a GOOBER, which the loot pipeline
+    // cannot reach because its loot id is 0) is never used, and a chest holding the required item
+    // is never approached, because the loot pipeline only engages within AiPlayerbot.LootDistance
+    // (15y) of the bot while quest chests sit scattered across the whole POI area. Measured live
+    // 2026-08-28: 34% of abandoned quests could not be progressed by killing anything.
+    // Upstream: falls straight through to MoveRandomNear(8.0f).
+    {
+        Quest const* qTemplate = sObjectMgr->GetQuestTemplate(questId);
+        GuidVector nearbyGos = context->GetValue<GuidVector>("nearest game objects")->Get();
+        QuestGameObjectTarget const goTarget =
+            qTemplate ? FindQuestObjectiveGameObject(bot, qTemplate, data.objectiveIdx, nearbyGos,
+                                                     data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                                     sPlayerbotAIConfig.grindDistance)
+                      : QuestGameObjectTarget{};
+        if (goTarget.guid)
+        {
+            if (!IsQuestGameObjectWithinInteraction(bot, goTarget.guid))
+            {
+                if (MoveWorldObjectTo(goTarget.guid, INTERACTION_DISTANCE))
+                    return true;
+                // Path failed or movement is still pending; fall through to the small wander so
+                // the next tick retries from a different spot, exactly as the POI walk does.
+            }
+            else if (goTarget.needsLoot)
+            {
+                // A chest: queue it for the loot pipeline (relevance 5..8 outranks this action's
+                // 3.0), which owns lock, skill, bag and release handling in OpenLootAction. Within
+                // interaction range it is inside LootDistance, so the pipeline engages next tick.
+                context->GetValue<LootObjectStack*>("available loot")->Get()->Add(goTarget.guid);
+                // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
+                LOG_DEBUG("playerbots", "[QuestProbe] {} GOLOOT quest {} obj {} go {}", bot->GetName(),
+                          questId, data.objectiveIdx, goTarget.entry);
+                return true;
+            }
+            else if (UseQuestGameObject(bot, goTarget.guid))
+            {
+                // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
+                LOG_DEBUG("playerbots", "[QuestProbe] {} GOUSE quest {} obj {} go {}", bot->GetName(),
+                          questId, data.objectiveIdx, goTarget.entry);
+                // Let the use land (goober animation and loot state) before the next decision.
+                return ForceToWait(3000);
+            }
+        }
+    }
+    // PLB-LOCAL END(quest-gameobject-objective)
 
     // At the POI: keep the bot actively placed but avoid large
     // random 20yd hops that look like pacing back and forth. A small
