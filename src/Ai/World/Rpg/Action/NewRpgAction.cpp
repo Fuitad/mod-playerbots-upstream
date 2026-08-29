@@ -15,6 +15,10 @@
 // needs while standing at its POI. Pure decisions live in QuestGameObjectPolicy.h, world glue
 // in NewRpgQuestGameObject.cpp; this file carries only the call site.
 #include "Ai/World/Rpg/Action/NewRpgQuestGameObject.h"
+// PLB-LOCAL(quest-use-target): operate the creature a use-credited objective needs (blackjack a
+// peon, inoculate an owlkin, cast a racial on a survivor). Pure decisions in
+// QuestUseTargetPolicy.h, world glue in NewRpgQuestUseTarget.cpp; this file carries the call site.
+#include "Ai/World/Rpg/Action/NewRpgQuestUseTarget.h"
 // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner. Playerbots.h is
 // pulled in for AI_VALUE so the stay-end records can sample the grind pipeline's own values.
 #include "Ai/World/Rpg/QuestStayKillProbe.h"
@@ -689,6 +693,43 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         }
     }
     // PLB-LOCAL END(quest-gameobject-objective)
+
+    // PLB-LOCAL BEGIN(quest-use-target): operate the creature a use-credited objective needs.
+    // Some creature objectives are credited by USING something on the creature, not killing it:
+    // wake a Lazy Peon, inoculate a Nestlewood Owlkin, Mana Tap an Arcane Wraith, cast Gift of
+    // the Naaru on a Draenei Survivor. The grind strategy can only kill, so bots burned whole
+    // stays in heavy combat with the counter at zero (measured live 2026-08-29: abandons with 3
+    // to 21 kills and no credit). A quest without a use-tool returns an empty target here and the
+    // kill path below stays exactly as it was.
+    {
+        Quest const* qTemplate = sObjectMgr->GetQuestTemplate(questId);
+        GuidVector nearbyUnits = context->GetValue<GuidVector>("nearest npcs")->Get();
+        QuestUseTarget const useTarget =
+            qTemplate ? FindQuestUseTarget(botAI, qTemplate, data.objectiveIdx, nearbyUnits,
+                                           data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                           sPlayerbotAIConfig.grindDistance)
+                      : QuestUseTarget{};
+        if (useTarget.guid)
+        {
+            Unit* useUnit = botAI->GetUnit(useTarget.guid);
+            if (useUnit && bot->GetDistance(useUnit) > INTERACTION_DISTANCE)
+            {
+                if (MoveWorldObjectTo(useTarget.guid, INTERACTION_DISTANCE))
+                    return true;
+                // Path failed or movement pending; fall through to the wander and retry.
+            }
+            else if (EngageQuestUseTarget(botAI, useTarget))
+            {
+                // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
+                LOG_DEBUG("playerbots", "[QuestProbe] {} QUSE quest {} obj {} npc {} mode {} tool {}",
+                          bot->GetName(), questId, data.objectiveIdx, useTarget.entry,
+                          useTarget.mode == QuestUseMode::Item ? "item" : "spell", useTarget.toolId);
+                // Let the use land (cast time, credit, respawn state) before the next decision.
+                return ForceToWait(2000);
+            }
+        }
+    }
+    // PLB-LOCAL END(quest-use-target)
 
     // At the POI: keep the bot actively placed but avoid large
     // random 20yd hops that look like pacing back and forth. A small
