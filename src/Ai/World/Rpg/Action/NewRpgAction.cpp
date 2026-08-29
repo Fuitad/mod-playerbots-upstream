@@ -679,8 +679,11 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             {
                 if (MoveWorldObjectTo(goTarget.guid, INTERACTION_DISTANCE))
                     return true;
-                // Path failed or movement is still pending; fall through to the small wander so
-                // the next tick retries from a different spot, exactly as the POI walk does.
+                // Movement still pending or path momentarily failed: hold the tick instead of
+                // wandering. The wander issues its own movement, which keeps the movement wait
+                // alive and starves this approach forever - measured live 2026-08-29, a bot spent
+                // a whole 451s stay next to a valid use target without ever closing the distance.
+                return true;
             }
             else if (goTarget.needsLoot)
             {
@@ -727,7 +730,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             {
                 if (MoveWorldObjectTo(useTarget.guid, INTERACTION_DISTANCE))
                     return true;
-                // Path failed or movement pending; fall through to the wander and retry.
+                // Hold instead of wandering, same reasoning as the gameobject seek above.
+                return true;
             }
             else if (EngageQuestUseTarget(botAI, useTarget))
             {
