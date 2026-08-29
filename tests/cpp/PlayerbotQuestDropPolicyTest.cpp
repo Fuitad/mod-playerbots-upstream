@@ -1,0 +1,103 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
+/*
+ * PLB-LOCAL FILE. This file does not exist upstream and never conflicts on a merge.
+ */
+
+#include "Ai/World/Rpg/QuestDropPolicy.h"
+#include "gtest/gtest.h"
+
+namespace
+{
+QuestDropFacts Facts(uint8 botLevel, int32 questLevel, bool complete, bool givenUp, bool reachable)
+{
+    QuestDropFacts facts;
+    facts.botLevel = botLevel;
+    facts.questLevel = questLevel;
+    facts.complete = complete;
+    facts.givenUp = givenUp;
+    facts.reachable = reachable;
+    return facts;
+}
+}  // namespace
+
+// Expected gray boundaries are hand-derived from the formula spec in Formulas.h:
+// level <= 5 -> 0; 6..39 -> L - 5 - L/10; 40..59 -> L - 1 - L/5; 60+ -> L - 9.
+TEST(PlayerbotQuestDropPolicyTest, GrayBoundaryMatchesTheCoreFormula)
+{
+    // Bot 30: gray at 30 - 5 - 3 = 22.
+    EXPECT_TRUE(QuestIsGrayFor(30, 22));
+    EXPECT_FALSE(QuestIsGrayFor(30, 23));
+    // Bot 10: gray at 10 - 5 - 1 = 4.
+    EXPECT_TRUE(QuestIsGrayFor(10, 4));
+    EXPECT_FALSE(QuestIsGrayFor(10, 5));
+    // Bot 45: gray at 45 - 1 - 9 = 35.
+    EXPECT_TRUE(QuestIsGrayFor(45, 35));
+    EXPECT_FALSE(QuestIsGrayFor(45, 36));
+    // Bot 80: gray at 80 - 9 = 71.
+    EXPECT_TRUE(QuestIsGrayFor(80, 71));
+    EXPECT_FALSE(QuestIsGrayFor(80, 72));
+}
+
+TEST(PlayerbotQuestDropPolicyTest, LowLevelBotsAndScalingQuestsAreNeverGray)
+{
+    // Bot 5 grays at level 0, and quest levels start at 1.
+    EXPECT_FALSE(QuestIsGrayFor(5, 1));
+    // Level <= 0 marks a quest that scales with the player.
+    EXPECT_FALSE(QuestIsGrayFor(80, 0));
+    EXPECT_FALSE(QuestIsGrayFor(80, -1));
+}
+
+TEST(PlayerbotQuestDropPolicyTest, ACompleteQuestIsNeverDropped)
+{
+    // Ready to turn in, however gray, given up, and unreachable it is.
+    EXPECT_EQ(QuestDropDecision(Facts(80, 10, true, true, false)), QuestDropVerdict::Keep);
+    EXPECT_EQ(QuestDropDecision(Facts(80, 10, true, false, false)), QuestDropVerdict::Keep);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, AQuestStillDoableAtLevelIsNeverDropped)
+{
+    // Not gray: neither the give-up record nor unreachability alone may drop it.
+    EXPECT_EQ(QuestDropDecision(Facts(30, 28, false, true, true)), QuestDropVerdict::Keep);
+    EXPECT_EQ(QuestDropDecision(Facts(30, 28, false, false, false)), QuestDropVerdict::Keep);
+    EXPECT_EQ(QuestDropDecision(Facts(30, 28, false, true, false)), QuestDropVerdict::Keep);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, AGrayGivenUpQuestIsDropped)
+{
+    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, true, true)), QuestDropVerdict::DropGivenUp);
+    // Given up wins as the reason even when the quest is also unreachable.
+    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, true, false)), QuestDropVerdict::DropGivenUp);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, AGrayUnreachableQuestIsDropped)
+{
+    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, false, false)), QuestDropVerdict::DropUnreachable);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, AGrayButWorkableQuestIsKept)
+{
+    // Gray alone is not enough: the bot never gave up and can still reach the objectives.
+    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, false, true)), QuestDropVerdict::Keep);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, ReachabilityIsOnlyConsultedWhenItCanChangeTheVerdict)
+{
+    // Only an incomplete, gray, not-given-up quest needs the POI computation.
+    EXPECT_TRUE(QuestDropNeedsReachability(Facts(30, 15, false, false, true)));
+    // Complete, given up, or still at level: the verdict is already settled without it.
+    EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 15, true, false, true)));
+    EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 15, false, true, true)));
+    EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 28, false, false, true)));
+}
+
+TEST(PlayerbotQuestDropPolicyTest, ReasonNamesFeedTheDropProbeLine)
+{
+    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropGivenUp), "givenup");
+    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropUnreachable), "unreachable");
+    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::Keep), "keep");
+}
