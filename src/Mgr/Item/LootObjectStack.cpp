@@ -195,6 +195,14 @@ void LootObject::Refresh(Player* bot, ObjectGuid lootGUID)
         if (!lockInfo)
             return;
 
+        // PLB-LOCAL(loot-open-lock): whether any lock row lets anyone open this with no skill.
+        // Lock rows are ALTERNATIVES: quest plants like the Corrupted Flower (lock 259) carry an
+        // OPEN_KNEELING row for everyone plus a herbalism row for gatherers. Verified against
+        // Lock.dbc on 2026-08-29 after the first version of this fix still refused them: the
+        // herbalism row, iterated later, overwrote skillId and turned the free row into a
+        // profession gate. Any freely openable row must win over a skill alternative.
+        bool openableWithoutSkill = false;
+
         for (uint8 i = 0; i < 8; ++i)
         {
             switch (lockInfo->Type[i])
@@ -228,6 +236,7 @@ void LootObject::Refresh(Player* bot, ObjectGuid lootGUID)
                     else if (LockRowOpensWithoutSkill(lockInfo->Index[i]))
                     {
                         guid = lootGUID;
+                        openableWithoutSkill = true;
                     }
                     // PLB-LOCAL END(loot-open-lock)
                     break;
@@ -237,6 +246,16 @@ void LootObject::Refresh(Player* bot, ObjectGuid lootGUID)
                     break;
             }
         }
+
+        // PLB-LOCAL BEGIN(loot-open-lock): a freely openable row makes every skill row an
+        // optional alternative, whatever order the rows came in. Without this, iteration order
+        // decided whether a quest plant was free or profession-gated.
+        if (openableWithoutSkill)
+        {
+            skillId = SKILL_NONE;
+            reqSkillValue = 0;
+        }
+        // PLB-LOCAL END(loot-open-lock)
     }
 }
 
