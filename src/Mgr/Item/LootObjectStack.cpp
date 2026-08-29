@@ -10,6 +10,8 @@
 
 #include "LootObjectStack.h"
 #include "LootMgr.h"
+// PLB-LOCAL(loot-open-lock): openable-without-skill lock classification.
+#include "LootLockPolicy.h"
 #include "Object.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
@@ -216,6 +218,18 @@ void LootObject::Refresh(Player* bot, ObjectGuid lootGUID)
                         reqSkillValue = std::max((uint32)1, lockInfo->Skill[i]);
                         guid = lootGUID;
                     }
+                    // PLB-LOCAL BEGIN(loot-open-lock): a lock row anyone can open (OPEN, TREASURE,
+                    // QUICK_OPEN, OPEN_KNEELING, SLOW_OPEN) maps to SKILL_NONE, which the branch
+                    // above rejects. That refused every quest plant and ground container of this
+                    // class; the Serpentbloom special case above is the two-gameobject symptom of
+                    // it. skillId stays SKILL_NONE, so IsLootPossible passes and OpenLootAction
+                    // takes the generic opening-spell path. See LootLockPolicy.h.
+                    // Upstream: no branch here, so guid stayed empty and the object was skipped.
+                    else if (LockRowOpensWithoutSkill(lockInfo->Index[i]))
+                    {
+                        guid = lootGUID;
+                    }
+                    // PLB-LOCAL END(loot-open-lock)
                     break;
 
                 case LOCK_KEY_NONE:
