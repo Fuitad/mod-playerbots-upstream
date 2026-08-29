@@ -95,7 +95,7 @@ bool playerbots::recovery::IsHomebindRecoverySuccessful(bool aliveAfterRevive, b
 }
 
 bool playerbots::recovery::ShouldRequireRepairBeforeCombat(bool economyManagedSupplies, bool randomBot, bool alive,
-                                                           bool hasBrokenEquipment)
+                                                           bool hasBrokenWeapon)
 {
-    return economyManagedSupplies && randomBot && alive && hasBrokenEquipment;
+    return economyManagedSupplies && randomBot && alive && hasBrokenWeapon;
 }

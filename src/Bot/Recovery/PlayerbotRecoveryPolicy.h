@@ -98,8 +98,10 @@ struct CorpseReclaimEligibility
 [[nodiscard]] bool ShouldCountPhysicalDeath(bool alreadyInDeadEngine, bool alive, bool inBattleground,
                                             bool hasRealPlayerMaster);
 [[nodiscard]] bool IsHomebindRecoverySuccessful(bool aliveAfterRevive, bool teleportAccepted);
+// The last fact is a broken main-hand WEAPON, not any broken equipment: banning combat over broken
+// armor starved bots of the income they needed to repair (see PlayerbotAI::HasBrokenWeapon).
 [[nodiscard]] bool ShouldRequireRepairBeforeCombat(bool economyManagedSupplies, bool randomBot, bool alive,
-                                                   bool hasBrokenEquipment);
+                                                   bool hasBrokenWeapon);
 }  // namespace playerbots::recovery
 
 #endif

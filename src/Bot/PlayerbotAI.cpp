@@ -4738,26 +4738,24 @@ bool PlayerbotAI::IsPostReviveRepairPending()
 {
     return playerbots::recovery::ShouldRequireRepairBeforeCombat(sPlayerbotAIConfig.economyManagedSupplies,
                                                                  sRandomPlayerbotMgr.IsRandomBot(bot),
-                                                                 bot && bot->IsAlive(), HasBrokenEquipment());
+                                                                 bot && bot->IsAlive(), HasBrokenWeapon());
 }
 
 bool PlayerbotAI::CanInitiateCombat() { return !IsPostReviveRepairPending(); }
 
-bool PlayerbotAI::HasBrokenEquipment() const
+// Only a broken main-hand weapon blocks combat. This used to scan every equipment slot, which
+// banned a bot from initiating combat over a broken bracer: measured live 2026-08-29 with the
+// engine action trace, all 983 failed "attack anything" executions in a 9 minute window came from
+// bots with broken equipment (0 from intact bots), 31 of 200 online bots were banned at once, and
+// the ban fed itself - no combat means no income, so repairs stayed unaffordable. Armor breakage
+// still drives repair trips through playerbots::maintenance::HasBrokenEquipment, which is separate.
+bool PlayerbotAI::HasBrokenWeapon() const
 {
     if (!bot)
         return false;
 
-    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
-    {
-        Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
-        if (item && item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY) && !item->GetUInt32Value(ITEM_FIELD_DURABILITY))
-        {
-            return true;
-        }
-    }
-
-    return false;
+    Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
+    return item && item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY) && !item->GetUInt32Value(ITEM_FIELD_DURABILITY);
 }
 
 bool PlayerbotAI::AllowActive(ActivityType activityType)

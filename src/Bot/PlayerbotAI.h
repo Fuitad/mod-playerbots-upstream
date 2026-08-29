@@ -675,7 +675,7 @@ private:
     // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     void UpdateAIGroupMaster();
     Item* FindItemInInventory(std::function<bool(ItemTemplate const*)> checkItem) const;
-    [[nodiscard]] bool HasBrokenEquipment() const;
+    [[nodiscard]] bool HasBrokenWeapon() const;
     // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     void HandleCommands();
     void HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang = LANG_UNIVERSAL);
