@@ -197,6 +197,17 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
     }
 
     bool const castResult = botAI->CastSpell(spellId, bot);
+    // PLB-LOCAL BEGIN(loot-open-cast-delay): sleep the AI through the opening cast. CastSpell
+    // returns as soon as the cast STARTS (WaitForSpellCast is disabled upstream), so the next AI
+    // tick ran mid-cast, and with a second lootable nearby the "move to loot" movement it issued
+    // interrupted the cast every time. Measured live 2026-08-30 on Emitter Spare Part chests, two
+    // spawns 11y apart: two Opening casts logged result true with zero loot stored across a whole
+    // stay, because the result-true removal from "available loot" made the OTHER spawn the next
+    // loot target, so the interruption engine fed itself.
+    if (castResult)
+        if (SpellInfo const* openingInfo = sSpellMgr->GetSpellInfo(spellId))
+            botAI->SetNextCheckDelay(openingInfo->CalcCastTime() + sPlayerbotAIConfig.lootDelay);
+    // PLB-LOCAL END(loot-open-cast-delay)
     // PLB-LOCAL(loot-skip-probe): temporary diagnostic, records the terminal outcome for a quest
     // chest: which opening spell was chosen and whether the cast path accepted it.
     if (probeChest)
