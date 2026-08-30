@@ -97,6 +97,7 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
         QuestUseCandidateFacts candidate;
         candidate.matchesEntry = unit->GetEntry() == uint32(requiredEntry);
         candidate.alive = unit->IsAlive();
+        candidate.sleeping = unit->getStandState() == UNIT_STAND_STATE_SLEEP;
         if (diag)
         {
             ++diag->nearbyUnits;

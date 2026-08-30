@@ -15,13 +15,15 @@
 
 namespace
 {
-QuestUseCandidateFacts Candidate(bool matchesEntry, bool alive, float distanceSq, float anchorDistanceSq = 0.0f)
+QuestUseCandidateFacts Candidate(bool matchesEntry, bool alive, float distanceSq, float anchorDistanceSq = 0.0f,
+                                 bool sleeping = false)
 {
     QuestUseCandidateFacts facts;
     facts.matchesEntry = matchesEntry;
     facts.alive = alive;
     facts.distanceSq = distanceSq;
     facts.anchorDistanceSq = anchorDistanceSq;
+    facts.sleeping = sleeping;
     return facts;
 }
 
@@ -83,4 +85,30 @@ TEST(PlayerbotQuestUseTargetPolicyTest, NoCandidatesMeansNoChoice)
     EXPECT_EQ(BestQuestUseTargetIndex({}, NoAnchorCap), QUEST_USE_NO_CANDIDATE);
     std::vector<QuestUseCandidateFacts> const onlyForeign = {Candidate(false, true, 1.0f)};
     EXPECT_EQ(BestQuestUseTargetIndex(onlyForeign, NoAnchorCap), QUEST_USE_NO_CANDIDATE);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, ASleepingTargetOutranksANearerAwakeOne)
+{
+    // The defect this pins: the Foreman's Blackjack credits only a sleeping Lazy Peon, and the
+    // seek kept sending bots to the nearest awake one - 15 wasted whacks measured live before a
+    // single credit landed.
+    std::vector<QuestUseCandidateFacts> const candidates = {
+        Candidate(true, true, 4.0f),                        // awake, nearest
+        Candidate(true, true, 2500.0f, 0.0f, true),         // sleeping, far
+        Candidate(true, true, 900.0f, 0.0f, true),          // sleeping, nearer
+    };
+
+    EXPECT_EQ(BestQuestUseTargetIndex(candidates, NoAnchorCap), 2u);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, NoSleeperFallsBackToTheNearestAwakeTarget)
+{
+    // Scripts without a sleep requirement (Inoculation owlkin never sleep) must keep working
+    // exactly as before.
+    std::vector<QuestUseCandidateFacts> const candidates = {
+        Candidate(true, true, 900.0f),
+        Candidate(true, true, 25.0f),
+    };
+
+    EXPECT_EQ(BestQuestUseTargetIndex(candidates, NoAnchorCap), 1u);
 }

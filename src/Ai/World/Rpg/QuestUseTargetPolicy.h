@@ -66,6 +66,12 @@ struct QuestUseCandidateFacts
 {
     bool matchesEntry = false;
     bool alive = true;
+    // Some use-credited scripts only accept a sleeping target: the Foreman's Blackjack wakes a
+    // Lazy Peon and credits nothing on one already working. Measured live 2026-08-29: 15 whacks
+    // on awake peons, zero credits. A sleeping candidate outranks any awake one; when nothing
+    // sleeps (Inoculation owlkin never do), the awake nearest still wins, so scripts without a
+    // sleep requirement are unaffected.
+    bool sleeping = false;
     float distanceSq = 0.0f;
     float anchorDistanceSq = 0.0f;
 };
@@ -74,11 +80,14 @@ inline constexpr size_t QUEST_USE_NO_CANDIDATE = ~static_cast<size_t>(0);
 
 // Nearest living creature of the objective entry within the POI anchor radius, mirroring
 // BestQuestGoCandidateIndex so this seek can never fight the quest-poi-approach return radius.
+// A sleeping candidate outranks any awake one; distance breaks ties within each group.
 [[nodiscard]] inline size_t BestQuestUseTargetIndex(std::vector<QuestUseCandidateFacts> const& candidates,
                                                     float maxAnchorDistanceSq)
 {
     size_t best = QUEST_USE_NO_CANDIDATE;
     float bestDistanceSq = -1.0f;
+    size_t bestSleeping = QUEST_USE_NO_CANDIDATE;
+    float bestSleepingDistanceSq = -1.0f;
     for (size_t i = 0; i < candidates.size(); ++i)
     {
         QuestUseCandidateFacts const& candidate = candidates[i];
@@ -91,8 +100,13 @@ inline constexpr size_t QUEST_USE_NO_CANDIDATE = ~static_cast<size_t>(0);
             bestDistanceSq = candidate.distanceSq;
             best = i;
         }
+        if (candidate.sleeping && (bestSleepingDistanceSq < 0.0f || candidate.distanceSq < bestSleepingDistanceSq))
+        {
+            bestSleepingDistanceSq = candidate.distanceSq;
+            bestSleeping = i;
+        }
     }
-    return best;
+    return bestSleeping != QUEST_USE_NO_CANDIDATE ? bestSleeping : best;
 }
 
 #endif
