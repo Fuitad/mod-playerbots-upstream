@@ -25,6 +25,9 @@
         // fishing-pool gameobjects outside every seek's model; three blamed live abandons
         // measured 2026-08-30 before Pierre called the blacklist.
         case 9452:
+        // The Party Never Ends: a multi-hub delivery chase around Silvermoon and beyond.
+        // Pierre, 2026-08-30: not worth the travel for a random bot.
+        case 9067:
             return true;
         default:
             return false;

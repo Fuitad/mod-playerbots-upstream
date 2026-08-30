@@ -162,6 +162,7 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     // Red Snapper - Very Tasty! needs a fishing net used on transient fishing-pool schools,
     // which no seek models; Pierre blacklisted it on 2026-08-30. Everything else stays open.
     EXPECT_TRUE(QuestIsRpgBlacklisted(9452));
+    EXPECT_TRUE(QuestIsRpgBlacklisted(9067));  // The Party Never Ends: multi-hub delivery chase
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }
