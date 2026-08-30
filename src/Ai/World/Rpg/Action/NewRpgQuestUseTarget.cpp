@@ -144,6 +144,8 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
 
     std::vector<uint32> const acceptedEntries =
         QuestUseAcceptedEntries(requiredEntry, ToolSpellTargetEntries(useSpellId));
+    if (diag)
+        diag->acceptedEntries = acceptedEntries;
 
     std::vector<QuestUseCandidateFacts> facts;
     std::vector<QuestUseTarget> targets;

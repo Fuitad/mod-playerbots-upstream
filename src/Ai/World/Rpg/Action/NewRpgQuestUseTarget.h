@@ -40,6 +40,10 @@ struct QuestUseSeekDiag
     uint32 nearbyUnits = 0;
     uint32 matchingEntry = 0;
     uint32 aliveMatching = 0;
+    // The entry set the seek accepts (required entry plus tool-spell condition entries), so the
+    // stay-end verdict can count kills of the real targetable creatures as relevant when the
+    // objective credits an unspawnable dummy.
+    std::vector<uint32> acceptedEntries;
     // Alive matching candidates that also pass the range cap: the count the seek can actually
     // return from. aliveMatching > 0 with inRange == 0 is the range-filter starvation signature.
     uint32 inRange = 0;

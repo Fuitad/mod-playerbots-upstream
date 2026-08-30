@@ -28,6 +28,7 @@
 // that dispatched its tool but lost the race for a creditable target.
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Ai/World/Rpg/QuestStayUseTracker.h"
+#include <algorithm>
 #include "Playerbots.h"
 #include "AreaDefines.h"
 #include "BroadcastHelper.h"
@@ -640,13 +641,13 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         // the right mobs without the drop landing is a failed drop roll, not an unworkable place.
         // Bystander kills still count for nothing. Decision table in QuestDropPolicy.h.
         // Upstream: `if (!hasProgression)` abandoned unconditionally.
-        uint32 const relevantKills =
-            QuestStayKillProbe::KillsOfEntriesSinceStayStart(
-                bot, QuestObjectiveSourceEntriesFor(quest, currentObjective).creatureEntries);
         // The end-of-stay seeks count as sightings too: a stay consumed entirely by combat never
         // ticks the seek blocks (measured live 2026-08-30, Milly's Harvest at Saldean's farm:
         // 473s, 13 kills, zero seek ticks, 35 usable crates in range at stay end). Candidates
-        // standing here right now prove the place can progress the quest.
+        // standing here right now prove the place can progress the quest, whether or not they
+        // pass the range cap: alive-but-out-of-range is target scarcity, not an unworkable place
+        // (measured live 2026-08-30, Inoculation at Nestlewood: 1 alive matching owlkin at 80y,
+        // inRange 0, converted a recoverable stay into an abandon).
         QuestUseSeekDiag useDiag;
         QuestGoSeekDiag goDiag;
         if (quest)
@@ -660,9 +661,20 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                                                data.pos.GetPositionX(), data.pos.GetPositionY(),
                                                sPlayerbotAIConfig.grindDistance, &goDiag);
         }
+        // Kills of the use-seek's accepted entries count as relevant too: when the objective
+        // credits an unspawnable dummy (Inoculation 9303), the creatures the tool targets are
+        // the real drop sources, and killing them during a contested stay is trying, not idling.
+        std::vector<uint32> relevantKillEntries =
+            QuestObjectiveSourceEntriesFor(quest, currentObjective).creatureEntries;
+        for (uint32 const acceptedEntry : useDiag.acceptedEntries)
+            if (std::find(relevantKillEntries.begin(), relevantKillEntries.end(), acceptedEntry) ==
+                relevantKillEntries.end())
+                relevantKillEntries.push_back(acceptedEntry);
+        uint32 const relevantKills =
+            QuestStayKillProbe::KillsOfEntriesSinceStayStart(bot, relevantKillEntries);
         QuestStayEndVerdict const stayVerdict = QuestStayEndDecision(
             hasProgression, QuestStayUseTracker::AttemptsThisStay(bot), relevantKills,
-            QuestStayUseTracker::SightingsThisStay(bot) + useDiag.inRange + goDiag.inRange);
+            QuestStayUseTracker::SightingsThisStay(bot) + useDiag.aliveMatching + goDiag.usableMatching);
         if (stayVerdict == QuestStayEndVerdict::Abandon)
         // PLB-LOCAL END(quest-stay-use-tracker)
         {
