@@ -19,6 +19,7 @@
 // peon, inoculate an owlkin, cast a racial on a survivor). Pure decisions in
 // QuestUseTargetPolicy.h, world glue in NewRpgQuestUseTarget.cpp; this file carries the call site.
 #include "Ai/World/Rpg/Action/NewRpgQuestUseTarget.h"
+#include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner. Playerbots.h is
 // pulled in for AI_VALUE so the stay-end records can sample the grind pipeline's own values.
 #include "Ai/World/Rpg/QuestStayKillProbe.h"
@@ -634,10 +635,16 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         // interactions (tool on a creature, quest gameobject queued or operated) rotates without
         // the lowPriorityQuest mark instead of abandoning: the mark is a hard skip for the life of
         // the process, and losing the race for a creditable target (contested sleeping peons,
-        // contested quest chests) is not evidence the quest cannot be done here. Decision table in
-        // QuestDropPolicy.h. Upstream: `if (!hasProgression)` abandoned unconditionally.
+        // contested quest chests) is not evidence the quest cannot be done here. Kills of the
+        // objective's OWN drop-source creatures count the same way (Pierre, 2026-08-30): killing
+        // the right mobs without the drop landing is a failed drop roll, not an unworkable place.
+        // Bystander kills still count for nothing. Decision table in QuestDropPolicy.h.
+        // Upstream: `if (!hasProgression)` abandoned unconditionally.
+        uint32 const relevantKills =
+            QuestStayKillProbe::KillsOfEntriesSinceStayStart(
+                bot, QuestObjectiveSourceEntriesFor(quest, currentObjective).creatureEntries);
         QuestStayEndVerdict const stayVerdict =
-            QuestStayEndDecision(hasProgression, QuestStayUseTracker::AttemptsThisStay(bot));
+            QuestStayEndDecision(hasProgression, QuestStayUseTracker::AttemptsThisStay(bot), relevantKills);
         if (stayVerdict == QuestStayEndVerdict::Abandon)
         // PLB-LOCAL END(quest-stay-use-tracker)
         {
@@ -695,9 +702,9 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         // for how often this verdict fires and for which quests.
         if (stayVerdict == QuestStayEndVerdict::RotateWithoutBlame)
         {
-            LOG_DEBUG("playerbots", "[QuestProbe] {} STAYUSE quest {} obj {} stayed {}s attempts {} lvl {}",
+            LOG_DEBUG("playerbots", "[QuestProbe] {} STAYUSE quest {} obj {} stayed {}s attempts {} relkills {} lvl {}",
                       bot->GetName(), questId, currentObjective, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
-                      QuestStayUseTracker::AttemptsThisStay(bot), bot->GetLevel());
+                      QuestStayUseTracker::AttemptsThisStay(bot), relevantKills, bot->GetLevel());
             data.lastReachPOI = 0;
             data.pos = WorldPosition();
             data.objectiveIdx = 0;

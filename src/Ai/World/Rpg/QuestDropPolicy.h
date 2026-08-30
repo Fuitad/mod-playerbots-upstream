@@ -109,11 +109,16 @@ enum class QuestStayEndVerdict : uint8
     Abandon,
 };
 
-[[nodiscard]] inline QuestStayEndVerdict QuestStayEndDecision(bool hasProgression, uint32 interactionAttempts)
+// relevantKills counts kills of the objective's OWN source creatures during the stay (resolved
+// through QuestObjectiveSourceEntriesFor). Killing the right creatures without the drop landing
+// is trying and losing the drop roll, not proof the place cannot progress the quest; bystander
+// kills never reach this parameter, so the old excuse-by-unrelated-combat hole stays closed.
+[[nodiscard]] inline QuestStayEndVerdict QuestStayEndDecision(bool hasProgression, uint32 interactionAttempts,
+                                                              uint32 relevantKills = 0)
 {
     if (hasProgression)
         return QuestStayEndVerdict::Progressed;
-    if (interactionAttempts > 0)
+    if (interactionAttempts > 0 || relevantKills > 0)
         return QuestStayEndVerdict::RotateWithoutBlame;
     return QuestStayEndVerdict::Abandon;
 }

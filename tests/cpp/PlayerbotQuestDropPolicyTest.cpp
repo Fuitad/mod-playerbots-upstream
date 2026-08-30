@@ -118,6 +118,24 @@ TEST(PlayerbotQuestDropPolicyTest, AFruitlessStayThatDispatchedInteractionsRotat
 
 TEST(PlayerbotQuestDropPolicyTest, AFruitlessStayWithNoInteractionAttemptIsAbandoned)
 {
-    // A pure kill stay with nothing to show still means this place cannot progress the quest.
+    // A stay with nothing to show still means this place cannot progress the quest.
     EXPECT_EQ(QuestStayEndDecision(false, 0), QuestStayEndVerdict::Abandon);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, KillsOfTheObjectivesOwnSourcesCountAsTrying)
+{
+    // The drop-luck class, measured live 2026-08-30: Beringaer killed 18 of quest 6394's own
+    // drop-source mobs in one stay and the required item never dropped (counter 0), yet the
+    // stay abandoned as if untried. Killing the right creatures IS trying; only the drop roll
+    // failed, so the quest must stay eligible.
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 18), QuestStayEndVerdict::RotateWithoutBlame);
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 1), QuestStayEndVerdict::RotateWithoutBlame);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, BystanderKillsStillDoNotExcuseAnUntriedStay)
+{
+    // Only kills of the objective's OWN source entries reach the third parameter; a stay spent
+    // fighting unrelated mobs next to an untouched objective (the old 9303 pattern, 9 bystander
+    // kills, zero credit) still abandons.
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0), QuestStayEndVerdict::Abandon);
 }

@@ -18,9 +18,18 @@
 
 class Quest;
 
-// Every spawn on the given map that can progress the given objective: the required creature or
-// gameobject entry for a kill/interact objective, and every creature or gameobject whose
-// questitem list carries the required item for an item objective. Results are cached per
+// The entities that can progress the given objective: the required creature or gameobject entry
+// for a kill/interact objective, and every creature or gameobject whose questitem list carries
+// the required item for an item objective.
+struct QuestObjectiveSources
+{
+    std::vector<uint32> creatureEntries;
+    std::vector<uint32> gameObjectEntries;
+};
+
+[[nodiscard]] QuestObjectiveSources QuestObjectiveSourceEntriesFor(Quest const* quest, int32 objectiveIdx);
+
+// Every spawn on the given map of the objective's source entities. Results are cached per
 // (quest, objective, map); spawn data never changes after startup. Returns by value so callers
 // never hold references into the cache.
 [[nodiscard]] std::vector<SpawnAnchorPoint> QuestObjectiveSpawnPointsFor(Quest const* quest, int32 objectiveIdx,

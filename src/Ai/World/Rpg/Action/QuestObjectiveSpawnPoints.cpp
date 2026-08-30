@@ -45,22 +45,19 @@ void BuildReverseIndexes()
 }
 }  // namespace
 
-std::vector<SpawnAnchorPoint> QuestObjectiveSpawnPointsFor(Quest const* quest, int32 objectiveIdx, uint32 mapId)
+QuestObjectiveSources QuestObjectiveSourceEntriesFor(Quest const* quest, int32 objectiveIdx)
 {
     if (!quest)
         return {};
 
-    std::vector<uint32> creatureEntries;
-    std::vector<uint32> gameObjectEntries;
+    QuestObjectiveSources sources;
     if (objectiveIdx >= 0 && objectiveIdx < QUEST_OBJECTIVES_COUNT)
     {
         int32 const entry = quest->RequiredNpcOrGo[objectiveIdx];
         if (entry > 0)
-            creatureEntries.push_back(static_cast<uint32>(entry));
+            sources.creatureEntries.push_back(static_cast<uint32>(entry));
         else if (entry < 0)
-            gameObjectEntries.push_back(static_cast<uint32>(-entry));
-        else
-            return {};
+            sources.gameObjectEntries.push_back(static_cast<uint32>(-entry));
     }
     else if (objectiveIdx >= QUEST_OBJECTIVES_COUNT &&
              objectiveIdx < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT)
@@ -70,12 +67,21 @@ std::vector<SpawnAnchorPoint> QuestObjectiveSpawnPointsFor(Quest const* quest, i
             return {};
         std::call_once(reverseIndexBuilt, BuildReverseIndexes);
         if (auto it = itemToCreatureEntries.find(itemId); it != itemToCreatureEntries.end())
-            creatureEntries = it->second;
+            sources.creatureEntries = it->second;
         if (auto it = itemToGameObjectEntries.find(itemId); it != itemToGameObjectEntries.end())
-            gameObjectEntries = it->second;
+            sources.gameObjectEntries = it->second;
     }
-    else
+    return sources;
+}
+
+std::vector<SpawnAnchorPoint> QuestObjectiveSpawnPointsFor(Quest const* quest, int32 objectiveIdx, uint32 mapId)
+{
+    if (!quest)
         return {};
+
+    QuestObjectiveSources const sources = QuestObjectiveSourceEntriesFor(quest, objectiveIdx);
+    std::vector<uint32> const& creatureEntries = sources.creatureEntries;
+    std::vector<uint32> const& gameObjectEntries = sources.gameObjectEntries;
 
     if (creatureEntries.empty() && gameObjectEntries.empty())
         return {};
