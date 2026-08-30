@@ -8,6 +8,8 @@
 
 // PLB-LOCAL(grind-quest-priority): ranking policy for eligible grind candidates.
 #include "GrindTargetPolicy.h"
+// PLB-LOCAL(grind-poi-stay-engage): use-tool detection for the stay exception below.
+#include "Ai/World/Rpg/Action/NewRpgQuestUseTarget.h"
 #include "NewRpgInfo.h"
 #include "Playerbots.h"
 #include "ReputationMgr.h"
@@ -66,10 +68,19 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
     // PLB-LOCAL BEGIN(grind-poi-stay-engage): once the POI stay is running, the eligibility gate
     // below stops demanding quest relevance. See GrindCandidateNeedsQuestRelevance for the
     // measurements. Upstream: no such state was read here.
+    //
+    // Exception: a USE-credited stay (blackjack a peon, inoculate an owlkin) keeps the relevance
+    // demand. Lifting it there made bots brawl bystanders at relevance 4.0, which outranks the
+    // do-quest tick at 3.0, so the tool was never used: measured live 2026-08-29 on the fresh
+    // cohort, six REACHes on Lazy Peons across four bots with zero blackjack uses while one of
+    // them fought scorpids 90 yards from the peons for a whole stay.
     bool stayingAtQuestPoi = false;
     if (questPriorityActive)
         if (auto const* doQuest = std::get_if<NewRpgInfo::DoQuest>(&botAI->rpgInfo.data))
-            stayingAtQuestPoi = doQuest->lastReachPOI != 0;
+            stayingAtQuestPoi =
+                doQuest->lastReachPOI != 0 &&
+                !QuestObjectiveHasUseTool(botAI, sObjectMgr->GetQuestTemplate(doQuest->questId),
+                                          doQuest->objectiveIdx);
     // PLB-LOCAL END(grind-poi-stay-engage)
 
     for (ObjectGuid const guid : targets)

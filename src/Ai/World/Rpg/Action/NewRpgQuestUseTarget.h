@@ -51,4 +51,9 @@ struct QuestUseSeekDiag
 // dispatched.
 bool EngageQuestUseTarget(PlayerbotAI* botAI, QuestUseTarget const& target);
 
+// Whether the objective is credited by USING a tool on the creature rather than killing it: the
+// bot holds the quest's source item with an on-use spell, or knows one of the quest's mapped
+// spells. Grind targeting consults this so a use-credited stay is not spent brawling bystanders.
+[[nodiscard]] bool QuestObjectiveHasUseTool(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx);
+
 #endif

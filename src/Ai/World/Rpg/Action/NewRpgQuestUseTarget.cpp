@@ -50,6 +50,17 @@ uint32 KnownQuestSpell(Player* bot, uint32 questId)
 }
 }  // namespace
 
+bool QuestObjectiveHasUseTool(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx)
+{
+    if (!botAI || !quest || objectiveIdx < 0 || objectiveIdx >= QUEST_OBJECTIVES_COUNT)
+        return false;
+    if (quest->RequiredNpcOrGo[objectiveIdx] <= 0)
+        return false;
+
+    Player* bot = botAI->GetBot();
+    return SourceItemWithUseSpell(bot, quest) != nullptr || KnownQuestSpell(bot, quest->GetQuestId()) != 0;
+}
+
 QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx,
                                   GuidVector const& nearbyUnits, float anchorX, float anchorY,
                                   float anchorRadius, QuestUseSeekDiag* diag)
