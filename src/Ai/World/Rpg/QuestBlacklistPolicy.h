@@ -28,6 +28,11 @@
         // The Party Never Ends: a multi-hub delivery chase around Silvermoon and beyond.
         // Pierre, 2026-08-30: not worth the travel for a random bot.
         case 9067:
+        // Thirst Unending: credit dummy 15468 (Sunstrider Mana Tap Counter) has zero world
+        // spawns, the quest has no StartItem, and no conditions rows exist for the Mana Tap
+        // racial, so no seek can resolve a target. Four 300s empty-POI abandons in wave 2
+        // (one per blood elf reaching level 3) before Pierre called the blacklist.
+        case 8346:
             return true;
         default:
             return false;

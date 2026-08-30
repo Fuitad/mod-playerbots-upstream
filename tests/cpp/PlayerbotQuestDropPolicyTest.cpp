@@ -185,6 +185,7 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     // which no seek models; Pierre blacklisted it on 2026-08-30. Everything else stays open.
     EXPECT_TRUE(QuestIsRpgBlacklisted(9452));
     EXPECT_TRUE(QuestIsRpgBlacklisted(9067));  // The Party Never Ends: multi-hub delivery chase
+    EXPECT_TRUE(QuestIsRpgBlacklisted(8346));  // Thirst Unending: unresolvable Mana Tap credit dummy
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }
