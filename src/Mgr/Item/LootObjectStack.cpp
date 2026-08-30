@@ -19,6 +19,9 @@
 // PLB-LOCAL(22371d0c8c68): chore(upstream): merge mod-playerbots updates through 8d9f6aa
 #include <algorithm>
 #include <array>
+// PLB-LOCAL(loot-skip-probe): rate limiter for the temporary GetNearest diagnostic.
+#include <mutex>
+#include <unordered_map>
 
 #define MAX_LOOT_OBJECT_COUNT 200
 
@@ -451,6 +454,35 @@ LootObject LootObjectStack::GetLoot(float maxDistance)
     return nearest.IsEmpty() ? LootObject() : nearest;
 }
 
+// PLB-LOCAL BEGIN(loot-skip-probe): temporary diagnostic. A quest chest queued by the RPG GO-seek
+// (GOLOOT) can sit in this stack without ever being opened: measured live 2026-08-30, one bot
+// queued the same Corrupted Flower five times across a 305s stay with zero loots. This logs WHY
+// the selector passes over a queued quest chest, rate-limited per bot. Remove with the
+// quest-abandon-probe family.
+namespace
+{
+std::mutex lootSkipProbeMutex;
+std::unordered_map<ObjectGuid::LowType, time_t> lootSkipProbeLastLog;
+
+bool LootSkipProbeDue(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(lootSkipProbeMutex);
+    time_t& last = lootSkipProbeLastLog[bot->GetGUID().GetCounter()];
+    time_t const now = time(nullptr);
+    if (now - last < 15)
+        return false;
+    last = now;
+    return true;
+}
+
+bool IsQuestChestForProbe(WorldObject* worldObj)
+{
+    GameObject* go = worldObj ? worldObj->ToGameObject() : nullptr;
+    return go && sObjectMgr->GetGameObjectQuestItemList(go->GetEntry()) != nullptr;
+}
+}  // namespace
+// PLB-LOCAL END(loot-skip-probe)
+
 LootObject LootObjectStack::GetNearest(float maxDistance)
 {
     availableLoot.shrink(time(nullptr) - 30);
@@ -470,12 +502,34 @@ LootObject LootObjectStack::GetNearest(float maxDistance)
         float distance = bot->GetDistance(worldObj);
 
         if (distance >= nearestDistance || (maxDistance && distance > maxDistance))
+        {
+            // PLB-LOCAL(loot-skip-probe): temporary diagnostic, see banner above GetNearest.
+            if (IsQuestChestForProbe(worldObj) && (maxDistance && distance > maxDistance) &&
+                LootSkipProbeDue(bot))
+                LOG_DEBUG("playerbots", "[QuestProbe] {} LOOTSKIP go {} reason range dist {:.1f} max {:.1f}",
+                          bot->GetName(), worldObj->GetEntry(), distance, maxDistance);
             continue;
+        }
 
         LootObject lootObject(bot, guid);
 
         if (!lootObject.IsLootPossible(bot))
+        {
+            // PLB-LOCAL(loot-skip-probe): temporary diagnostic, see banner above GetNearest.
+            if (IsQuestChestForProbe(worldObj) && LootSkipProbeDue(bot))
+            {
+                GameObject* dbgGo = worldObj->ToGameObject();
+                LOG_DEBUG("playerbots",
+                          "[QuestProbe] {} LOOTSKIP go {} reason notpossible empty {} dz {:.1f} spawned {} "
+                          "state {} flags {} activate {} skill {}/{}",
+                          bot->GetName(), worldObj->GetEntry(), lootObject.IsEmpty(),
+                          std::abs(worldObj->GetPositionZ() - bot->GetPositionZ()),
+                          dbgGo->isSpawned(), static_cast<uint32>(dbgGo->GetGoState()),
+                          dbgGo->GetUInt32Value(GAMEOBJECT_FLAGS), dbgGo->ActivateToQuest(bot),
+                          lootObject.skillId, lootObject.reqSkillValue);
+            }
             continue;
+        }
 
         nearestDistance = distance;
         nearest = lootObject;

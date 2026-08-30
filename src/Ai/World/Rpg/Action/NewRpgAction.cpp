@@ -32,6 +32,8 @@
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
 #include "GossipDef.h"
+// PLB-LOCAL(quest-abandon-probe): GameObject facts for the GOLOOT diagnostic line.
+#include "GameObject.h"
 #include "IVMapMgr.h"
 // PLB-LOCAL(quest-gameobject-objective): LootObjectStack::Add hands quest chests to the loot pipeline.
 #include "LootObjectStack.h"
@@ -723,9 +725,26 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 context->GetValue<LootObjectStack*>("available loot")->Get()->Add(goTarget.guid);
                 // PLB-LOCAL(quest-stay-use-tracker): counts toward the stay-end verdict.
                 QuestStayUseTracker::RecordAttempt(bot);
-                // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
-                LOG_DEBUG("playerbots", "[QuestProbe] {} GOLOOT quest {} obj {} go {}", bot->GetName(),
-                          questId, data.objectiveIdx, goTarget.entry);
+                // PLB-LOCAL(quest-abandon-probe): temporary diagnostic, extended with the loot
+                // pipeline's view of the queued object at queue time. Measured live 2026-08-30:
+                // Templeton queued the same flower five times across a 305s stay and the pipeline
+                // never opened it, so the refusal happens on the pipeline's own later ticks; these
+                // facts pin whether it was already refusable here (z offset, GO state, lock skill)
+                // or went bad between ticks (despawn or another looter).
+                {
+                    GameObject* dbgGo = ObjectAccessor::GetGameObject(*bot, goTarget.guid);
+                    LootObject dbgProbe(bot, goTarget.guid);
+                    LOG_DEBUG("playerbots",
+                              "[QuestProbe] {} GOLOOT quest {} obj {} go {} dz {:.1f} spawned {} state {} "
+                              "flags {} activate {} skill {}/{} possible {}",
+                              bot->GetName(), questId, data.objectiveIdx, goTarget.entry,
+                              dbgGo ? std::abs(dbgGo->GetPositionZ() - bot->GetPositionZ()) : -1.0f,
+                              dbgGo ? dbgGo->isSpawned() : false,
+                              dbgGo ? static_cast<uint32>(dbgGo->GetGoState()) : 99,
+                              dbgGo ? dbgGo->GetUInt32Value(GAMEOBJECT_FLAGS) : 0,
+                              dbgGo ? dbgGo->ActivateToQuest(bot) : false, dbgProbe.skillId,
+                              dbgProbe.reqSkillValue, dbgProbe.IsLootPossible(bot));
+                }
                 return true;
             }
             else if (UseQuestGameObject(bot, goTarget.guid))
