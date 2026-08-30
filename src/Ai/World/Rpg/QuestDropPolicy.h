@@ -92,4 +92,30 @@ enum class QuestDropVerdict : uint8
     }
 }
 
+// How a finished POI stay ends. A stay with objective progress rotates normally. A stay with no
+// progress used to abandon unconditionally, which is right for a kill stay (five minutes of
+// grinding with nothing to show means the place cannot progress the quest) but wrong for an
+// interaction-credited stay: the bot dispatched its tool (blackjacked a peon, queued a quest
+// chest) and simply lost the race for a creditable target. Measured live 2026-08-29: a bot used
+// the Foreman's Blackjack 115 times in one 304s stay, earned nothing because only SLEEPING peons
+// credit and only one contested peon was in range, and the abandon then parked the quest in
+// lowPriorityQuest, which the quest rotation skips unconditionally for the life of the process.
+// Rotating without the mark keeps the retry alive; a quest whose interactions can never credit is
+// still bounded by the gray hard-drop above.
+enum class QuestStayEndVerdict : uint8
+{
+    Progressed,
+    RotateWithoutBlame,
+    Abandon,
+};
+
+[[nodiscard]] inline QuestStayEndVerdict QuestStayEndDecision(bool hasProgression, uint32 interactionAttempts)
+{
+    if (hasProgression)
+        return QuestStayEndVerdict::Progressed;
+    if (interactionAttempts > 0)
+        return QuestStayEndVerdict::RotateWithoutBlame;
+    return QuestStayEndVerdict::Abandon;
+}
+
 #endif

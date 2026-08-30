@@ -1,0 +1,50 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
+// PLB-LOCAL FILE (quest-stay-use-tracker). Not present upstream, so it can never conflict on a
+// merge. Load-bearing, unlike the QuestStayKillProbe diagnostics: it counts the objective
+// interactions a bot dispatched during the current POI stay (tool used on a creature, quest
+// gameobject queued for loot or operated), which QuestStayEndDecision consumes to distinguish
+// "this place cannot progress the quest" from "the bot tried and lost the race for a creditable
+// target". Kept outside NewRpgInfo::DoQuest deliberately: that struct lives in NewRpgInfo.h,
+// which PlayerbotAI.h includes, so growing it rebuilds every module translation unit.
+
+#ifndef _PLAYERBOT_QUESTSTAYUSETRACKER_H
+#define _PLAYERBOT_QUESTSTAYUSETRACKER_H
+
+#include "Player.h"
+
+#include <mutex>
+#include <unordered_map>
+
+namespace QuestStayUseTracker
+{
+// Bots tick on the map update workers, so different bots reach this map from different threads
+// and even distinct entries share the container's rehashes: same locking as QuestStayKillProbe.
+inline std::mutex trackerMutex;
+inline std::unordered_map<ObjectGuid::LowType, uint32> attemptsThisStay;
+
+inline void MarkStayStart(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    attemptsThisStay[bot->GetGUID().GetCounter()] = 0;
+}
+
+inline void RecordAttempt(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    ++attemptsThisStay[bot->GetGUID().GetCounter()];
+}
+
+[[nodiscard]] inline uint32 AttemptsThisStay(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    auto it = attemptsThisStay.find(bot->GetGUID().GetCounter());
+    return it != attemptsThisStay.end() ? it->second : 0;
+}
+}  // namespace QuestStayUseTracker
+
+#endif

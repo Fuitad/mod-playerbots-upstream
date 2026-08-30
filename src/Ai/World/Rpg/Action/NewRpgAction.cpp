@@ -22,6 +22,11 @@
 // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner. Playerbots.h is
 // pulled in for AI_VALUE so the stay-end records can sample the grind pipeline's own values.
 #include "Ai/World/Rpg/QuestStayKillProbe.h"
+// PLB-LOCAL(quest-stay-use-tracker): counts objective interactions per stay so the stay-end
+// verdict (QuestStayEndDecision in QuestDropPolicy.h) can rotate instead of abandoning a stay
+// that dispatched its tool but lost the race for a creditable target.
+#include "Ai/World/Rpg/QuestDropPolicy.h"
+#include "Ai/World/Rpg/QuestStayUseTracker.h"
 #include "Playerbots.h"
 #include "AreaDefines.h"
 #include "BroadcastHelper.h"
@@ -571,6 +576,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         // PLB-LOCAL(quest-stay-kill-probe): snapshot the kill counter so the stay-end records can
         // report how many creatures the bot killed between arrival and the stay verdict.
         QuestStayKillProbe::MarkStayStart(bot);
+        // PLB-LOCAL(quest-stay-use-tracker): fresh interaction count for this stay.
+        QuestStayUseTracker::MarkStayStart(bot);
         return true;
     }
     // stayed at this POI for more than 5 minutes
@@ -592,7 +599,16 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 quest->RequiredItemCount[currentObjective - QUEST_OBJECTIVES_COUNT])
                 hasProgression = true;
         }
-        if (!hasProgression)
+        // PLB-LOCAL BEGIN(quest-stay-use-tracker): a fruitless stay that dispatched objective
+        // interactions (tool on a creature, quest gameobject queued or operated) rotates without
+        // the lowPriorityQuest mark instead of abandoning: the mark is a hard skip for the life of
+        // the process, and losing the race for a creditable target (contested sleeping peons,
+        // contested quest chests) is not evidence the quest cannot be done here. Decision table in
+        // QuestDropPolicy.h. Upstream: `if (!hasProgression)` abandoned unconditionally.
+        QuestStayEndVerdict const stayVerdict =
+            QuestStayEndDecision(hasProgression, QuestStayUseTracker::AttemptsThisStay(bot));
+        if (stayVerdict == QuestStayEndVerdict::Abandon)
+        // PLB-LOCAL END(quest-stay-use-tracker)
         {
             // we has reach the poi for more than 5 mins but no progession
             // may not be able to complete this quest, marked as abandoned
@@ -635,6 +651,20 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }
+        // PLB-LOCAL BEGIN(quest-stay-use-tracker): the tried-but-uncredited stay: keep the quest
+        // eligible and rotate to another POI/quest draw. The STAYUSE line is the measurement hook
+        // for how often this verdict fires and for which quests.
+        if (stayVerdict == QuestStayEndVerdict::RotateWithoutBlame)
+        {
+            LOG_DEBUG("playerbots", "[QuestProbe] {} STAYUSE quest {} obj {} stayed {}s attempts {} lvl {}",
+                      bot->GetName(), questId, currentObjective, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
+                      QuestStayUseTracker::AttemptsThisStay(bot), bot->GetLevel());
+            data.lastReachPOI = 0;
+            data.pos = WorldPosition();
+            data.objectiveIdx = 0;
+            return true;
+        }
+        // PLB-LOCAL END(quest-stay-use-tracker)
         // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic. The contrast group: a stay that
         // ended with objective progression instead of an abandon, with the same kill delta the
         // abandon record carries. Comparing kills between the two groups separates "the bot never
@@ -691,6 +721,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 // 3.0), which owns lock, skill, bag and release handling in OpenLootAction. Within
                 // interaction range it is inside LootDistance, so the pipeline engages next tick.
                 context->GetValue<LootObjectStack*>("available loot")->Get()->Add(goTarget.guid);
+                // PLB-LOCAL(quest-stay-use-tracker): counts toward the stay-end verdict.
+                QuestStayUseTracker::RecordAttempt(bot);
                 // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
                 LOG_DEBUG("playerbots", "[QuestProbe] {} GOLOOT quest {} obj {} go {}", bot->GetName(),
                           questId, data.objectiveIdx, goTarget.entry);
@@ -698,6 +730,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             }
             else if (UseQuestGameObject(bot, goTarget.guid))
             {
+                // PLB-LOCAL(quest-stay-use-tracker): counts toward the stay-end verdict.
+                QuestStayUseTracker::RecordAttempt(bot);
                 // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
                 LOG_DEBUG("playerbots", "[QuestProbe] {} GOUSE quest {} obj {} go {}", bot->GetName(),
                           questId, data.objectiveIdx, goTarget.entry);
@@ -735,6 +769,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             }
             else if (EngageQuestUseTarget(botAI, useTarget))
             {
+                // PLB-LOCAL(quest-stay-use-tracker): counts toward the stay-end verdict.
+                QuestStayUseTracker::RecordAttempt(bot);
                 // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
                 LOG_DEBUG("playerbots", "[QuestProbe] {} QUSE quest {} obj {} npc {} mode {} tool {}",
                           bot->GetName(), questId, data.objectiveIdx, useTarget.entry,

@@ -101,3 +101,23 @@ TEST(PlayerbotQuestDropPolicyTest, ReasonNamesFeedTheDropProbeLine)
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropUnreachable), "unreachable");
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::Keep), "keep");
 }
+
+TEST(PlayerbotQuestDropPolicyTest, ProgressAtStayEndOutranksInteractionCount)
+{
+    EXPECT_EQ(QuestStayEndDecision(true, 0), QuestStayEndVerdict::Progressed);
+    EXPECT_EQ(QuestStayEndDecision(true, 7), QuestStayEndVerdict::Progressed);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, AFruitlessStayThatDispatchedInteractionsRotatesWithoutBlame)
+{
+    // The Faillicie case: 115 blackjack uses in one stay, zero credit because only sleeping
+    // peons credit and the one in range was contested. The quest must stay eligible.
+    EXPECT_EQ(QuestStayEndDecision(false, 1), QuestStayEndVerdict::RotateWithoutBlame);
+    EXPECT_EQ(QuestStayEndDecision(false, 115), QuestStayEndVerdict::RotateWithoutBlame);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, AFruitlessStayWithNoInteractionAttemptIsAbandoned)
+{
+    // A pure kill stay with nothing to show still means this place cannot progress the quest.
+    EXPECT_EQ(QuestStayEndDecision(false, 0), QuestStayEndVerdict::Abandon);
+}
