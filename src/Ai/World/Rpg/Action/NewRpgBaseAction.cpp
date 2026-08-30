@@ -16,6 +16,8 @@
 #include "Ai/World/Rpg/MoveFarStuckPolicy.h"
 // PLB-LOCAL(quest-hard-drop): permanently drop gray quests the bot gave up on or cannot reach.
 #include "Ai/World/Rpg/QuestDropSweep.h"
+#include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
+#include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
 #include "BroadcastHelper.h"
@@ -1016,10 +1018,35 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
         float dx = poiPoints[nearest].first, dy = poiPoints[nearest].second;
         // PLB-LOCAL END(quest-poi-real-point)
 
+        // PLB-LOCAL BEGIN(quest-stay-spawn-anchor): re-anchor the stay on the objective's real
+        // spawn nearest this POI point. quest_poi marks the surveyed AREA; the spawns are the
+        // ground truth, and for quest 47 they sit inside a cave while the POI marks the surface
+        // entrance (four blamed abandons with targets 0, measured live 2026-08-30). The spawn's
+        // own z rides along in POIInfo because GetHeight from MAX_HEIGHT would land on the
+        // terrain above a cave. A quest whose objective has no world spawns (credit dummies like
+        // 9303's 16534) keeps the POI point unchanged.
+        float spawnZ = 0.0f;
+        bool hasSpawnZ = false;
+        {
+            std::vector<SpawnAnchorPoint> const spawns =
+                QuestObjectiveSpawnPointsFor(quest, qPoi.ObjectiveIndex, bot->GetMapId());
+            size_t const snapIdx = NearestSpawnAnchorIndex(spawns, dx, dy, QUEST_ANCHOR_MAX_SNAP_DISTANCE);
+            if (snapIdx != QUEST_ANCHOR_NO_SPAWN)
+            {
+                dx = spawns[snapIdx].x;
+                dy = spawns[snapIdx].y;
+                spawnZ = spawns[snapIdx].z;
+                hasSpawnZ = true;
+            }
+        }
+        // PLB-LOCAL END(quest-stay-spawn-anchor)
+
         if (bot->GetDistance2d(dx, dy) >= 1500.0f)
             continue;
 
-        float dz = std::max(bot->GetMap()->GetHeight(dx, dy, MAX_HEIGHT), bot->GetMap()->GetWaterLevel(dx, dy));
+        // PLB-LOCAL(quest-stay-spawn-anchor): the spawn z is authoritative when snapped.
+        float dz = hasSpawnZ ? spawnZ
+                             : std::max(bot->GetMap()->GetHeight(dx, dy, MAX_HEIGHT), bot->GetMap()->GetWaterLevel(dx, dy));
 
         if (dz == INVALID_HEIGHT || dz == VMAP_INVALID_HEIGHT_VALUE)
             continue;
@@ -1027,7 +1054,7 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
         if (bot->GetZoneId() != bot->GetMap()->GetZoneId(bot->GetPhaseMask(), dx, dy, dz))
             continue;
 
-        poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex});
+        poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex, spawnZ, hasSpawnZ});
     }
 
     if (poiInfo.size() == 0)

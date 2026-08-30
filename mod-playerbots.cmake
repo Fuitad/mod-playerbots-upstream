@@ -16,6 +16,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotLootLockPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestUseTargetPolicyTest.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestStayAnchorPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestDropPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/src/Ai/Base/Actions/RandomBotMaintenancePolicy.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/src/Bot/Recovery/PlayerbotRecoveryPolicy.cpp"

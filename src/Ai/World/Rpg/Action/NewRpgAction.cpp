@@ -558,7 +558,11 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         float dx = nearestPoi.x, dy = nearestPoi.y;
 
         // z = MAX_HEIGHT as we do not know accurate z
-        float dz = std::max(bot->GetMap()->GetHeight(dx, dy, MAX_HEIGHT), bot->GetMap()->GetWaterLevel(dx, dy));
+        // PLB-LOCAL(quest-stay-spawn-anchor): unless the anchor was snapped to a real spawn,
+        // whose row carries the true z. A cave spawn's surface height is the terrain above it.
+        float dz = poiInfo[rndIdx].hasSpawnZ
+                       ? poiInfo[rndIdx].spawnZ
+                       : std::max(bot->GetMap()->GetHeight(dx, dy, MAX_HEIGHT), bot->GetMap()->GetWaterLevel(dx, dy));
 
         // double check for GetQuestPOIPosAndObjectiveIdx
         if (dz == INVALID_HEIGHT || dz == VMAP_INVALID_HEIGHT_VALUE)

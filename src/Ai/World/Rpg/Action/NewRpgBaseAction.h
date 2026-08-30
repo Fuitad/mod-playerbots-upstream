@@ -29,6 +29,11 @@ struct POIInfo
 {
     G3D::Vector2 pos;
     int32 objectiveIdx;
+    // PLB-LOCAL(quest-stay-spawn-anchor): set when pos was snapped to a real spawn of the
+    // objective's source entity. The spawn's own z is authoritative there: for a cave spawn,
+    // GetHeight(x, y, MAX_HEIGHT) returns the terrain surface above the cave instead.
+    float spawnZ = 0.0f;
+    bool hasSpawnZ = false;
 };
 
 /// A base (composition) class for all new rpg actions
