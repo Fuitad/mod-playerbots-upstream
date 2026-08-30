@@ -26,11 +26,15 @@ namespace QuestStayUseTracker
 // and even distinct entries share the container's rehashes: same locking as QuestStayKillProbe.
 inline std::mutex trackerMutex;
 inline std::unordered_map<ObjectGuid::LowType, uint32> attemptsThisStay;
+// Stay ticks on which a seek returned a usable objective candidate, converged or not. Feeds the
+// candidateSightings parameter of QuestStayEndDecision (the contention class).
+inline std::unordered_map<ObjectGuid::LowType, uint32> sightingsThisStay;
 
 inline void MarkStayStart(Player* bot)
 {
     std::lock_guard<std::mutex> lock(trackerMutex);
     attemptsThisStay[bot->GetGUID().GetCounter()] = 0;
+    sightingsThisStay[bot->GetGUID().GetCounter()] = 0;
 }
 
 inline void RecordAttempt(Player* bot)
@@ -39,11 +43,24 @@ inline void RecordAttempt(Player* bot)
     ++attemptsThisStay[bot->GetGUID().GetCounter()];
 }
 
+inline void RecordSighting(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    ++sightingsThisStay[bot->GetGUID().GetCounter()];
+}
+
 [[nodiscard]] inline uint32 AttemptsThisStay(Player* bot)
 {
     std::lock_guard<std::mutex> lock(trackerMutex);
     auto it = attemptsThisStay.find(bot->GetGUID().GetCounter());
     return it != attemptsThisStay.end() ? it->second : 0;
+}
+
+[[nodiscard]] inline uint32 SightingsThisStay(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    auto it = sightingsThisStay.find(bot->GetGUID().GetCounter());
+    return it != sightingsThisStay.end() ? it->second : 0;
 }
 }  // namespace QuestStayUseTracker
 

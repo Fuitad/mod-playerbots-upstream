@@ -644,7 +644,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             QuestStayKillProbe::KillsOfEntriesSinceStayStart(
                 bot, QuestObjectiveSourceEntriesFor(quest, currentObjective).creatureEntries);
         QuestStayEndVerdict const stayVerdict =
-            QuestStayEndDecision(hasProgression, QuestStayUseTracker::AttemptsThisStay(bot), relevantKills);
+            QuestStayEndDecision(hasProgression, QuestStayUseTracker::AttemptsThisStay(bot), relevantKills,
+                                 QuestStayUseTracker::SightingsThisStay(bot));
         if (stayVerdict == QuestStayEndVerdict::Abandon)
         // PLB-LOCAL END(quest-stay-use-tracker)
         {
@@ -702,9 +703,11 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         // for how often this verdict fires and for which quests.
         if (stayVerdict == QuestStayEndVerdict::RotateWithoutBlame)
         {
-            LOG_DEBUG("playerbots", "[QuestProbe] {} STAYUSE quest {} obj {} stayed {}s attempts {} relkills {} lvl {}",
+            LOG_DEBUG("playerbots",
+                      "[QuestProbe] {} STAYUSE quest {} obj {} stayed {}s attempts {} relkills {} sight {} lvl {}",
                       bot->GetName(), questId, currentObjective, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
-                      QuestStayUseTracker::AttemptsThisStay(bot), relevantKills, bot->GetLevel());
+                      QuestStayUseTracker::AttemptsThisStay(bot), relevantKills,
+                      QuestStayUseTracker::SightingsThisStay(bot), bot->GetLevel());
             data.lastReachPOI = 0;
             data.pos = WorldPosition();
             data.objectiveIdx = 0;
@@ -751,6 +754,9 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                       : QuestGameObjectTarget{};
         if (goTarget.guid)
         {
+            // PLB-LOCAL(quest-stay-use-tracker): a returned candidate is proof this place can
+            // progress the quest, converged or not (the contention class; see QuestDropPolicy.h).
+            QuestStayUseTracker::RecordSighting(bot);
             if (!IsQuestGameObjectWithinInteraction(bot, goTarget.guid))
             {
                 bool const moved = MoveWorldObjectTo(goTarget.guid, INTERACTION_DISTANCE);
@@ -832,6 +838,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                       : QuestUseTarget{};
         if (useTarget.guid)
         {
+            // PLB-LOCAL(quest-stay-use-tracker): same sighting rule as the gameobject seek above.
+            QuestStayUseTracker::RecordSighting(bot);
             Unit* useUnit = botAI->GetUnit(useTarget.guid);
             if (useUnit && bot->GetDistance(useUnit) > INTERACTION_DISTANCE)
             {

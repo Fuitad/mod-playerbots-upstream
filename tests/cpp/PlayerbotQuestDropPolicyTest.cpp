@@ -139,3 +139,19 @@ TEST(PlayerbotQuestDropPolicyTest, BystanderKillsStillDoNotExcuseAnUntriedStay)
     // kills, zero credit) still abandons.
     EXPECT_EQ(QuestStayEndDecision(false, 0, 0), QuestStayEndVerdict::Abandon);
 }
+
+TEST(PlayerbotQuestDropPolicyTest, ASightedCandidateCountsAsTrying)
+{
+    // The contention class, measured live 2026-08-30: Jdyalani's Webwood Egg stay ended with six
+    // usable in-range eggs (gocand 6/6/6/6) and zero recorded interactions, because the eggs were
+    // farmed out during the stay and the approach never converged before they vanished. A seek
+    // that RETURNED a candidate at any point proves the place can progress the quest; losing the
+    // race for it is not evidence to abandon on.
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 1), QuestStayEndVerdict::RotateWithoutBlame);
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 40), QuestStayEndVerdict::RotateWithoutBlame);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, NoSightingNoKillNoInteractionStillAbandons)
+{
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 0), QuestStayEndVerdict::Abandon);
+}

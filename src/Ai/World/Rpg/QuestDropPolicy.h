@@ -113,12 +113,18 @@ enum class QuestStayEndVerdict : uint8
 // through QuestObjectiveSourceEntriesFor). Killing the right creatures without the drop landing
 // is trying and losing the drop roll, not proof the place cannot progress the quest; bystander
 // kills never reach this parameter, so the old excuse-by-unrelated-combat hole stays closed.
+//
+// candidateSightings counts stay ticks on which a seek RETURNED a usable objective candidate
+// (gameobject or use-target), whether or not the approach converged before it was contested
+// away. A sighted candidate proves the place can progress the quest; losing the race for it is
+// the contention class (Pierre, 2026-08-30), not grounds for the process-lifetime abandon mark.
 [[nodiscard]] inline QuestStayEndVerdict QuestStayEndDecision(bool hasProgression, uint32 interactionAttempts,
-                                                              uint32 relevantKills = 0)
+                                                              uint32 relevantKills = 0,
+                                                              uint32 candidateSightings = 0)
 {
     if (hasProgression)
         return QuestStayEndVerdict::Progressed;
-    if (interactionAttempts > 0 || relevantKills > 0)
+    if (interactionAttempts > 0 || relevantKills > 0 || candidateSightings > 0)
         return QuestStayEndVerdict::RotateWithoutBlame;
     return QuestStayEndVerdict::Abandon;
 }
