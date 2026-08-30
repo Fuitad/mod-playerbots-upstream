@@ -643,9 +643,26 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         uint32 const relevantKills =
             QuestStayKillProbe::KillsOfEntriesSinceStayStart(
                 bot, QuestObjectiveSourceEntriesFor(quest, currentObjective).creatureEntries);
-        QuestStayEndVerdict const stayVerdict =
-            QuestStayEndDecision(hasProgression, QuestStayUseTracker::AttemptsThisStay(bot), relevantKills,
-                                 QuestStayUseTracker::SightingsThisStay(bot));
+        // The end-of-stay seeks count as sightings too: a stay consumed entirely by combat never
+        // ticks the seek blocks (measured live 2026-08-30, Milly's Harvest at Saldean's farm:
+        // 473s, 13 kills, zero seek ticks, 35 usable crates in range at stay end). Candidates
+        // standing here right now prove the place can progress the quest.
+        QuestUseSeekDiag useDiag;
+        QuestGoSeekDiag goDiag;
+        if (quest)
+        {
+            (void)FindQuestUseTarget(botAI, quest, data.objectiveIdx,
+                                     context->GetValue<GuidVector>("nearest npcs")->Get(),
+                                     data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                     sPlayerbotAIConfig.grindDistance, &useDiag);
+            (void)FindQuestObjectiveGameObject(bot, quest, data.objectiveIdx,
+                                               context->GetValue<GuidVector>("nearest game objects")->Get(),
+                                               data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                               sPlayerbotAIConfig.grindDistance, &goDiag);
+        }
+        QuestStayEndVerdict const stayVerdict = QuestStayEndDecision(
+            hasProgression, QuestStayUseTracker::AttemptsThisStay(bot), relevantKills,
+            QuestStayUseTracker::SightingsThisStay(bot) + useDiag.inRange + goDiag.inRange);
         if (stayVerdict == QuestStayEndVerdict::Abandon)
         // PLB-LOCAL END(quest-stay-use-tracker)
         {
@@ -664,22 +681,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                                           : (currentObjective < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT
                                                  ? q_status.ItemCount[currentObjective - QUEST_OBJECTIVES_COUNT]
                                                  : 0u);
-            // PLB-LOCAL(quest-use-target): sample the use-seek's view once at abandon so a
-            // use-credited quest that died without a QUSE line explains itself: no tool, no
-            // matching creature nearby, or none of them alive.
-            QuestUseSeekDiag useDiag;
-            QuestGoSeekDiag goDiag;
-            if (Quest const* diagQuest = sObjectMgr->GetQuestTemplate(questId))
-            {
-                (void)FindQuestUseTarget(botAI, diagQuest, data.objectiveIdx,
-                                         context->GetValue<GuidVector>("nearest npcs")->Get(),
-                                         data.pos.GetPositionX(), data.pos.GetPositionY(),
-                                         sPlayerbotAIConfig.grindDistance, &useDiag);
-                (void)FindQuestObjectiveGameObject(bot, diagQuest, data.objectiveIdx,
-                                                   context->GetValue<GuidVector>("nearest game objects")->Get(),
-                                                   data.pos.GetPositionX(), data.pos.GetPositionY(),
-                                                   sPlayerbotAIConfig.grindDistance, &goDiag);
-            }
+            // PLB-LOCAL(quest-use-target): the diags were sampled above, before the verdict, so a
+            // quest that died without a QUSE/GOLOOT line explains itself in the line below.
             LOG_DEBUG("playerbots",
                       "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
                       "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}/{} gocand {}/{}/{}/{}",

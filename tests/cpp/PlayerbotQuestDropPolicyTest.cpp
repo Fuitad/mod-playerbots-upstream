@@ -8,6 +8,7 @@
  * PLB-LOCAL FILE. This file does not exist upstream and never conflicts on a merge.
  */
 
+#include "Ai/World/Rpg/QuestBlacklistPolicy.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "gtest/gtest.h"
 
@@ -154,4 +155,13 @@ TEST(PlayerbotQuestDropPolicyTest, ASightedCandidateCountsAsTrying)
 TEST(PlayerbotQuestDropPolicyTest, NoSightingNoKillNoInteractionStillAbandons)
 {
     EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 0), QuestStayEndVerdict::Abandon);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
+{
+    // Red Snapper - Very Tasty! needs a fishing net used on transient fishing-pool schools,
+    // which no seek models; Pierre blacklisted it on 2026-08-30. Everything else stays open.
+    EXPECT_TRUE(QuestIsRpgBlacklisted(9452));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }

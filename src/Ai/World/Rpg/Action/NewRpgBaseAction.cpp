@@ -16,6 +16,7 @@
 #include "Ai/World/Rpg/MoveFarStuckPolicy.h"
 // PLB-LOCAL(quest-hard-drop): permanently drop gray quests the bot gave up on or cannot reach.
 #include "Ai/World/Rpg/QuestDropSweep.h"
+#include "Ai/World/Rpg/QuestBlacklistPolicy.h"
 #include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
 #include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
@@ -620,6 +621,11 @@ uint32 NewRpgBaseAction::BestRewardIndex(Quest const* quest)
 
 bool NewRpgBaseAction::IsQuestWorthDoing(Quest const* quest)
 {
+    // PLB-LOCAL(quest-blacklist): quests the RPG system cannot complete by design are never
+    // worth accepting. See QuestBlacklistPolicy.h.
+    if (QuestIsRpgBlacklisted(quest->GetQuestId()))
+        return false;
+
     bool isLowLevelQuest =
         bot->GetLevel() > (bot->GetQuestLevel(quest) + sWorld->getIntConfig(CONFIG_QUEST_LOW_LEVEL_HIDE_DIFF));
 
@@ -1298,6 +1304,9 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
                 uint32 questId = bot->GetQuestSlotQuestId(slot);
                 if (botAI->lowPriorityQuest.find(questId) != botAI->lowPriorityQuest.end())
                     continue;
+                // PLB-LOCAL(quest-blacklist): see QuestBlacklistPolicy.h.
+                if (QuestIsRpgBlacklisted(questId))
+                    continue;
 
                 std::vector<POIInfo> poiInfo;
                 if (GetQuestPOIPosAndObjectiveIdx(questId, poiInfo, true))
@@ -1410,6 +1419,9 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status, NewRpgStatus
             {
                 uint32 questId = bot->GetQuestSlotQuestId(slot);
                 if (botAI->lowPriorityQuest.find(questId) != botAI->lowPriorityQuest.end())
+                    continue;
+                // PLB-LOCAL(quest-blacklist): see QuestBlacklistPolicy.h.
+                if (QuestIsRpgBlacklisted(questId))
                     continue;
 
                 std::vector<POIInfo> poiInfo;
