@@ -42,7 +42,7 @@ bool ChestCanDropQuestItem(GameObject const* go, Player* bot, uint32 neededItemI
 
 QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* quest, int32 objectiveIdx,
                                                    GuidVector const& nearbyGameObjects, float anchorX,
-                                                   float anchorY, float anchorRadius)
+                                                   float anchorY, float anchorRadius, QuestGoSeekDiag* diag)
 {
     if (!bot || !quest)
         return {};
@@ -112,6 +112,23 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
 
         candidate.distanceSq = bot->GetExactDistSq(go);
         candidate.anchorDistanceSq = go->GetExactDist2dSq(anchorX, anchorY);
+
+        // PLB-LOCAL(quest-abandon-probe): temporary diagnostic, see QuestGoSeekDiag.
+        if (diag)
+        {
+            ++diag->nearbyGos;
+            if (candidate.matchesObjective)
+            {
+                ++diag->matching;
+                if (candidate.usable)
+                {
+                    ++diag->usableMatching;
+                    if (QuestGoCandidateInRange(candidate,
+                                                anchorRadius > 0.0f ? anchorRadius * anchorRadius : 0.0f))
+                        ++diag->inRange;
+                }
+            }
+        }
 
         QuestGameObjectTarget target;
         target.guid = guid;

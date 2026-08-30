@@ -34,11 +34,24 @@ struct QuestGameObjectTarget
 // [QUEST_OBJECTIVES_COUNT, QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT) are item
 // slots. anchorX/anchorY/anchorRadius bound the search around the assigned POI so the seek
 // never fights the quest-poi-approach return radius.
+// PLB-LOCAL(quest-abandon-probe): temporary diagnostic mirror of QuestUseSeekDiag. Sampled once
+// at abandon so a gameobject-sourced quest that died with zero GOLOOT/GOUSE explains itself:
+// nothing nearby, nothing matching, matching-but-unusable (despawned, contested, loot-refused),
+// or filtered by the range cap.
+struct QuestGoSeekDiag
+{
+    uint32 nearbyGos = 0;
+    uint32 matching = 0;
+    uint32 usableMatching = 0;
+    uint32 inRange = 0;
+};
+
 [[nodiscard]] QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* quest,
                                                                  int32 objectiveIdx,
                                                                  GuidVector const& nearbyGameObjects,
                                                                  float anchorX, float anchorY,
-                                                                 float anchorRadius);
+                                                                 float anchorRadius,
+                                                                 QuestGoSeekDiag* diag = nullptr);
 
 [[nodiscard]] bool IsQuestGameObjectWithinInteraction(Player* bot, ObjectGuid guid);
 

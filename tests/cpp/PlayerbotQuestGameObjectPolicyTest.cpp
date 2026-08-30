@@ -84,22 +84,34 @@ TEST(PlayerbotQuestGameObjectPolicyTest, UnusableSkippedOrForeignCandidatesNever
     EXPECT_EQ(BestQuestGoCandidateIndex(withWinner, NoAnchorCap), 3u);
 }
 
-TEST(PlayerbotQuestGameObjectPolicyTest, ACandidateBeyondThePoiAnchorRadiusIsIgnored)
+TEST(PlayerbotQuestGameObjectPolicyTest, ACandidateBeyondBothRadiiIsIgnored)
 {
-    // The anchor cap exists so the seek never fights QuestPoiNeedsApproach's return radius:
-    // a gameobject close to the bot but far from the assigned POI would drag the bot out,
-    // whereupon the approach policy drags it back, forever.
+    // The cap bounds the seek from two reference points, mirroring QuestUseCandidateInRange:
+    // a gameobject far from the POI anchor AND far from the bot would drag the bot clean off
+    // the quest area. The stay latch keeps the POI approach disabled while this seek runs.
     float const maxAnchorDistanceSq = 75.0f * 75.0f;
 
     std::vector<QuestGoCandidateFacts> const candidates = {
-        Candidate(true, true, QuestGoInteraction::Use, 25.0f, 90.0f * 90.0f),    // near bot, off anchor
-        Candidate(true, true, QuestGoInteraction::Use, 2500.0f, 40.0f * 40.0f),  // far from bot, on anchor
+        Candidate(true, true, QuestGoInteraction::Use, 80.0f * 80.0f, 90.0f * 90.0f),  // off both
+        Candidate(true, true, QuestGoInteraction::Use, 85.0f * 85.0f, 40.0f * 40.0f),  // on anchor
     };
 
     EXPECT_EQ(BestQuestGoCandidateIndex(candidates, maxAnchorDistanceSq), 1u);
 
-    // A zero (or negative) cap disables the anchor filter entirely.
+    // A zero (or negative) cap disables the range filter entirely.
     EXPECT_EQ(BestQuestGoCandidateIndex(candidates, NoAnchorCap), 0u);
+}
+
+TEST(PlayerbotQuestGameObjectPolicyTest, ACandidateBesideTheBotSurvivesTheAnchorCap)
+{
+    // Mirror of the use-target rule proven live on 9303 (2026-08-30): a bot that drifted off
+    // the POI chasing combat must still walk to a creditable gameobject standing next to it,
+    // even when that object is beyond the cap measured from the POI point.
+    std::vector<QuestGoCandidateFacts> const candidates = {
+        Candidate(true, true, QuestGoInteraction::Loot, 100.0f, 10000.0f),
+    };
+
+    EXPECT_EQ(BestQuestGoCandidateIndex(candidates, 5625.0f), 0u);
 }
 
 TEST(PlayerbotQuestGameObjectPolicyTest, AnEqualDistanceDoesNotDisplaceTheIncumbent)

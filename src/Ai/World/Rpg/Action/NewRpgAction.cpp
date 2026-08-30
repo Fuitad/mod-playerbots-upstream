@@ -56,6 +56,31 @@
 #include "G3D/Vector2.h"
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
+#include <mutex>
+#include <unordered_map>
+
+// PLB-LOCAL BEGIN(quest-abandon-probe): temporary diagnostic. The approach branches below hold
+// the tick with no log line, so a bot that never closes on its seek target (failed path, combat
+// resets) burns a stay invisibly. One line per bot per 15s, same throttle idiom as the
+// loot-skip probes. Remove with the quest-abandon-probe family.
+namespace
+{
+std::mutex approachProbeMutex;
+std::unordered_map<ObjectGuid::LowType, time_t> approachProbeLastLog;
+
+bool ApproachProbeDue(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(approachProbeMutex);
+    time_t& last = approachProbeLastLog[bot->GetGUID().GetCounter()];
+    time_t const now = time(nullptr);
+    if (now - last < 15)
+        return false;
+    last = now;
+    return true;
+}
+}  // namespace
+// PLB-LOCAL END(quest-abandon-probe)
 
 void TellRpgStatusAction::WhisperStatusChange(Player* owner, std::string const& statusName)
 {
@@ -631,14 +656,21 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             // use-credited quest that died without a QUSE line explains itself: no tool, no
             // matching creature nearby, or none of them alive.
             QuestUseSeekDiag useDiag;
+            QuestGoSeekDiag goDiag;
             if (Quest const* diagQuest = sObjectMgr->GetQuestTemplate(questId))
+            {
                 (void)FindQuestUseTarget(botAI, diagQuest, data.objectiveIdx,
                                          context->GetValue<GuidVector>("nearest npcs")->Get(),
                                          data.pos.GetPositionX(), data.pos.GetPositionY(),
                                          sPlayerbotAIConfig.grindDistance, &useDiag);
+                (void)FindQuestObjectiveGameObject(bot, diagQuest, data.objectiveIdx,
+                                                   context->GetValue<GuidVector>("nearest game objects")->Get(),
+                                                   data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                                   sPlayerbotAIConfig.grindDistance, &goDiag);
+            }
             LOG_DEBUG("playerbots",
                       "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
-                      "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}/{}",
+                      "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}/{} gocand {}/{}/{}/{}",
                       bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
                       GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel(),
                       QuestStayKillProbe::KillsSinceStayStart(bot),
@@ -649,7 +681,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                           return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
                       }(),
                       static_cast<uint32>(useDiag.mode), useDiag.nearbyUnits, useDiag.matchingEntry,
-                      useDiag.aliveMatching, useDiag.inRange);
+                      useDiag.aliveMatching, useDiag.inRange, goDiag.nearbyGos, goDiag.matching,
+                      goDiag.usableMatching, goDiag.inRange);
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }
@@ -709,7 +742,17 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         {
             if (!IsQuestGameObjectWithinInteraction(bot, goTarget.guid))
             {
-                if (MoveWorldObjectTo(goTarget.guid, INTERACTION_DISTANCE))
+                bool const moved = MoveWorldObjectTo(goTarget.guid, INTERACTION_DISTANCE);
+                // PLB-LOCAL(quest-abandon-probe): temporary diagnostic. A stay that ends with
+                // zero GOLOOT/GOUSE next to APPROACH lines means the walk never converged.
+                if (ApproachProbeDue(bot))
+                {
+                    GameObject* dbgGo = ObjectAccessor::GetGameObject(*bot, goTarget.guid);
+                    LOG_DEBUG("playerbots", "[QuestProbe] {} APPROACH quest {} go {} dist {:.1f} moved {}",
+                              bot->GetName(), questId, goTarget.entry,
+                              dbgGo ? bot->GetDistance(dbgGo) : -1.0f, moved);
+                }
+                if (moved)
                     return true;
                 // Movement still pending or path momentarily failed: hold the tick instead of
                 // wandering. The wander issues its own movement, which keeps the movement wait
@@ -781,7 +824,13 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             Unit* useUnit = botAI->GetUnit(useTarget.guid);
             if (useUnit && bot->GetDistance(useUnit) > INTERACTION_DISTANCE)
             {
-                if (MoveWorldObjectTo(useTarget.guid, INTERACTION_DISTANCE))
+                bool const moved = MoveWorldObjectTo(useTarget.guid, INTERACTION_DISTANCE);
+                // PLB-LOCAL(quest-abandon-probe): temporary diagnostic, same as the gameobject
+                // approach above.
+                if (ApproachProbeDue(bot))
+                    LOG_DEBUG("playerbots", "[QuestProbe] {} APPROACH quest {} npc {} dist {:.1f} moved {}",
+                              bot->GetName(), questId, useTarget.entry, bot->GetDistance(useUnit), moved);
+                if (moved)
                     return true;
                 // Hold instead of wandering, same reasoning as the gameobject seek above.
                 return true;

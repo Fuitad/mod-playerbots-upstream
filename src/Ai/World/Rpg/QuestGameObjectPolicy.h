@@ -73,6 +73,16 @@ inline constexpr size_t QUEST_GO_NO_CANDIDATE = ~static_cast<size_t>(0);
 // Nearest usable candidate that matches the objective and has a defined interaction, within
 // the anchor radius. maxAnchorDistanceSq <= 0 disables the anchor cap. Strict less-than keeps
 // the scan stable: an equal candidate never displaces the incumbent.
+// A candidate is in range when it sits within the cap of the POI anchor OR of the bot itself,
+// mirroring QuestUseCandidateInRange: the anchor-only cap filtered a creditable target standing
+// beside a bot that had drifted off the POI chasing combat (proven live on 9303, 2026-08-30).
+// The stay latch (lastReachPOI) keeps the POI approach disabled while this seek runs.
+[[nodiscard]] inline bool QuestGoCandidateInRange(QuestGoCandidateFacts const& candidate, float maxDistanceSq)
+{
+    return maxDistanceSq <= 0.0f || candidate.anchorDistanceSq <= maxDistanceSq ||
+           candidate.distanceSq <= maxDistanceSq;
+}
+
 [[nodiscard]] inline size_t BestQuestGoCandidateIndex(std::vector<QuestGoCandidateFacts> const& candidates,
                                                       float maxAnchorDistanceSq)
 {
@@ -84,7 +94,7 @@ inline constexpr size_t QUEST_GO_NO_CANDIDATE = ~static_cast<size_t>(0);
         if (!candidate.usable || !candidate.matchesObjective ||
             candidate.interaction == QuestGoInteraction::Skip)
             continue;
-        if (maxAnchorDistanceSq > 0.0f && candidate.anchorDistanceSq > maxAnchorDistanceSq)
+        if (!QuestGoCandidateInRange(candidate, maxAnchorDistanceSq))
             continue;
         if (bestDistanceSq < 0.0f || candidate.distanceSq < bestDistanceSq)
         {
