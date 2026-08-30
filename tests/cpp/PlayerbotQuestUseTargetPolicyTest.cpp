@@ -112,3 +112,37 @@ TEST(PlayerbotQuestUseTargetPolicyTest, NoSleeperFallsBackToTheNearestAwakeTarge
 
     EXPECT_EQ(BestQuestUseTargetIndex(candidates, NoAnchorCap), 1u);
 }
+
+TEST(PlayerbotQuestUseTargetPolicyTest, ACreditDummyObjectiveAcceptsTheToolSpellsWorldTarget)
+{
+    // The defect this pins: Inoculation (9303) requires credit dummy 16534, which never stands
+    // in the world; the crystal's spell is conditioned onto live entry 16518. Matching only the
+    // required entry produced zero candidates through whole stays (three blamed abandons measured
+    // live 2026-08-30). Both entries must be accepted, the dummy first.
+    std::vector<uint32> const accepted = QuestUseAcceptedEntries(16534, {16518});
+
+    ASSERT_EQ(accepted.size(), 2u);
+    EXPECT_EQ(accepted[0], 16534u);
+    EXPECT_EQ(accepted[1], 16518u);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, AWorldEntryObjectiveWithoutSpellTargetsIsUnchanged)
+{
+    // Lazy Peons (5441) requires the live entry 10556 directly and its tool spell carries no
+    // target conditions; the accepted set must stay exactly the required entry.
+    std::vector<uint32> const accepted = QuestUseAcceptedEntries(10556, {});
+
+    ASSERT_EQ(accepted.size(), 1u);
+    EXPECT_EQ(accepted[0], 10556u);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, AcceptedEntriesDropDuplicatesAndZeroes)
+{
+    // A spell conditioned onto the same entry the quest already requires, or carrying a zeroed
+    // row, must not inflate the set.
+    std::vector<uint32> const accepted = QuestUseAcceptedEntries(16518, {0, 16518, 16519, 16519});
+
+    ASSERT_EQ(accepted.size(), 2u);
+    EXPECT_EQ(accepted[0], 16518u);
+    EXPECT_EQ(accepted[1], 16519u);
+}

@@ -61,6 +61,35 @@ enum class QuestUseMode : uint8
     }
 }
 
+// The creature entries a use-seek accepts as the objective target. Some quests count a credit
+// DUMMY that never stands in the world: Inoculation (9303) requires entry 16534 "Inoculated
+// Nestlewood Owlkin", granted by the crystal's spell, while the creatures actually spawned are
+// entry 16518. Matching only the required entry finds nothing forever (measured live 2026-08-30:
+// three bots at the POI with owlkin around them, zero candidates, blamed abandons). The tool
+// spell's target-condition entries name the real-world creature, so both are accepted.
+[[nodiscard]] inline std::vector<uint32> QuestUseAcceptedEntries(int32 requiredEntry,
+                                                                std::vector<uint32> const& toolSpellTargetEntries)
+{
+    std::vector<uint32> accepted;
+    if (requiredEntry > 0)
+        accepted.push_back(static_cast<uint32>(requiredEntry));
+    for (uint32 entry : toolSpellTargetEntries)
+    {
+        if (!entry)
+            continue;
+        bool known = false;
+        for (uint32 have : accepted)
+            if (have == entry)
+            {
+                known = true;
+                break;
+            }
+        if (!known)
+            accepted.push_back(entry);
+    }
+    return accepted;
+}
+
 // One nearby creature, reduced to the facts that decide whether to walk to it.
 struct QuestUseCandidateFacts
 {

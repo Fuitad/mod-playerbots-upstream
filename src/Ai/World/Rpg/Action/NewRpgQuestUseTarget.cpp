@@ -11,6 +11,7 @@
 
 #include "NewRpgQuestUseTarget.h"
 
+#include "ConditionMgr.h"
 #include "Item.h"
 #include "ItemTemplate.h"
 #include "ObjectAccessor.h"
@@ -18,12 +19,17 @@
 #include "Playerbots.h"
 #include "QuestDef.h"
 #include "SharedDefines.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
+
+#include <algorithm>
 
 namespace
 {
 // The provided quest item qualifies as a tool only when it carries an on-use spell: the
 // Foreman's Blackjack and the Inoculating Crystal do, a readable starter letter does not.
-Item* SourceItemWithUseSpell(Player* bot, Quest const* quest)
+// useSpellId, when requested, receives that on-use spell.
+Item* SourceItemWithUseSpell(Player* bot, Quest const* quest, uint32* useSpellId = nullptr)
 {
     uint32 const itemEntry = quest->GetSrcItemId();
     if (!itemEntry)
@@ -36,9 +42,49 @@ Item* SourceItemWithUseSpell(Player* bot, Quest const* quest)
     ItemTemplate const* proto = item->GetTemplate();
     for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
         if (proto->Spells[i].SpellId > 0 && proto->Spells[i].SpellTrigger == ITEM_SPELLTRIGGER_ON_USE)
+        {
+            if (useSpellId)
+                *useSpellId = static_cast<uint32>(proto->Spells[i].SpellId);
             return item;
+        }
 
     return nullptr;
+}
+
+// Creature entries the tool spell is conditioned to target, from both places the conditions
+// table lands at load: whole-spell cast conditions (source 17, the generic store) and per-effect
+// implicit-target conditions (source 13, attached to SpellInfo effects). Inoculation's spell
+// 29528 carries a source-17 OBJECT_ENTRY_GUID row naming creature 16518; without reading it the
+// seek matches only the quest's credit dummy 16534, which never stands in the world.
+void AppendConditionEntries(ConditionList const& conditions, std::vector<uint32>& entries)
+{
+    for (Condition const* cond : conditions)
+    {
+        if (!cond || cond->NegativeCondition)
+            continue;
+        if (cond->ConditionType != CONDITION_OBJECT_ENTRY_GUID)
+            continue;
+        if (cond->ConditionValue1 != TYPEID_UNIT || !cond->ConditionValue2)
+            continue;
+        entries.push_back(cond->ConditionValue2);
+    }
+}
+
+std::vector<uint32> ToolSpellTargetEntries(uint32 spellId)
+{
+    std::vector<uint32> entries;
+    if (!spellId)
+        return entries;
+
+    AppendConditionEntries(sConditionMgr->GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_SPELL, spellId),
+                           entries);
+
+    if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId))
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            if (ConditionList const* effectConditions = spellInfo->Effects[i].ImplicitTargetConditions)
+                AppendConditionEntries(*effectConditions, entries);
+
+    return entries;
 }
 
 uint32 KnownQuestSpell(Player* bot, uint32 questId)
@@ -78,7 +124,8 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
 
     QuestUseMode mode = QuestUseMode::None;
     uint32 toolId = 0;
-    if (Item* item = SourceItemWithUseSpell(bot, quest))
+    uint32 useSpellId = 0;
+    if (Item* item = SourceItemWithUseSpell(bot, quest, &useSpellId))
     {
         mode = QuestUseMode::Item;
         toolId = item->GetEntry();
@@ -87,12 +134,16 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
     {
         mode = QuestUseMode::Spell;
         toolId = spellId;
+        useSpellId = spellId;
     }
     else
         return {};  // no tool: a genuine kill quest, the grind strategy owns it
 
     if (diag)
         diag->mode = mode;
+
+    std::vector<uint32> const acceptedEntries =
+        QuestUseAcceptedEntries(requiredEntry, ToolSpellTargetEntries(useSpellId));
 
     std::vector<QuestUseCandidateFacts> facts;
     std::vector<QuestUseTarget> targets;
@@ -106,7 +157,8 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
             continue;
 
         QuestUseCandidateFacts candidate;
-        candidate.matchesEntry = unit->GetEntry() == uint32(requiredEntry);
+        candidate.matchesEntry =
+            std::find(acceptedEntries.begin(), acceptedEntries.end(), unit->GetEntry()) != acceptedEntries.end();
         candidate.alive = unit->IsAlive();
         candidate.sleeping = unit->getStandState() == UNIT_STAND_STATE_SLEEP;
         if (diag)
