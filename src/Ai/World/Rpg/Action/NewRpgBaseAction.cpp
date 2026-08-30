@@ -17,6 +17,7 @@
 // PLB-LOCAL(quest-hard-drop): permanently drop gray quests the bot gave up on or cannot reach.
 #include "Ai/World/Rpg/QuestDropSweep.h"
 #include "Ai/World/Rpg/QuestBlacklistPolicy.h"
+#include "Ai/World/Rpg/QuestPickPolicy.h"
 #include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
 #include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
@@ -1316,7 +1317,20 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             }
             if (availableQuests.size())
             {
-                uint32 questId = availableQuests[urand(0, availableQuests.size() - 1)];
+                // PLB-LOCAL BEGIN(quest-pick-lowest-level): pick among the LOWEST-level available
+                // quests instead of uniformly. Higher-level quests only ripen while lower-level
+                // ones gray out untried (Pierre, 2026-08-30). See QuestPickPolicy.h.
+                // Upstream: `uint32 questId = availableQuests[urand(0, availableQuests.size() - 1)];`
+                std::vector<int32> questLevels;
+                questLevels.reserve(availableQuests.size());
+                for (uint32 availableId : availableQuests)
+                {
+                    Quest const* availableQuest = sObjectMgr->GetQuestTemplate(availableId);
+                    questLevels.push_back(availableQuest ? availableQuest->GetQuestLevel() : 0);
+                }
+                std::vector<size_t> const lowest = LowestLevelQuestIndices(questLevels);
+                uint32 questId = availableQuests[lowest[urand(0, lowest.size() - 1)]];
+                // PLB-LOCAL END(quest-pick-lowest-level)
                 const Quest* quest = sObjectMgr->GetQuestTemplate(questId);
                 if (quest)
                 {

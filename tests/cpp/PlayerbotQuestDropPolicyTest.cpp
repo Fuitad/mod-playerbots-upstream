@@ -10,6 +10,7 @@
 
 #include "Ai/World/Rpg/QuestBlacklistPolicy.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
+#include "Ai/World/Rpg/QuestPickPolicy.h"
 #include "gtest/gtest.h"
 
 namespace
@@ -155,6 +156,27 @@ TEST(PlayerbotQuestDropPolicyTest, ASightedCandidateCountsAsTrying)
 TEST(PlayerbotQuestDropPolicyTest, NoSightingNoKillNoInteractionStillAbandons)
 {
     EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 0), QuestStayEndVerdict::Abandon);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, TheLowestLevelQuestsArePickedFirst)
+{
+    // Muzeze carried a level-5 quest to level 9 while the picker kept drawing his higher-level
+    // quests uniformly; the gray-drop policy then retired it untried. Low first, ties together.
+    std::vector<size_t> const lowest = LowestLevelQuestIndices({10, 5, 8, 5, 12});
+    ASSERT_EQ(lowest.size(), 2u);
+    EXPECT_EQ(lowest[0], 1u);
+    EXPECT_EQ(lowest[1], 3u);
+}
+
+TEST(PlayerbotQuestDropPolicyTest, ScalingQuestsSortLastButAloneStayPickable)
+{
+    // A quest level <= 0 scales with the player and can never be outleveled.
+    std::vector<size_t> const mixed = LowestLevelQuestIndices({-1, 7, 0});
+    ASSERT_EQ(mixed.size(), 1u);
+    EXPECT_EQ(mixed[0], 1u);
+
+    std::vector<size_t> const onlyScaling = LowestLevelQuestIndices({-1, 0});
+    ASSERT_EQ(onlyScaling.size(), 2u);
 }
 
 TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
