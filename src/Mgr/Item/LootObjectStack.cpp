@@ -535,5 +535,16 @@ LootObject LootObjectStack::GetNearest(float maxDistance)
         nearest = lootObject;
     }
 
+    // PLB-LOCAL(loot-skip-probe): temporary diagnostic, see banner above GetNearest. The accept
+    // side: a quest chest the selector actually returned. Measured live 2026-08-30, a queued
+    // Emitter Spare Part (181283) at 1.6y produced zero range/notpossible skips yet the loot
+    // chain never engaged; this line splits "selector never returned it" from "an action after
+    // the selector dropped it".
+    if (!nearest.IsEmpty())
+        if (WorldObject* acceptedObj = ObjectAccessor::GetWorldObject(*bot, nearest.guid))
+            if (IsQuestChestForProbe(acceptedObj) && LootSkipProbeDue(bot))
+                LOG_DEBUG("playerbots", "[QuestProbe] {} LOOTPICK go {} dist {:.1f}", bot->GetName(),
+                          acceptedObj->GetEntry(), bot->GetDistance(acceptedObj));
+
     return nearest;
 }

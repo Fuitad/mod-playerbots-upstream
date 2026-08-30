@@ -173,6 +173,9 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
         }
         candidate.distanceSq = bot->GetExactDistSq(unit);
         candidate.anchorDistanceSq = unit->GetExactDist2dSq(anchorX, anchorY);
+        if (diag && candidate.matchesEntry && candidate.alive &&
+            QuestUseCandidateInRange(candidate, anchorRadius > 0.0f ? anchorRadius * anchorRadius : 0.0f))
+            ++diag->inRange;
 
         QuestUseTarget target;
         target.guid = guid;

@@ -40,6 +40,9 @@ struct QuestUseSeekDiag
     uint32 nearbyUnits = 0;
     uint32 matchingEntry = 0;
     uint32 aliveMatching = 0;
+    // Alive matching candidates that also pass the range cap: the count the seek can actually
+    // return from. aliveMatching > 0 with inRange == 0 is the range-filter starvation signature.
+    uint32 inRange = 0;
 };
 
 [[nodiscard]] QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx,

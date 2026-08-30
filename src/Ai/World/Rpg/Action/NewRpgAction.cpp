@@ -638,7 +638,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                                          sPlayerbotAIConfig.grindDistance, &useDiag);
             LOG_DEBUG("playerbots",
                       "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
-                      "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}",
+                      "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}/{}",
                       bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
                       GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel(),
                       QuestStayKillProbe::KillsSinceStayStart(bot),
@@ -649,7 +649,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                           return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
                       }(),
                       static_cast<uint32>(useDiag.mode), useDiag.nearbyUnits, useDiag.matchingEntry,
-                      useDiag.aliveMatching);
+                      useDiag.aliveMatching, useDiag.inRange);
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }

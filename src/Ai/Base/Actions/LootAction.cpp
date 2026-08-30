@@ -44,6 +44,12 @@ bool LootAction::Execute(Event /*event*/)
     }
     else
     {
+        // PLB-LOCAL(loot-skip-probe): temporary diagnostic, same family as the LootObjectStack
+        // probes. Proves the "loot available" trigger fired and a quest chest became the target.
+        if (lootObject.guid.IsGameObject() &&
+            sObjectMgr->GetGameObjectQuestItemList(lootObject.guid.GetEntry()) != nullptr)
+            LOG_DEBUG("playerbots", "[QuestProbe] {} LOOTTGT go {}", bot->GetName(),
+                      lootObject.guid.GetEntry());
         context->GetValue<LootObject>("loot target")->Set(lootObject);
         return true;
     }
@@ -135,20 +141,44 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
     }
 
     GameObject* go = botAI->GetGameObject(lootObject.guid);
+    // PLB-LOCAL BEGIN(loot-skip-probe): temporary diagnostic, same family as the LootObjectStack
+    // probes. Names the gate that drops a quest chest AFTER the selector returned it: measured
+    // live 2026-08-30 a queued Emitter Spare Part (181283) at 1.6y was never opened and no
+    // existing probe covered this stretch. Unthrottled: a quest chest reaching DoLoot is rare.
+    bool const probeChest = go && sObjectMgr->GetGameObjectQuestItemList(go->GetEntry()) != nullptr;
+    auto probeGate = [&](char const* gate)
+    {
+        if (probeChest)
+            LOG_DEBUG("playerbots", "[QuestProbe] {} LOOTOPEN go {} gate {} dist {:.1f}", bot->GetName(),
+                      go->GetEntry(), gate, bot->GetDistance(go));
+    };
+    // PLB-LOCAL END(loot-skip-probe)
     if (go && bot->GetDistance(go) > INTERACTION_DISTANCE - 2.0f)
+    {
+        probeGate("distance");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    }
 
     if (go && (go->GetGoState() != GO_STATE_READY))
+    {
+        probeGate("state");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    }
 
     // This prevents dungeon chests like Tribunal Chest (Halls of Stone) from being ninja'd by the bots.
     // Quest objects carry the same flag but are gated on quest state, which ActivateToQuest answers.
     if (go && go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_INTERACT_COND) && !go->ActivateToQuest(bot))
+    {
+        probeGate("interactcond");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    }
 
     // This prevents raid chests like Gunship Armory (ICC) from being ninja'd by the bots
     if (go && go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE))
+    {
+        probeGate("notselectable");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    }
 
     if (lootObject.skillId == SKILL_MINING)
         // PLB-LOCAL(bb8742eed9ad): refactor(loot): share gathering requirements
@@ -161,9 +191,18 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
 
     uint32 spellId = GetOpeningSpell(lootObject);
     if (!spellId)
+    {
+        probeGate("nospell");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    }
 
-    return botAI->CastSpell(spellId, bot);
+    bool const castResult = botAI->CastSpell(spellId, bot);
+    // PLB-LOCAL(loot-skip-probe): temporary diagnostic, records the terminal outcome for a quest
+    // chest: which opening spell was chosen and whether the cast path accepted it.
+    if (probeChest)
+        LOG_DEBUG("playerbots", "[QuestProbe] {} LOOTOPEN go {} gate cast spell {} result {}", bot->GetName(),
+                  go ? go->GetEntry() : 0, spellId, castResult);
+    return castResult;
 }
 
 uint32 OpenLootAction::GetOpeningSpell(LootObject& lootObject)

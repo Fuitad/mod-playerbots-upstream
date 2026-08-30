@@ -107,8 +107,18 @@ struct QuestUseCandidateFacts
 
 inline constexpr size_t QUEST_USE_NO_CANDIDATE = ~static_cast<size_t>(0);
 
-// Nearest living creature of the objective entry within the POI anchor radius, mirroring
-// BestQuestGoCandidateIndex so this seek can never fight the quest-poi-approach return radius.
+// A candidate is in range when it sits within the cap of the POI anchor OR of the bot itself.
+// The anchor-only cap filtered a live owlkin standing beside a bot that had drifted 45y chasing
+// combat (Abaka, measured live 2026-08-30: usecand 6/1/1 yet zero engagements in a 316s stay).
+// The stay latch (lastReachPOI) keeps the POI approach disabled while this seek runs, so
+// accepting a bot-near candidate cannot fight the approach radius.
+[[nodiscard]] inline bool QuestUseCandidateInRange(QuestUseCandidateFacts const& candidate, float maxDistanceSq)
+{
+    return maxDistanceSq <= 0.0f || candidate.anchorDistanceSq <= maxDistanceSq ||
+           candidate.distanceSq <= maxDistanceSq;
+}
+
+// Nearest living creature of the objective entry within range (see QuestUseCandidateInRange).
 // A sleeping candidate outranks any awake one; distance breaks ties within each group.
 [[nodiscard]] inline size_t BestQuestUseTargetIndex(std::vector<QuestUseCandidateFacts> const& candidates,
                                                     float maxAnchorDistanceSq)
@@ -122,7 +132,7 @@ inline constexpr size_t QUEST_USE_NO_CANDIDATE = ~static_cast<size_t>(0);
         QuestUseCandidateFacts const& candidate = candidates[i];
         if (!candidate.matchesEntry || !candidate.alive)
             continue;
-        if (maxAnchorDistanceSq > 0.0f && candidate.anchorDistanceSq > maxAnchorDistanceSq)
+        if (!QuestUseCandidateInRange(candidate, maxAnchorDistanceSq))
             continue;
         if (bestDistanceSq < 0.0f || candidate.distanceSq < bestDistanceSq)
         {

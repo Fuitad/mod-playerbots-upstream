@@ -66,14 +66,15 @@ TEST(PlayerbotQuestUseTargetPolicyTest, TheNearestLivingMatchingCreatureWins)
     EXPECT_EQ(BestQuestUseTargetIndex(candidates, NoAnchorCap), 3u);
 }
 
-TEST(PlayerbotQuestUseTargetPolicyTest, ACandidateBeyondThePoiAnchorRadiusIsIgnored)
+TEST(PlayerbotQuestUseTargetPolicyTest, ACandidateBeyondBothRadiiIsIgnored)
 {
-    // Same contract as the gameobject seek: walking to a creature far from the assigned POI would
-    // fight the quest-poi-approach return radius forever.
+    // The cap bounds the seek from two reference points (see QuestUseCandidateInRange): a
+    // candidate far from the POI anchor AND far from the bot would drag the bot clean off the
+    // quest area, so only the in-range one may win, even though the far one is nearer the bot.
     float const maxAnchorDistanceSq = 75.0f * 75.0f;
     std::vector<QuestUseCandidateFacts> const candidates = {
-        Candidate(true, true, 25.0f, 90.0f * 90.0f),
-        Candidate(true, true, 2500.0f, 40.0f * 40.0f),
+        Candidate(true, true, 80.0f * 80.0f, 90.0f * 90.0f),
+        Candidate(true, true, 85.0f * 85.0f, 40.0f * 40.0f),
     };
 
     EXPECT_EQ(BestQuestUseTargetIndex(candidates, maxAnchorDistanceSq), 1u);
@@ -145,4 +146,29 @@ TEST(PlayerbotQuestUseTargetPolicyTest, AcceptedEntriesDropDuplicatesAndZeroes)
     ASSERT_EQ(accepted.size(), 2u);
     EXPECT_EQ(accepted[0], 16518u);
     EXPECT_EQ(accepted[1], 16519u);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, ATargetBesideTheBotSurvivesTheAnchorCap)
+{
+    // The defect this pins: Abaka stood beside a live owlkin (usecand 6/1/1 measured live
+    // 2026-08-30) yet burned a 316s stay with zero engagements, because the cap was measured
+    // only from the assigned POI point and the bot had drifted 45y chasing combat: a creditable
+    // target 10y from the bot sat 100y from the anchor and was filtered every tick. A candidate
+    // within the cap of EITHER the anchor or the bot must be accepted.
+    std::vector<QuestUseCandidateFacts> const candidates = {
+        Candidate(true, true, /*distanceSq*/ 100.0f, /*anchorDistanceSq*/ 10000.0f),
+    };
+
+    EXPECT_EQ(BestQuestUseTargetIndex(candidates, /*maxAnchorDistanceSq*/ 5625.0f), 0u);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, ATargetFarFromBothBotAndAnchorStaysFiltered)
+{
+    // The cap still has to bound the seek: a candidate beyond it from both reference points
+    // would drag the bot clean off the quest area.
+    std::vector<QuestUseCandidateFacts> const candidates = {
+        Candidate(true, true, 10000.0f, 10000.0f),
+    };
+
+    EXPECT_EQ(BestQuestUseTargetIndex(candidates, 5625.0f), QUEST_USE_NO_CANDIDATE);
 }
