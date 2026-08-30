@@ -37,6 +37,10 @@
         // Bael'dun dwarves and using them at the camp anvil, a two-step tool-use-at-object
         // mechanic outside every seek's model. Pierre called the blacklist on 2026-08-30.
         case 746:
+        // Crown of the Earth: the required item is created by using the quest's Crystal Phial
+        // while standing at the Dolanaar moonwell, a use-provided-item-at-location mechanic no
+        // seek models. Pierre called the blacklist on 2026-08-30.
+        case 921:
             return true;
         default:
             return false;

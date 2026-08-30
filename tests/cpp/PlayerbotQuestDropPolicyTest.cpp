@@ -187,6 +187,7 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     EXPECT_TRUE(QuestIsRpgBlacklisted(9067));  // The Party Never Ends: multi-hub delivery chase
     EXPECT_TRUE(QuestIsRpgBlacklisted(8346));  // Thirst Unending: unresolvable Mana Tap credit dummy
     EXPECT_TRUE(QuestIsRpgBlacklisted(746));   // Dwarven Digging: two-step tool-use-at-anvil mechanic
+    EXPECT_TRUE(QuestIsRpgBlacklisted(921));   // Crown of the Earth: use provided item at the moonwell
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }
