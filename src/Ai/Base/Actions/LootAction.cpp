@@ -15,6 +15,7 @@
 #include "GuildTaskMgr.h"
 #include "ItemUsageValue.h"
 #include "LootObjectStack.h"
+#include "LootStorePolicy.h"
 #include "LootStrategyValue.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
@@ -462,7 +463,13 @@ bool StoreLootAction::Execute(Event event)
         if (!proto)
             continue;
 
-        if (!IsRealPlayer(botAI->GetMaster()) && AI_VALUE(uint8, "bag space") > 80)
+        // PLB-LOCAL(loot-store-quest-exempt): a quest-needed item is never dropped by the bag-space
+        // guard. Every quest item is max-stack 1, so upstream's guard made a bot with a filled
+        // backpack skip the quest item out of every chest and corpse it opened, release, and re-arm
+        // the chest for the next identical failure. Decision in LootStorePolicy.h.
+        // Upstream: `if (!IsRealPlayer(botAI->GetMaster()) && AI_VALUE(uint8, "bag space") > 80)`.
+        if (LootStoreBagSpaceGuardApplies(IsRealPlayer(botAI->GetMaster()), AI_VALUE(uint8, "bag space"),
+                                          proto->Class == ITEM_CLASS_QUEST || bot->HasQuestForItem(itemid)))
         {
             uint32 maxStack = proto->GetMaxStackSize();
             if (maxStack == 1)
