@@ -40,6 +40,13 @@
 #include "IVMapMgr.h"
 // PLB-LOCAL(quest-gameobject-objective): LootObjectStack::Add hands quest chests to the loot pipeline.
 #include "LootObjectStack.h"
+// PLB-LOCAL(quest-loot-container): LootTemplates_Item answers whether a bag container still holds a
+// quest item the bot needs; the open goes through the session's CMSG_OPEN_ITEM handler.
+#include "Bag.h"
+#include "Item.h"
+#include "LootMgr.h"
+#include "WorldPacket.h"
+#include "WorldSession.h"
 #include "NewRpgInfo.h"
 #include "NewRpgStrategy.h"
 #include "Object.h"
@@ -84,6 +91,47 @@ bool ApproachProbeDue(Player* bot)
 }
 }  // namespace
 // PLB-LOCAL END(quest-abandon-probe)
+
+// PLB-LOCAL BEGIN(quest-loot-container): some quest items only exist inside another item the bot
+// loots as the quest's ItemDrop (measured 2026-09-01: Ferocitas the Dream Eater, quest 2459, drops
+// Gnarlpine Necklace 8049 whose item_loot_template holds Tallonkai's Jewel 8050). Looting the
+// necklace is automatic, opening it never was: OpenItemAction only answers a master's "open items"
+// chat command. Open the first unlocked ITEM_FLAG_HAS_LOOT container whose loot table still holds a
+// quest item this bot needs; the loot response then flows through the normal store-loot pipeline.
+namespace
+{
+bool OpenQuestLootContainer(Player* bot)
+{
+    if (!bot->IsAlive() || bot->IsInCombat() || !bot->GetLootGUID().IsEmpty())
+        return false;
+    auto open = [&](Item* item) -> bool
+    {
+        if (!item)
+            return false;
+        ItemTemplate const* proto = item->GetTemplate();
+        if (!proto->HasFlag(ITEM_FLAG_HAS_LOOT) || (proto->LockID && item->IsLocked()))
+            return false;
+        if (!LootTemplates_Item.HaveQuestLootForPlayer(proto->ItemId, bot))
+            return false;
+        LOG_DEBUG("playerbots", "[QuestProbe] {} OPEN-CONTAINER item {} ({}) for a quest item inside it",
+                  bot->GetName(), proto->ItemId, proto->Name1);
+        WorldPacket packet(CMSG_OPEN_ITEM);
+        packet << item->GetBagSlot() << item->GetSlot();
+        bot->GetSession()->HandleOpenItemOpcode(packet);
+        return true;
+    };
+    for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        if (open(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot)))
+            return true;
+    for (uint8 bagSlot = INVENTORY_SLOT_BAG_START; bagSlot < INVENTORY_SLOT_BAG_END; ++bagSlot)
+        if (Bag* bag = bot->GetBagByPos(bagSlot))
+            for (uint32 slot = 0; slot < bag->GetBagSize(); ++slot)
+                if (open(bag->GetItemByPos(slot)))
+                    return true;
+    return false;
+}
+}  // namespace
+// PLB-LOCAL END(quest-loot-container)
 
 void TellRpgStatusAction::WhisperStatusChange(Player* owner, std::string const& statusName)
 {
@@ -503,6 +551,10 @@ bool NewRpgDoQuestAction::Execute(Event /*event*/)
 bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
 {
     uint32 questId = data.questId;
+    // PLB-LOCAL(quest-loot-container): a looted container that holds a needed quest item is
+    // opened before any objective travel; the quest item lands through the loot pipeline.
+    if (OpenQuestLootContainer(bot))
+        return true;
     if (data.pos != WorldPosition())
     {
         /// @TODO: extract to a new function
