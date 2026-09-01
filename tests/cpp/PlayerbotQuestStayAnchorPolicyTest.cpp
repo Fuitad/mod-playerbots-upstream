@@ -62,3 +62,35 @@ TEST(PlayerbotQuestStayAnchorPolicyTest, CreatureSpawnsWithinCountsOnlyCreatures
     EXPECT_EQ(CreatureSpawnsWithin(spawns, 100.0f, 100.0f, 10.0f), 1u);
     EXPECT_EQ(CreatureSpawnsWithin({}, 100.0f, 100.0f, 75.0f), 0u);
 }
+
+TEST(PlayerbotQuestStayAnchorPolicyTest, TheDensestClusterBeatsTheNearestLoneSpawn)
+{
+    // The defect this pins: Sting of the Scorpid's POI centroid sits beside one lone spawn while
+    // the herd stands 150y away; the stay must go to the herd.
+    std::vector<SpawnAnchorPoint> const spawns = {
+        {10.0f, 0.0f, 0.0f, 1, true},     // lone spawn 10y from the POI
+        {150.0f, 0.0f, 0.0f, 2, true},    // cluster of four, 150y away
+        {160.0f, 5.0f, 0.0f, 3, true},
+        {155.0f, -8.0f, 0.0f, 4, true},
+        {170.0f, 3.0f, 0.0f, 5, true},
+    };
+    EXPECT_EQ(DensestSpawnAnchorIndex(spawns, 0.0f, 0.0f, 400.0f, 75.0f), 1u);
+}
+
+TEST(PlayerbotQuestStayAnchorPolicyTest, EqualDensityFallsBackToTheNearestSpawn)
+{
+    std::vector<SpawnAnchorPoint> const spawns = {
+        {300.0f, 0.0f, 0.0f, 1, true},
+        {20.0f, 0.0f, 0.0f, 2, true},
+    };
+    EXPECT_EQ(DensestSpawnAnchorIndex(spawns, 0.0f, 0.0f, 400.0f, 75.0f), 1u);
+}
+
+TEST(PlayerbotQuestStayAnchorPolicyTest, TheDensestSnapStillHonoursTheCap)
+{
+    std::vector<SpawnAnchorPoint> const spawns = {
+        {500.0f, 0.0f, 0.0f, 1, true}, {505.0f, 0.0f, 0.0f, 2, true}, {510.0f, 0.0f, 0.0f, 3, true},
+    };
+    EXPECT_EQ(DensestSpawnAnchorIndex(spawns, 0.0f, 0.0f, 400.0f, 75.0f), QUEST_ANCHOR_NO_SPAWN);
+    EXPECT_EQ(DensestSpawnAnchorIndex({}, 0.0f, 0.0f, 400.0f, 75.0f), QUEST_ANCHOR_NO_SPAWN);
+}

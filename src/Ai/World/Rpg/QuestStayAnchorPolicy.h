@@ -28,6 +28,55 @@ struct SpawnAnchorPoint
     bool creature = false;
 };
 
+inline constexpr size_t QUEST_ANCHOR_NO_SPAWN = ~static_cast<size_t>(0);
+
+// The snap stays local to the POI cluster the picker chose: a spawn farther than this from the
+// POI point belongs to another cluster (or another cave) and must not drag the stay across it.
+inline constexpr float QUEST_ANCHOR_MAX_SNAP_DISTANCE = 400.0f;
+
+// The spawn to stand at when the POI point is a poor guide to where the objective actually is:
+// among the spawns within maxSnapDistance of the POI point, the one with the most OTHER spawns
+// within clusterRadius, ties broken by distance to the POI point. Measured live 2026-09-01, Sting
+// of the Scorpid (789): the POI centroid has one Scorpid Worker spawn within 75y while the other
+// 54 spread over a 600 by 440 yard valley, so the nearest-spawn snap parked level-3 bots beside a
+// lone scorpid with "targets 3" for whole stays. Returns QUEST_ANCHOR_NO_SPAWN when nothing is
+// within the cap, exactly like NearestSpawnAnchorIndex.
+[[nodiscard]] inline size_t DensestSpawnAnchorIndex(std::vector<SpawnAnchorPoint> const& spawns, float poiX,
+                                                    float poiY, float maxSnapDistance, float clusterRadius)
+{
+    size_t best = QUEST_ANCHOR_NO_SPAWN;
+    size_t bestNeighbours = 0;
+    float bestDistSq = 0.0f;
+    float const capSq = maxSnapDistance > 0.0f ? maxSnapDistance * maxSnapDistance : -1.0f;
+    float const radiusSq = clusterRadius * clusterRadius;
+    for (size_t i = 0; i < spawns.size(); ++i)
+    {
+        float const dx = spawns[i].x - poiX;
+        float const dy = spawns[i].y - poiY;
+        float const distSq = dx * dx + dy * dy;
+        if (capSq >= 0.0f && distSq > capSq)
+            continue;
+        size_t neighbours = 0;
+        for (size_t j = 0; j < spawns.size(); ++j)
+        {
+            if (j == i)
+                continue;
+            float const nx = spawns[j].x - spawns[i].x;
+            float const ny = spawns[j].y - spawns[i].y;
+            if (nx * nx + ny * ny <= radiusSq)
+                ++neighbours;
+        }
+        if (best == QUEST_ANCHOR_NO_SPAWN || neighbours > bestNeighbours ||
+            (neighbours == bestNeighbours && distSq < bestDistSq))
+        {
+            best = i;
+            bestNeighbours = neighbours;
+            bestDistSq = distSq;
+        }
+    }
+    return best;
+}
+
 // How many creature spawns of the objective's sources sit within range (2D) of the anchor. A
 // single named creature on its respawn timer (Felendren the Banished, 300s; Fizzle Darkstorm;
 // Sarkoth) leaves the stay with no live candidate and no kill, which read as an unworkable place
@@ -50,12 +99,6 @@ struct SpawnAnchorPoint
     }
     return count;
 }
-
-inline constexpr size_t QUEST_ANCHOR_NO_SPAWN = ~static_cast<size_t>(0);
-
-// The snap stays local to the POI cluster the picker chose: a spawn farther than this from the
-// POI point belongs to another cluster (or another cave) and must not drag the stay across it.
-inline constexpr float QUEST_ANCHOR_MAX_SNAP_DISTANCE = 400.0f;
 
 // The spawn nearest (2D) to the chosen POI point, or QUEST_ANCHOR_NO_SPAWN when none is within
 // maxSnapDistance. Measured live 2026-08-30: quest 47's POI marks the mine ENTRANCE while every

@@ -1103,7 +1103,10 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
         {
             std::vector<SpawnAnchorPoint> const spawns =
                 QuestObjectiveSpawnPointsFor(quest, qPoi.ObjectiveIndex, bot->GetMapId());
-            size_t const snapIdx = NearestSpawnAnchorIndex(spawns, dx, dy, QUEST_ANCHOR_MAX_SNAP_DISTANCE);
+            // Densest cluster within the cap, not merely the nearest spawn: see
+            // DensestSpawnAnchorIndex for the Sting of the Scorpid measurement.
+            size_t const snapIdx = DensestSpawnAnchorIndex(spawns, dx, dy, QUEST_ANCHOR_MAX_SNAP_DISTANCE,
+                                                           sPlayerbotAIConfig.grindDistance);
             if (snapIdx != QUEST_ANCHOR_NO_SPAWN)
             {
                 dx = spawns[snapIdx].x;
