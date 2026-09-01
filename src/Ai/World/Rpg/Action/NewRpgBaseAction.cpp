@@ -18,7 +18,11 @@
 #include "Ai/World/Rpg/QuestDropSweep.h"
 #include "Ai/World/Rpg/QuestBlacklistPolicy.h"
 #include "Ai/World/Rpg/QuestPickPolicy.h"
+#include "Ai/World/Rpg/QuestRewardBagPolicy.h"
 #include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
+#include "Bag.h"
+#include "Item.h"
+#include "ItemUsageValue.h"
 #include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
@@ -847,6 +851,61 @@ ObjectGuid NewRpgBaseAction::ChooseNpcOrGameObjectToInteract(bool questgiverOnly
     return ObjectGuid();
 }
 
+// PLB-LOCAL BEGIN(quest-reward-bag-slot): a completed quest whose reward cannot be stored used to
+// sit through the whole reward stay and then be marked low priority for the life of the process.
+// Player::CanRewardQuest refuses when the reward item has no room, and a masterless bot's bags fill
+// with white gathering materials the vendor trip never sells (auction-classified), so every
+// item-reward quest was blocked for such a bot. Measured live 2026-09-01: Hemewmew, Botanical
+// Legwork complete, 16 of 16 backpack slots, 300s beside eight quest givers, abandoned. Free one
+// slot by destroying the cheapest unprotected stack; the caller re-checks CanRewardQuest.
+// Selection rule and its measurements in QuestRewardBagPolicy.h.
+namespace
+{
+bool FreeOneBagSlotForQuestReward(PlayerbotAI* botAI, Player* bot, Quest const* quest)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    std::vector<BagStackFacts> facts;
+    std::vector<Item*> items;
+    auto consider = [&](Item* item)
+    {
+        if (!item)
+            return;
+        ItemTemplate const* proto = item->GetTemplate();
+        ItemUsage const usage = context->GetValue<ItemUsage>("item usage", item->GetEntry())->Get();
+        bool const protectedUsage = usage == ITEM_USAGE_QUEST || usage == ITEM_USAGE_EQUIP ||
+                                    usage == ITEM_USAGE_REPLACE || usage == ITEM_USAGE_USE ||
+                                    usage == ITEM_USAGE_KEEP || usage == ITEM_USAGE_SKILL ||
+                                    usage == ITEM_USAGE_GUILD_TASK || bot->HasQuestForItem(item->GetEntry()) ||
+                                    proto->Class == ITEM_CLASS_QUEST || proto->Class == ITEM_CLASS_KEY ||
+                                    proto->Class == ITEM_CLASS_CONTAINER;
+        BagStackFacts f;
+        f.protectedUsage = protectedUsage;
+        f.bound = item->IsSoulBound() || proto->Bonding == BIND_WHEN_PICKED_UP;
+        f.sellValue = proto->SellPrice * item->GetCount();
+        f.trash = usage == ITEM_USAGE_VENDOR || usage == ITEM_USAGE_NONE;
+        facts.push_back(f);
+        items.push_back(item);
+    };
+    for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        consider(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot));
+    for (uint8 bagSlot = INVENTORY_SLOT_BAG_START; bagSlot < INVENTORY_SLOT_BAG_END; ++bagSlot)
+        if (Bag* bag = bot->GetBagByPos(bagSlot))
+            for (uint32 slot = 0; slot < bag->GetBagSize(); ++slot)
+                consider(bag->GetItemByPos(slot));
+
+    size_t const victim = ChooseBagStackToSacrifice(facts);
+    if (victim == QUEST_REWARD_NO_VICTIM)
+        return false;
+    Item* item = items[victim];
+    LOG_DEBUG("playerbots", "[QuestProbe] {} FREE-SLOT quest {} destroying {}x{} ({}c) for the reward",
+              bot->GetName(), quest->GetQuestId(), item->GetCount(), item->GetEntry(), facts[victim].sellValue);
+    uint32 count = item->GetCount();
+    bot->DestroyItemCount(item, count, true);
+    return true;
+}
+}  // namespace
+// PLB-LOCAL END(quest-reward-bag-slot)
+
 bool NewRpgBaseAction::HasQuestToAcceptOrReward(WorldObject* object)
 {
     ObjectGuid guid = object->GetGUID();
@@ -863,6 +922,13 @@ bool NewRpgBaseAction::HasQuestToAcceptOrReward(WorldObject* object)
             continue;
         const QuestStatus& status = bot->GetQuestStatus(item.QuestId);
         if (status == QUEST_STATUS_COMPLETE && bot->CanRewardQuest(quest, 0, false))
+        {
+            return true;
+        }
+        // PLB-LOCAL(quest-reward-bag-slot): the reward has no room; sacrifice one stack and
+        // re-check so the reward stay hands the quest in instead of timing out.
+        if (status == QUEST_STATUS_COMPLETE && FreeOneBagSlotForQuestReward(botAI, bot, quest) &&
+            bot->CanRewardQuest(quest, 0, false))
         {
             return true;
         }
