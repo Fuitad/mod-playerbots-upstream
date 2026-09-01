@@ -28,6 +28,7 @@
 // that dispatched its tool but lost the race for a creditable target.
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Ai/World/Rpg/QuestStayUseTracker.h"
+#include "GameTime.h"
 #include <algorithm>
 #include "Playerbots.h"
 #include "AreaDefines.h"
@@ -672,9 +673,30 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 relevantKillEntries.push_back(acceptedEntry);
         uint32 const relevantKills =
             QuestStayKillProbe::KillsOfEntriesSinceStayStart(bot, relevantKillEntries);
+        // A source creature spawn near the anchor that is sitting on its respawn timer is a
+        // sighting too: the place can progress the quest, the mob is simply dead right now (a
+        // single named creature and a 300s respawn against a 300s stay lose that race often).
+        // See CreatureSpawnsWithin for the measurement.
+        uint32 respawnPending = 0;
+        if (quest)
+        {
+            time_t const now = GameTime::GetGameTime().count();
+            for (SpawnAnchorPoint const& spawn :
+                 QuestObjectiveSpawnPointsFor(quest, currentObjective, bot->GetMapId()))
+            {
+                if (!spawn.creature || spawn.spawnId == 0)
+                    continue;
+                if (CreatureSpawnsWithin({spawn}, data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                         sPlayerbotAIConfig.grindDistance) == 0)
+                    continue;
+                if (bot->GetMap()->GetCreatureRespawnTime(spawn.spawnId) > now)
+                    ++respawnPending;
+            }
+        }
         QuestStayEndVerdict const stayVerdict = QuestStayEndDecision(
             hasProgression, QuestStayUseTracker::AttemptsThisStay(bot), relevantKills,
-            QuestStayUseTracker::SightingsThisStay(bot) + useDiag.aliveMatching + goDiag.usableMatching);
+            QuestStayUseTracker::SightingsThisStay(bot) + useDiag.aliveMatching + goDiag.usableMatching +
+                respawnPending);
         if (stayVerdict == QuestStayEndVerdict::Abandon)
         // PLB-LOCAL END(quest-stay-use-tracker)
         {

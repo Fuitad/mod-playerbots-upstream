@@ -47,3 +47,18 @@ TEST(PlayerbotQuestStayAnchorPolicyTest, AZeroCapDisablesTheDistanceFilter)
 
     EXPECT_EQ(NearestSpawnAnchorIndex(spawns, 0.0f, 0.0f, 0.0f), 0u);
 }
+
+TEST(PlayerbotQuestStayAnchorPolicyTest, CreatureSpawnsWithinCountsOnlyCreaturesInRange)
+{
+    // The defect this pins: a named creature on its respawn timer near the anchor must be visible
+    // to the stay-end verdict as a reason to come back, and a gameobject spawn must not count.
+    std::vector<SpawnAnchorPoint> const spawns = {
+        {100.0f, 100.0f, 0.0f, 1, true},   // 0y from the anchor
+        {160.0f, 100.0f, 0.0f, 2, true},   // 60y away
+        {200.0f, 100.0f, 0.0f, 3, true},   // 100y away, out of range
+        {100.0f, 100.0f, 0.0f, 4, false},  // gameobject at the anchor
+    };
+    EXPECT_EQ(CreatureSpawnsWithin(spawns, 100.0f, 100.0f, 75.0f), 2u);
+    EXPECT_EQ(CreatureSpawnsWithin(spawns, 100.0f, 100.0f, 10.0f), 1u);
+    EXPECT_EQ(CreatureSpawnsWithin({}, 100.0f, 100.0f, 75.0f), 0u);
+}

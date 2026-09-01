@@ -23,7 +23,33 @@ struct SpawnAnchorPoint
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
+    // The spawn row's id, so the stay can ask the map whether this spawn is on its respawn timer.
+    uint32_t spawnId = 0;
+    bool creature = false;
 };
+
+// How many creature spawns of the objective's sources sit within range (2D) of the anchor. A
+// single named creature on its respawn timer (Felendren the Banished, 300s; Fizzle Darkstorm;
+// Sarkoth) leaves the stay with no live candidate and no kill, which read as an unworkable place
+// and abandoned the quest for the life of the process. Measured live 2026-09-01: Jhendurheka
+// stayed 321s at 31y from Felendren's tower-top spawn with zero relevant kills. A nearby source
+// spawn that is merely dead is a reason to rotate and come back, not to give up.
+[[nodiscard]] inline size_t CreatureSpawnsWithin(std::vector<SpawnAnchorPoint> const& spawns, float x, float y,
+                                                 float range)
+{
+    size_t count = 0;
+    float const rangeSq = range * range;
+    for (SpawnAnchorPoint const& spawn : spawns)
+    {
+        if (!spawn.creature)
+            continue;
+        float const dx = spawn.x - x;
+        float const dy = spawn.y - y;
+        if (dx * dx + dy * dy <= rangeSq)
+            ++count;
+    }
+    return count;
+}
 
 inline constexpr size_t QUEST_ANCHOR_NO_SPAWN = ~static_cast<size_t>(0);
 

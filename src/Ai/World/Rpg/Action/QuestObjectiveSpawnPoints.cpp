@@ -101,13 +101,13 @@ std::vector<SpawnAnchorPoint> QuestObjectiveSpawnPointsFor(Quest const* quest, i
     if (!creatureEntries.empty())
         for (auto const& [spawnId, data] : sObjectMgr->GetAllCreatureData())
             if (data.mapid == mapId && (wantsCreature(data.id) || wantsCreature(data.id2) || wantsCreature(data.id3)))
-                points.push_back({data.posX, data.posY, data.posZ});
+                points.push_back({data.posX, data.posY, data.posZ, static_cast<uint32>(spawnId), true});
 
     if (!gameObjectEntries.empty())
         for (auto const& [spawnId, data] : sObjectMgr->GetAllGOData())
             if (data.mapid == mapId && std::find(gameObjectEntries.begin(), gameObjectEntries.end(), data.id) !=
                                            gameObjectEntries.end())
-                points.push_back({data.posX, data.posY, data.posZ});
+                points.push_back({data.posX, data.posY, data.posZ, static_cast<uint32>(spawnId), false});
 
     std::lock_guard<std::mutex> lock(spawnCacheMutex);
     return spawnCache.emplace(key, std::move(points)).first->second;
