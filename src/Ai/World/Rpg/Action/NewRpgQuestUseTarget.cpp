@@ -27,12 +27,14 @@
 
 namespace
 {
-// The provided quest item qualifies as a tool only when it carries an on-use spell: the
-// Foreman's Blackjack and the Inoculating Crystal do, a readable starter letter does not.
+// A held quest item qualifies as a tool only when it carries an on-use spell: the Foreman's
+// Blackjack and the Inoculating Crystal do, a readable starter letter does not. The tool is the
+// quest's provided item when it has one, otherwise one of the quest's ItemDrop entries the bot has
+// already looted (measured 2026-09-01: Kyle's Gone Missing, quest 11129, feeds Kyle with Tender
+// Strider Meat 33009 that drops from plainstriders and is never handed out by the giver).
 // useSpellId, when requested, receives that on-use spell.
-Item* SourceItemWithUseSpell(Player* bot, Quest const* quest, uint32* useSpellId = nullptr)
+Item* HeldItemWithUseSpell(Player* bot, uint32 itemEntry, uint32* useSpellId)
 {
-    uint32 const itemEntry = quest->GetSrcItemId();
     if (!itemEntry)
         return nullptr;
 
@@ -49,6 +51,16 @@ Item* SourceItemWithUseSpell(Player* bot, Quest const* quest, uint32* useSpellId
             return item;
         }
 
+    return nullptr;
+}
+
+Item* SourceItemWithUseSpell(Player* bot, Quest const* quest, uint32* useSpellId = nullptr)
+{
+    if (Item* item = HeldItemWithUseSpell(bot, quest->GetSrcItemId(), useSpellId))
+        return item;
+    for (uint8 i = 0; i < QUEST_SOURCE_ITEM_IDS_COUNT; ++i)
+        if (Item* item = HeldItemWithUseSpell(bot, quest->ItemDrop[i], useSpellId))
+            return item;
     return nullptr;
 }
 
