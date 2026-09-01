@@ -50,6 +50,22 @@
         // They are the only two overworld quests with an event-spawned ender.
         case 310:
         case 2399:
+        // Shaman totem chains (every "Call of Earth / Fire / Water / Air" quest, all 53 ids): the
+        // reward is a totem spell a bot already learns from its trainer, and the "report back"
+        // steps end in another zone (9449 in the Exodar, 2983/2984 in Orgrimmar), which the pick
+        // rule never reaches, so 11 bots sat at complete with the slot wasted. Pierre called the
+        // blacklist on 2026-09-01: "since bots get all the spells, I'm not sure if it's necessary".
+        case 63: case 96: case 100: case 220: case 1103:
+        case 1516: case 1517: case 1518: case 1519: case 1520: case 1521:
+        case 1522: case 1523: case 1524: case 1525: case 1526: case 1527:
+        case 1528: case 1529: case 1530: case 1531: case 1532:
+        case 1534: case 1535: case 1536:
+        case 2983: case 2984: case 2985: case 2986:
+        case 9449: case 9450: case 9451:
+        case 9461: case 9462: case 9464: case 9465: case 9467: case 9468:
+        case 9500: case 9501: case 9502: case 9503: case 9504: case 9508: case 9509:
+        case 9547: case 9551: case 9552: case 9553: case 9554: case 9555:
+        case 10490: case 10491:
             return true;
         default:
             return false;

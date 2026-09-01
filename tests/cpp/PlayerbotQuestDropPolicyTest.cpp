@@ -190,6 +190,11 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     EXPECT_TRUE(QuestIsRpgBlacklisted(921));   // Crown of the Earth: use provided item at the moonwell
     EXPECT_TRUE(QuestIsRpgBlacklisted(310));   // Bitter Rivals: ender barrel only exists while scripted
     EXPECT_TRUE(QuestIsRpgBlacklisted(2399));  // The Sprouted Fronds: same event-spawned ender class
+    // Shaman totem chains: redundant reward, cross-zone report-back steps (Pierre, 2026-09-01).
+    EXPECT_TRUE(QuestIsRpgBlacklisted(1518));   // Call of Earth, orc/troll
+    EXPECT_TRUE(QuestIsRpgBlacklisted(9449));   // Call of Earth, draenei, ends in the Exodar
+    EXPECT_TRUE(QuestIsRpgBlacklisted(10491));  // Call of Air, the last id of the family
+    EXPECT_FALSE(QuestIsRpgBlacklisted(1515));  // Dogran's Captivity, the id just below the family
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }
