@@ -20,6 +20,7 @@
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "Player.h"
+#include "QuestBlacklistPolicy.h"
 #include "QuestDef.h"
 #include "QuestDropPolicy.h"
 #include "QuestPackets.h"
@@ -52,6 +53,7 @@ inline uint32 DropStaleGrayQuests(Player* bot, std::unordered_set<uint32> const&
             continue;
 
         QuestDropFacts facts;
+        facts.blacklisted = QuestIsRpgBlacklisted(questId);
         facts.botLevel = bot->GetLevel();
         facts.questLevel = quest->GetQuestLevel();
         facts.complete = bot->GetQuestStatus(questId) == QUEST_STATUS_COMPLETE;

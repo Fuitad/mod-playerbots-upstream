@@ -31,8 +31,15 @@
 //       (GetQuestPOIPosAndObjectiveIdx found no reachable POI for any incomplete objective).
 // A quest that is COMPLETE (ready to turn in) is never dropped, and neither is anything the bot
 // could still reasonably do at level.
+//
+// One exception outranks all of that: a quest on the RPG blacklist (QuestBlacklistPolicy.h) is
+// dropped whatever its level or status. The blacklist keeps the pick loop from ever selecting it,
+// so a blacklisted quest already in the log is a dead slot; measured 2026-09-01 when the shaman
+// totem chains were blacklisted with 11 bots holding one at complete.
 struct QuestDropFacts
 {
+    // QuestIsRpgBlacklisted(questId).
+    bool blacklisted = false;
     uint8 botLevel = 0;
     // Quest::GetQuestLevel(). A value <= 0 means the quest scales with the player and can never
     // be gray (Player::GetQuestLevel substitutes the player's own level).
@@ -50,6 +57,7 @@ enum class QuestDropVerdict : uint8
     Keep,
     DropGivenUp,
     DropUnreachable,
+    DropBlacklisted,
 };
 
 [[nodiscard]] inline bool QuestIsGrayFor(uint8 botLevel, int32 questLevel)
@@ -63,11 +71,14 @@ enum class QuestDropVerdict : uint8
 // computation whenever its answer cannot change the outcome.
 [[nodiscard]] inline bool QuestDropNeedsReachability(QuestDropFacts const& facts)
 {
-    return !facts.complete && !facts.givenUp && QuestIsGrayFor(facts.botLevel, facts.questLevel);
+    return !facts.blacklisted && !facts.complete && !facts.givenUp &&
+           QuestIsGrayFor(facts.botLevel, facts.questLevel);
 }
 
 [[nodiscard]] inline QuestDropVerdict QuestDropDecision(QuestDropFacts const& facts)
 {
+    if (facts.blacklisted)
+        return QuestDropVerdict::DropBlacklisted;
     if (facts.complete)
         return QuestDropVerdict::Keep;
     if (!QuestIsGrayFor(facts.botLevel, facts.questLevel))
@@ -87,6 +98,8 @@ enum class QuestDropVerdict : uint8
             return "givenup";
         case QuestDropVerdict::DropUnreachable:
             return "unreachable";
+        case QuestDropVerdict::DropBlacklisted:
+            return "blacklisted";
         default:
             return "keep";
     }

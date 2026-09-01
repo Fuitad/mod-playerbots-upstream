@@ -87,6 +87,23 @@ TEST(PlayerbotQuestDropPolicyTest, AGrayButWorkableQuestIsKept)
     EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, false, true)), QuestDropVerdict::Keep);
 }
 
+TEST(PlayerbotQuestDropPolicyTest, ABlacklistedQuestIsDroppedWhateverItsState)
+{
+    // The blacklist outranks every keep rule: complete, at level, or gray-but-workable all drop,
+    // and the POI probe is never consulted for it (2026-09-01: 11 bots holding a blacklisted
+    // totem step at complete).
+    QuestDropFacts complete = Facts(30, 28, true, false, true);
+    complete.blacklisted = true;
+    EXPECT_EQ(QuestDropDecision(complete), QuestDropVerdict::DropBlacklisted);
+    QuestDropFacts atLevel = Facts(30, 28, false, false, true);
+    atLevel.blacklisted = true;
+    EXPECT_EQ(QuestDropDecision(atLevel), QuestDropVerdict::DropBlacklisted);
+    EXPECT_FALSE(QuestDropNeedsReachability(atLevel));
+    QuestDropFacts grayWorkable = Facts(30, 15, false, false, true);
+    grayWorkable.blacklisted = true;
+    EXPECT_EQ(QuestDropDecision(grayWorkable), QuestDropVerdict::DropBlacklisted);
+}
+
 TEST(PlayerbotQuestDropPolicyTest, ReachabilityIsOnlyConsultedWhenItCanChangeTheVerdict)
 {
     // Only an incomplete, gray, not-given-up quest needs the POI computation.
@@ -101,6 +118,7 @@ TEST(PlayerbotQuestDropPolicyTest, ReasonNamesFeedTheDropProbeLine)
 {
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropGivenUp), "givenup");
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropUnreachable), "unreachable");
+    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropBlacklisted), "blacklisted");
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::Keep), "keep");
 }
 
