@@ -197,6 +197,23 @@ TEST(PlayerbotQuestDropPolicyTest, ScalingQuestsSortLastButAloneStayPickable)
     ASSERT_EQ(onlyScaling.size(), 2u);
 }
 
+TEST(PlayerbotQuestDropPolicyTest, CompletedQuestsAreTurnedInBeforeAnyObjectiveWork)
+{
+    // Mournful (2026-09-01): Muren Stormpike (scaling level, sorts last) sat at complete for an
+    // hour behind four level 7 to 12 objectives. A turn-in outranks every level.
+    std::vector<size_t> const turnIn = PickableQuestIndices({7, 9, -1, 12}, {false, false, true, false});
+    ASSERT_EQ(turnIn.size(), 1u);
+    EXPECT_EQ(turnIn[0], 2u);
+    // Several turn-ins: the lowest-level rule orders them among themselves.
+    std::vector<size_t> const twoTurnIns = PickableQuestIndices({7, 9, -1, 12}, {true, false, true, true});
+    ASSERT_EQ(twoTurnIns.size(), 1u);
+    EXPECT_EQ(twoTurnIns[0], 0u);
+    // No turn-in: unchanged lowest-level behaviour.
+    std::vector<size_t> const none = PickableQuestIndices({10, 5, 8}, {false, false, false});
+    ASSERT_EQ(none.size(), 1u);
+    EXPECT_EQ(none[0], 1u);
+}
+
 TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
 {
     // Red Snapper - Very Tasty! needs a fishing net used on transient fishing-pool schools,

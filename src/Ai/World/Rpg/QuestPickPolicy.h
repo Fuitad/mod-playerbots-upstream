@@ -56,4 +56,28 @@ constexpr float QUEST_REWARD_POI_MAX_DISTANCE = 3000.0f;
     return best;
 }
 
+// A quest that is already COMPLETE is a turn-in: one trip, a guaranteed reward, a freed log slot.
+// It goes before any objective work, whatever its level; the lowest-level rule then orders the
+// turn-ins among themselves. Measured 2026-09-01: Mournful carried Muren Stormpike (1679,
+// scaling level, so it sorted LAST) at complete for over an hour while grinding four level 7 to
+// 12 quests, with the Ironforge turn-in 700y away the whole time.
+[[nodiscard]] inline std::vector<size_t> PickableQuestIndices(std::vector<int32> const& questLevels,
+                                                              std::vector<bool> const& questComplete)
+{
+    std::vector<size_t> completeIdx;
+    std::vector<int32> completeLevels;
+    for (size_t i = 0; i < questLevels.size() && i < questComplete.size(); ++i)
+        if (questComplete[i])
+        {
+            completeIdx.push_back(i);
+            completeLevels.push_back(questLevels[i]);
+        }
+    if (completeIdx.empty())
+        return LowestLevelQuestIndices(questLevels);
+    std::vector<size_t> best;
+    for (size_t k : LowestLevelQuestIndices(completeLevels))
+        best.push_back(completeIdx[k]);
+    return best;
+}
+
 #endif

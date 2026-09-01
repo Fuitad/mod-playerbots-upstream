@@ -1404,13 +1404,17 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
                 // ones gray out untried (Pierre, 2026-08-30). See QuestPickPolicy.h.
                 // Upstream: `uint32 questId = availableQuests[urand(0, availableQuests.size() - 1)];`
                 std::vector<int32> questLevels;
+                std::vector<bool> questComplete;
                 questLevels.reserve(availableQuests.size());
+                questComplete.reserve(availableQuests.size());
                 for (uint32 availableId : availableQuests)
                 {
                     Quest const* availableQuest = sObjectMgr->GetQuestTemplate(availableId);
                     questLevels.push_back(availableQuest ? availableQuest->GetQuestLevel() : 0);
+                    // Turn-ins first (Mournful, 1679, 2026-09-01): see PickableQuestIndices.
+                    questComplete.push_back(bot->GetQuestStatus(availableId) == QUEST_STATUS_COMPLETE);
                 }
-                std::vector<size_t> const lowest = LowestLevelQuestIndices(questLevels);
+                std::vector<size_t> const lowest = PickableQuestIndices(questLevels, questComplete);
                 uint32 questId = availableQuests[lowest[urand(0, lowest.size() - 1)]];
                 // PLB-LOCAL END(quest-pick-lowest-level)
                 const Quest* quest = sObjectMgr->GetQuestTemplate(questId);
