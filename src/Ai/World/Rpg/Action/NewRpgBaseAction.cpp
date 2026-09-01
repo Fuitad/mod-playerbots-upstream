@@ -875,9 +875,14 @@ bool FreeOneBagSlotForQuestReward(PlayerbotAI* botAI, Player* bot, Quest const* 
         bool const protectedUsage = usage == ITEM_USAGE_QUEST || usage == ITEM_USAGE_EQUIP ||
                                     usage == ITEM_USAGE_REPLACE || usage == ITEM_USAGE_USE ||
                                     usage == ITEM_USAGE_KEEP || usage == ITEM_USAGE_SKILL ||
-                                    usage == ITEM_USAGE_GUILD_TASK || bot->HasQuestForItem(item->GetEntry()) ||
+                                    usage == ITEM_USAGE_GUILD_TASK || usage == ITEM_USAGE_AMMO ||
+                                    bot->HasQuestForItem(item->GetEntry()) ||
                                     proto->Class == ITEM_CLASS_QUEST || proto->Class == ITEM_CLASS_KEY ||
-                                    proto->Class == ITEM_CLASS_CONTAINER;
+                                    proto->Class == ITEM_CLASS_CONTAINER ||
+                                    // A hunter's spare ammunition has a sell price of 0c and looked
+                                    // like the cheapest stack in the bag (measured 2026-09-01: 196
+                                    // Light Shot destroyed for a reward slot).
+                                    proto->Class == ITEM_CLASS_PROJECTILE;
         BagStackFacts f;
         f.protectedUsage = protectedUsage;
         f.bound = item->IsSoulBound() || proto->Bonding == BIND_WHEN_PICKED_UP;
