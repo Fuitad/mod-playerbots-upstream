@@ -969,6 +969,15 @@ bool NewRpgDoQuestAction::DoCompletedQuest(NewRpgInfo::DoQuest& data)
     // stayed at this POI for more than 5 minutes
     if (GetMSTimeDiffToNow(data.lastReachPOI) >= poiStayTime)
     {
+        // PLB-LOCAL(quest-abandon-probe): temporary diagnostic for the SECOND abandon site. A
+        // reward stay that times out has no stay-end probe, so it was invisible next to the
+        // objective-stay ABANDON lines (measured 2026-09-01: Bitter Rivals, quest complete, item in
+        // bag, 300s beside a quest-giver barrel that was not the ender). Names how many
+        // quest-giver creatures and gameobjects the bot could see when it gave up.
+        LOG_DEBUG("playerbots", "[QuestProbe] {} TURNIN-TIMEOUT quest {} distFromPoi {:.0f}y npcs {} gos {}",
+                  bot->GetName(), questId, bot->GetDistance(data.pos),
+                  context->GetValue<GuidVector>("possible new rpg targets")->Get().size(),
+                  context->GetValue<GuidVector>("possible new rpg game objects")->Get().size());
         // e.g. Can not reward quest to gameobjects
         /// @TODO: It may be better to make lowPriorityQuest a global set shared by all bots (or saved in db)
         botAI->lowPriorityQuest.insert(questId);
