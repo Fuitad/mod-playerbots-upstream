@@ -19,6 +19,9 @@
 // peon, inoculate an owlkin, cast a racial on a survivor). Pure decisions in
 // QuestUseTargetPolicy.h, world glue in NewRpgQuestUseTarget.cpp; this file carries the call site.
 #include "Ai/World/Rpg/Action/NewRpgQuestUseTarget.h"
+// PLB-LOCAL(quest-vendor-item): buy an item objective from the vendor the POI marks. World glue in
+// NewRpgQuestVendor.cpp; this file carries only the call site.
+#include "Ai/World/Rpg/Action/NewRpgQuestVendor.h"
 #include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner. Playerbots.h is
 // pulled in for AI_VALUE so the stay-end records can sample the grind pipeline's own values.
@@ -854,9 +857,12 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 if (ApproachProbeDue(bot))
                 {
                     GameObject* dbgGo = ObjectAccessor::GetGameObject(*bot, goTarget.guid);
-                    LOG_DEBUG("playerbots", "[QuestProbe] {} APPROACH quest {} go {} dist {:.1f} moved {}",
+                    // Heights ride along: Strangechild sat 39y from the Sen'jin attack plan in 3D
+                    // while standing on its 2D spot (2026-09-01), which only a z gap explains.
+                    LOG_DEBUG("playerbots", "[QuestProbe] {} APPROACH quest {} go {} dist {:.1f} moved {} botz {:.1f} goz {:.1f}",
                               bot->GetName(), questId, goTarget.entry,
-                              dbgGo ? bot->GetDistance(dbgGo) : -1.0f, moved);
+                              dbgGo ? bot->GetDistance(dbgGo) : -1.0f, moved, bot->GetPositionZ(),
+                              dbgGo ? dbgGo->GetPositionZ() : -1.0f);
                 }
                 if (moved)
                     return true;
@@ -909,6 +915,36 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         }
     }
     // PLB-LOCAL END(quest-gameobject-objective)
+
+    // PLB-LOCAL BEGIN(quest-vendor-item): an item objective a vendor standing here sells is bought,
+    // not farmed. The POI for such an objective marks the vendor, so the bot is already beside
+    // it; without this it stood there for the whole stay with nothing to kill (Valderotaux, The
+    // Chill of Death 375, Coarse Thread, 300s, kills 0, abandon, measured live 2026-09-01).
+    // Upstream: no purchase path in the quest loop.
+    {
+        Quest const* qTemplate = sObjectMgr->GetQuestTemplate(questId);
+        QuestVendorTarget const vendor =
+            qTemplate ? FindQuestObjectiveVendor(bot, qTemplate, data.objectiveIdx,
+                                                 context->GetValue<GuidVector>("nearest npcs")->Get())
+                      : QuestVendorTarget{};
+        if (vendor.guid)
+        {
+            QuestStayUseTracker::RecordSighting(bot);
+            Creature* vendorNpc = ObjectAccessor::GetCreature(*bot, vendor.guid);
+            if (vendorNpc && !bot->IsWithinDistInMap(vendorNpc, INTERACTION_DISTANCE))
+            {
+                (void)MoveWorldObjectTo(vendor.guid, INTERACTION_DISTANCE);
+                // Hold the tick while the walk converges, same reasoning as the gameobject approach.
+                return true;
+            }
+            bool const bought = BuyQuestObjectiveItem(bot, vendor);
+            QuestStayUseTracker::RecordAttempt(bot);
+            LOG_DEBUG("playerbots", "[QuestProbe] {} QBUY quest {} obj {} item {} x{} npc {} bought {}",
+                      bot->GetName(), questId, data.objectiveIdx, vendor.itemId, vendor.count, vendor.entry, bought);
+            return ForceToWait(2000);
+        }
+    }
+    // PLB-LOCAL END(quest-vendor-item)
 
     // PLB-LOCAL BEGIN(quest-use-target): operate the creature a use-credited objective needs.
     // Some creature objectives are credited by USING something on the creature, not killing it:
