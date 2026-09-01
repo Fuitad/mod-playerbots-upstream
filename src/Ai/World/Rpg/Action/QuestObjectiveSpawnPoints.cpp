@@ -112,3 +112,60 @@ std::vector<SpawnAnchorPoint> QuestObjectiveSpawnPointsFor(Quest const* quest, i
     std::lock_guard<std::mutex> lock(spawnCacheMutex);
     return spawnCache.emplace(key, std::move(points)).first->second;
 }
+
+namespace
+{
+// quest id -> ender entries, inverted once from the core's entry -> quest relation maps.
+std::once_flag enderIndexBuilt;
+std::unordered_map<uint32, std::vector<uint32>> questToCreatureEnders;
+std::unordered_map<uint32, std::vector<uint32>> questToGameObjectEnders;
+
+void BuildEnderIndexes()
+{
+    for (auto const& [entry, questId] : *sObjectMgr->GetCreatureQuestInvolvedRelationMap())
+        questToCreatureEnders[questId].push_back(entry);
+    for (auto const& [entry, questId] : *sObjectMgr->GetGOQuestInvolvedRelationMap())
+        questToGameObjectEnders[questId].push_back(entry);
+}
+}  // namespace
+
+std::vector<SpawnAnchorPoint> QuestEnderSpawnPointsFor(Quest const* quest, uint32 mapId)
+{
+    if (!quest)
+        return {};
+
+    std::call_once(enderIndexBuilt, BuildEnderIndexes);
+    std::vector<uint32> const* creatureEntries = nullptr;
+    std::vector<uint32> const* gameObjectEntries = nullptr;
+    if (auto it = questToCreatureEnders.find(quest->GetQuestId()); it != questToCreatureEnders.end())
+        creatureEntries = &it->second;
+    if (auto it = questToGameObjectEnders.find(quest->GetQuestId()); it != questToGameObjectEnders.end())
+        gameObjectEntries = &it->second;
+    if (!creatureEntries && !gameObjectEntries)
+        return {};
+
+    // Objective index 0xFFFE keeps the ender points apart from every objective's cache entry.
+    uint64 const key = (static_cast<uint64>(quest->GetQuestId()) << 32) | (static_cast<uint64>(0xFFFE) << 16) | mapId;
+    {
+        std::lock_guard<std::mutex> lock(spawnCacheMutex);
+        if (auto it = spawnCache.find(key); it != spawnCache.end())
+            return it->second;
+    }
+
+    auto const wants = [](std::vector<uint32> const* entries, uint32 id)
+    { return entries && id && std::find(entries->begin(), entries->end(), id) != entries->end(); };
+
+    std::vector<SpawnAnchorPoint> points;
+    if (creatureEntries)
+        for (auto const& [spawnId, data] : sObjectMgr->GetAllCreatureData())
+            if (data.mapid == mapId && (wants(creatureEntries, data.id) || wants(creatureEntries, data.id2) ||
+                                        wants(creatureEntries, data.id3)))
+                points.push_back({data.posX, data.posY, data.posZ, static_cast<uint32>(spawnId), true});
+    if (gameObjectEntries)
+        for (auto const& [spawnId, data] : sObjectMgr->GetAllGOData())
+            if (data.mapid == mapId && wants(gameObjectEntries, data.id))
+                points.push_back({data.posX, data.posY, data.posZ, static_cast<uint32>(spawnId), false});
+
+    std::lock_guard<std::mutex> lock(spawnCacheMutex);
+    return spawnCache.emplace(key, std::move(points)).first->second;
+}

@@ -935,6 +935,22 @@ bool NewRpgDoQuestAction::DoCompletedQuest(NewRpgInfo::DoQuest& data)
         float dx = poiInfo[0].pos.x, dy = poiInfo[0].pos.y;
         // z = MAX_HEIGHT as we do not know accurate z
         float dz = std::max(bot->GetMap()->GetHeight(dx, dy, MAX_HEIGHT), bot->GetMap()->GetWaterLevel(dx, dy));
+        // PLB-LOCAL BEGIN(quest-reward-spawn-anchor): the ender's own spawn row is the authoritative
+        // place to stand, z included. MAX_HEIGHT put the bot on the wrong floor of a multi-level
+        // interior (Ironforge, bot at z 445 under a giver at z 510) or below a ledge (Valley of
+        // Trials, 50y under Furl Scornbrow); the giver was in range in 2D and never usable. See
+        // QuestEnderSpawnPointsFor.
+        {
+            std::vector<SpawnAnchorPoint> const enders = QuestEnderSpawnPointsFor(quest, bot->GetMapId());
+            size_t const snapIdx = NearestSpawnAnchorIndex(enders, dx, dy, QUEST_ANCHOR_MAX_SNAP_DISTANCE);
+            if (snapIdx != QUEST_ANCHOR_NO_SPAWN)
+            {
+                dx = enders[snapIdx].x;
+                dy = enders[snapIdx].y;
+                dz = enders[snapIdx].z;
+            }
+        }
+        // PLB-LOCAL END(quest-reward-spawn-anchor)
 
         // double check for GetQuestPOIPosAndObjectiveIdx
         if (dz == INVALID_HEIGHT || dz == VMAP_INVALID_HEIGHT_VALUE)

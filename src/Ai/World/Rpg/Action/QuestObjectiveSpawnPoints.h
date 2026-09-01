@@ -35,4 +35,12 @@ struct QuestObjectiveSources
 [[nodiscard]] std::vector<SpawnAnchorPoint> QuestObjectiveSpawnPointsFor(Quest const* quest, int32 objectiveIdx,
                                                                          uint32 mapId);
 
+// Every spawn on the given map of the creatures and gameobjects that END the quest (its
+// questenders). The reward POI only carries x and y; the ender's own spawn row carries the z the
+// bot must stand at. Measured live 2026-09-01: Muren Stormpike at z 510 in Ironforge with the bot
+// parked at z 445 under him, and Furl Scornbrow on a ledge at z 76 with the bot 50y below, both
+// reward stays timing out with the giver "visible" but unreachable. Cached like the objective
+// spawn points.
+[[nodiscard]] std::vector<SpawnAnchorPoint> QuestEnderSpawnPointsFor(Quest const* quest, uint32 mapId);
+
 #endif
