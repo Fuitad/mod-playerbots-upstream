@@ -41,6 +41,15 @@
         // while standing at the Dolanaar moonwell, a use-provided-item-at-location mechanic no
         // seek models. Pierre called the blacklist on 2026-08-30.
         case 921:
+        // Bitter Rivals and The Sprouted Fronds: the quest ENDER is a gameobject that only exists
+        // while a script has it spawned (spawntimesecs -600: Jarven Thunderbrew swaps the guarded
+        // barrel for the unguarded one at his patrol waypoint 2; the Sprouted Frond likewise).
+        // The turn-in stay is five minutes and waits for a giver that may not appear in that
+        // window, then marks the quest low priority for the life of the process. Measured live
+        // 2026-09-01: Jovy, quest complete, item in bag, 300s beside the guarded barrel, abandon.
+        // They are the only two overworld quests with an event-spawned ender.
+        case 310:
+        case 2399:
             return true;
         default:
             return false;
