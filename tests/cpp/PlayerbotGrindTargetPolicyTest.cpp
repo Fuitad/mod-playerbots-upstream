@@ -88,3 +88,12 @@ TEST(PlayerbotGrindTargetPolicyTest, ActiveGrindingAndInAggroCandidatesNeverNeed
     EXPECT_FALSE(GrindCandidateNeedsQuestRelevance(false, true, false));
     EXPECT_FALSE(GrindCandidateNeedsQuestRelevance(true, false, false));
 }
+
+TEST(PlayerbotGrindTargetPolicyTest, AGrayCreatureTheQuestNeedsStaysEligible)
+{
+    // The defect this pins: Skirmish at Echo Ridge at bot level 10, Kobold Laborers level 3 give
+    // no experience, and the XP gate dropped every one of them before the quest was consulted.
+    EXPECT_TRUE(GrindCandidateGrayEligible(false, true));
+    EXPECT_FALSE(GrindCandidateGrayEligible(false, false));
+    EXPECT_TRUE(GrindCandidateGrayEligible(true, false));
+}

@@ -99,8 +99,17 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
         if (!bot->IsHostileTo(unit) && unit->GetNpcFlags() != UNIT_NPC_FLAG_NONE)
             continue;
 
+        // PLB-LOCAL BEGIN(grind-gray-objective): a gray creature the bot's quest needs stays
+        // eligible. See GrindCandidateGrayEligible for the measurement.
+        // Upstream: `if (!bot->isHonorOrXPTarget(unit)) continue;`
         if (!bot->isHonorOrXPTarget(unit))
-            continue;
+        {
+            if (needForQuestMap.find(unit->GetEntry()) == needForQuestMap.end())
+                needForQuestMap[unit->GetEntry()] = needForQuest(unit);
+            if (!GrindCandidateGrayEligible(false, needForQuestMap[unit->GetEntry()]))
+                continue;
+        }
+        // PLB-LOCAL END(grind-gray-objective)
 
         if (abs(bot->GetPositionZ() - unit->GetPositionZ()) > INTERACTION_DISTANCE)
             continue;

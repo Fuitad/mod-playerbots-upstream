@@ -71,4 +71,16 @@ struct GrindCandidateFacts
     return inactiveGrindStatus && outOfAggro && !stayingAtQuestPoi;
 }
 
+// Whether a creature that yields no experience (gray to the bot) may still be ground.
+//
+// Upstream drops every non-XP creature before any other check. A bot working a low quest it
+// still holds (the lowest-level-first picker sends it there on purpose) then stands among the
+// objective creatures and attacks none of them: measured live 2026-09-01, Skirmish at Echo Ridge
+// (quest level 5, Kobold Laborers level 3) at bot level 10 ended four stays with 16 to 50 targets
+// in range and zero kills. A creature the bot's quest needs is eligible whatever its level.
+[[nodiscard]] inline bool GrindCandidateGrayEligible(bool yieldsExperience, bool neededForQuest)
+{
+    return yieldsExperience || neededForQuest;
+}
+
 #endif
