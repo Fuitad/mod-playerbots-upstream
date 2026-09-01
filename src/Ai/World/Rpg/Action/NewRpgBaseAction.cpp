@@ -1015,7 +1015,10 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
             float dx = poiPoints[nearest].first, dy = poiPoints[nearest].second;
             // PLB-LOCAL END(quest-poi-real-point)
 
-            if (bot->GetDistance2d(dx, dy) >= 1500.0f)
+            // PLB-LOCAL(quest-reward-poi-reach): a turn-in is one trip with a guaranteed payoff, so
+            // it gets a longer leash than an objective. See QUEST_REWARD_POI_MAX_DISTANCE.
+            // Upstream: `if (bot->GetDistance2d(dx, dy) >= 1500.0f)`
+            if (bot->GetDistance2d(dx, dy) >= QUEST_REWARD_POI_MAX_DISTANCE)
                 continue;
 
             float dz = std::max(bot->GetMap()->GetHeight(dx, dy, MAX_HEIGHT), bot->GetMap()->GetWaterLevel(dx, dy));
