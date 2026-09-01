@@ -56,9 +56,29 @@ enum class QuestUseMode : uint8
             return {28880, 57901, 59542, 59543, 59544, 59545, 59547, 59548};
         case 8346:  // Thirst Unending - Mana Tap
             return {28734};
+        // Priest garment quests: npc_garments_of_quests credits Lesser Heal rank 2 (2052) on the
+        // wounded guard, then Power Word: Fortitude rank 1 (1243) once healed, in that order. The
+        // list is a SEQUENCE for these, see QuestUseSpellForAttempt. Measured live 2026-08-31 and
+        // 2026-09-01: three abandons and gray-drops with usemode 0 before the table knew them.
+        case 5621:  // Garments of the Moon (night elf)
+        case 5624:  // Garments of the Light (human)
+        case 5625:  // Garments of the Light (dwarf)
+        case 5648:  // Garments of Spirituality (troll)
+        case 5650:  // Garments of Darkness (undead)
+            return {2052, 1243};
         default:
             return {};
     }
+}
+
+// Which of the bot's known quest spells to cast on this attempt. Single-spell quests always cast
+// their one spell; multi-spell quests walk the list in order so a credit script that wants spell
+// A then spell B sees both, and keep cycling so a lost cast is retried on the next pass.
+[[nodiscard]] inline uint32 QuestUseSpellForAttempt(std::vector<uint32> const& knownSpells, uint32 attempt)
+{
+    if (knownSpells.empty())
+        return 0;
+    return knownSpells[attempt % knownSpells.size()];
 }
 
 // The creature entries a use-seek accepts as the objective target. Some quests count a credit

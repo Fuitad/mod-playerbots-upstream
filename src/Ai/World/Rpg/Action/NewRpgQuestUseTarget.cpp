@@ -11,6 +11,7 @@
 
 #include "NewRpgQuestUseTarget.h"
 
+#include "Ai/World/Rpg/QuestStayUseTracker.h"
 #include "ConditionMgr.h"
 #include "Item.h"
 #include "ItemTemplate.h"
@@ -87,12 +88,13 @@ std::vector<uint32> ToolSpellTargetEntries(uint32 spellId)
     return entries;
 }
 
-uint32 KnownQuestSpell(Player* bot, uint32 questId)
+uint32 KnownQuestSpell(Player* bot, uint32 questId, uint32 attempt)
 {
+    std::vector<uint32> known;
     for (uint32 spellId : QuestUseSpellsForQuest(questId))
         if (bot->HasSpell(spellId))
-            return spellId;
-    return 0;
+            known.push_back(spellId);
+    return QuestUseSpellForAttempt(known, attempt);
 }
 }  // namespace
 
@@ -104,7 +106,7 @@ bool QuestObjectiveHasUseTool(PlayerbotAI* botAI, Quest const* quest, int32 obje
         return false;
 
     Player* bot = botAI->GetBot();
-    return SourceItemWithUseSpell(bot, quest) != nullptr || KnownQuestSpell(bot, quest->GetQuestId()) != 0;
+    return SourceItemWithUseSpell(bot, quest) != nullptr || KnownQuestSpell(bot, quest->GetQuestId(), 0) != 0;
 }
 
 QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx,
@@ -130,7 +132,7 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
         mode = QuestUseMode::Item;
         toolId = item->GetEntry();
     }
-    else if (uint32 spellId = KnownQuestSpell(bot, quest->GetQuestId()))
+    else if (uint32 spellId = KnownQuestSpell(bot, quest->GetQuestId(), QuestStayUseTracker::AttemptsThisStay(bot)))
     {
         mode = QuestUseMode::Spell;
         toolId = spellId;

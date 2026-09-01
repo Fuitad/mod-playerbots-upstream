@@ -172,3 +172,23 @@ TEST(PlayerbotQuestUseTargetPolicyTest, ATargetFarFromBothBotAndAnchorStaysFilte
 
     EXPECT_EQ(BestQuestUseTargetIndex(candidates, 5625.0f), QUEST_USE_NO_CANDIDATE);
 }
+
+TEST(PlayerbotQuestUseTargetPolicyTest, TheGarmentQuestsCastHealThenFortitudeInOrder)
+{
+    // npc_garments_of_quests credits Lesser Heal rank 2 first and Power Word: Fortitude rank 1
+    // second; a bot that only ever cast the first known spell would heal forever.
+    std::vector<uint32> const spells = QuestUseSpellsForQuest(5624);
+    ASSERT_EQ(spells.size(), 2u);
+    EXPECT_EQ(QuestUseSpellForAttempt(spells, 0), 2052u);
+    EXPECT_EQ(QuestUseSpellForAttempt(spells, 1), 1243u);
+    EXPECT_EQ(QuestUseSpellForAttempt(spells, 2), 2052u);
+    EXPECT_EQ(QuestUseSpellsForQuest(5650), spells);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, ASingleSpellQuestCastsItOnEveryAttempt)
+{
+    std::vector<uint32> const spells = {28734};
+    EXPECT_EQ(QuestUseSpellForAttempt(spells, 0), 28734u);
+    EXPECT_EQ(QuestUseSpellForAttempt(spells, 7), 28734u);
+    EXPECT_EQ(QuestUseSpellForAttempt({}, 3), 0u);
+}
