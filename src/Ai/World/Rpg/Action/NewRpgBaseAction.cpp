@@ -1026,8 +1026,13 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
             if (dz == INVALID_HEIGHT || dz == VMAP_INVALID_HEIGHT_VALUE)
                 continue;
 
-            if (bot->GetZoneId() != bot->GetMap()->GetZoneId(bot->GetPhaseMask(), dx, dy, dz))
-                continue;
+            // PLB-LOCAL(quest-reward-poi-reach): no same-zone gate on a turn-in. A capital city is
+            // its own zone, so a quest completed in the surrounding zone that turns in inside the
+            // city was only ever picked while the bot happened to be in the city for a vendor trip.
+            // Measured 2026-09-01: Mournful, 1679 complete, 25 minutes around Kharanos never
+            // re-picking Muren Stormpike in Ironforge; the draenei Call of Earth 9449 (Exodar) had 5
+            // bots at complete. The distance cap above still bounds the trip.
+            // Upstream: `if (bot->GetZoneId() != bot->GetMap()->GetZoneId(bot->GetPhaseMask(), dx, dy, dz)) continue;`
 
             poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex});
         }

@@ -21,7 +21,8 @@
 // whose ender sits farther than that from where the bot completes it. Measured 2026-09-01: The
 // Missing Fisherman (10428) is auto-complete at Dulliah (-4180, -12493) and turns in to Cowlen on
 // Silvermyst Isle (-5358, -11175), 1700 yards away; 13 bots sat at complete with 0 ever rewarded.
-// A turn-in is one trip with a guaranteed payoff, so it gets double the objective leash.
+// A turn-in is one trip with a guaranteed payoff, so it gets double the objective leash, and no
+// same-zone gate: capital cities are their own zone (Mournful, 1679, Kharanos to Ironforge).
 constexpr float QUEST_REWARD_POI_MAX_DISTANCE = 3000.0f;
 
 // Indices of the quests tied at the LOWEST quest level, so the caller can pick randomly among
