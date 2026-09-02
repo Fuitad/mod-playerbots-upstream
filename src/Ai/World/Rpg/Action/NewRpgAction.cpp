@@ -95,6 +95,34 @@ bool ApproachProbeDue(Player* bot)
 }  // namespace
 // PLB-LOCAL END(quest-abandon-probe)
 
+// PLB-LOCAL BEGIN(quest-stay-spawn-sweep): once per 20 s per bot, the stay may move to the source
+// spawn whose creature is actually up. See the call site in DoIncompleteQuest.
+namespace
+{
+std::mutex sweepMutex;
+std::unordered_map<ObjectGuid::LowType, time_t> sweepLastCheck;
+
+bool SweepDue(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(sweepMutex);
+    time_t& last = sweepLastCheck[bot->GetGUID().GetCounter()];
+    time_t const now = time(nullptr);
+    if (now - last < 20)
+        return false;
+    last = now;
+    return true;
+}
+
+Creature* LiveCreatureAt(Player* bot, SpawnAnchorPoint const& spawn)
+{
+    if (!spawn.creature || spawn.spawnId == 0)
+        return nullptr;
+    auto const range = bot->GetMap()->GetCreatureBySpawnIdStore().equal_range(spawn.spawnId);
+    return range.first != range.second ? range.first->second : nullptr;
+}
+}  // namespace
+// PLB-LOCAL END(quest-stay-spawn-sweep)
+
 // PLB-LOCAL BEGIN(quest-loot-container): some quest items only exist inside another item the bot
 // loots as the quest's ItemDrop (measured 2026-09-01: Ferocitas the Dream Eater, quest 2459, drops
 // Gnarlpine Necklace 8049 whose item_loot_template holds Tallonkai's Jewel 8050). Looting the
@@ -850,6 +878,54 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         data.objectiveIdx = 0;
         return true;
     }
+
+    // PLB-LOCAL BEGIN(quest-stay-spawn-sweep): when no source creature is up within reach of the
+    // anchor (same floor, grind distance) but one is up at another source spawn within the snap
+    // cap, move the stay there. Pooled rares come up at one of several rows (Lord Melenas, quest
+    // 932: three rows, one up at a time, 120 s), and the picker anchors on the POI's row.
+    // Measured 2026-09-01 with the SOURCE probe: Melenas alive at spawn 49850, 29 to 71 yards
+    // from the bots, 12 to 19 yards lower and behind cave walls; the grind filter (z gap, line
+    // of sight) never offered him and six stays abandoned. The new anchor keeps the row z so the
+    // walk takes the ramp. The stay timer restarts at the new anchor.
+    if (data.lastReachPOI && SweepDue(bot))
+    {
+        Quest const* sweepQuest = sObjectMgr->GetQuestTemplate(questId);
+        std::vector<SpawnAnchorPoint> const sweepSpawns =
+            sweepQuest ? QuestObjectiveSpawnPointsFor(sweepQuest, data.objectiveIdx, bot->GetMapId())
+                       : std::vector<SpawnAnchorPoint>{};
+        bool aliveNear = false;
+        for (SpawnAnchorPoint const& spawn : sweepSpawns)
+        {
+            if (CreatureSpawnsWithin({spawn}, data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                     sPlayerbotAIConfig.grindDistance) == 0 ||
+                std::abs(spawn.z - data.pos.GetPositionZ()) > INTERACTION_DISTANCE)
+                continue;
+            Creature* live = LiveCreatureAt(bot, spawn);
+            if (live && live->IsAlive())
+            {
+                aliveNear = true;
+                break;
+            }
+        }
+        if (!aliveNear)
+            for (SpawnAnchorPoint const& spawn : sweepSpawns)
+            {
+                if (data.pos.GetExactDist2d(spawn.x, spawn.y) < 1.0f ||
+                    data.pos.GetExactDist2d(spawn.x, spawn.y) > QUEST_ANCHOR_MAX_SNAP_DISTANCE)
+                    continue;
+                Creature* live = LiveCreatureAt(bot, spawn);
+                if (!live || !live->IsAlive())
+                    continue;
+                LOG_DEBUG("playerbots", "[QuestProbe] {} SWEEP quest {} obj {} to spawn {} dist {:.0f}y dz {:.1f}",
+                          bot->GetName(), questId, data.objectiveIdx, spawn.spawnId,
+                          bot->GetDistance2d(spawn.x, spawn.y), spawn.z - bot->GetPositionZ());
+                data.pos = WorldPosition(bot->GetMapId(), spawn.x, spawn.y, spawn.z);
+                data.lastReachPOI = 0;
+                (void)MoveFarTo(data.pos);
+                return true;
+            }
+    }
+    // PLB-LOCAL END(quest-stay-spawn-sweep)
 
     // PLB-LOCAL BEGIN(quest-gameobject-objective): operate the gameobject the current objective
     // needs. Upstream idles here on the comment "kill mobs and looting quest should be done
