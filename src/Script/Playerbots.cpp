@@ -22,6 +22,8 @@
 #include "PlayerScript.h"
 // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner.
 #include "Ai/World/Rpg/QuestStayKillProbe.h"
+// PLB-LOCAL(death-probe): temporary diagnostic include, removed with the probe.
+#include "Ai/World/Rpg/DeathProbe.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotCommandScript.h"
 #include "PlayerbotGuildMgr.h"
@@ -563,6 +565,8 @@ void AddPlayerbotsScripts()
     new PlayerbotsPlayerScript();
     // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic registration, removed with the probe.
     new QuestStayKillProbeScript();
+    // PLB-LOCAL(death-probe): temporary diagnostic registration, removed with the probe.
+    new DeathProbeScript();
     new PlayerbotsMiscScript();
     new PlayerbotsServerScript();
     new PlayerbotsWorldScript();
