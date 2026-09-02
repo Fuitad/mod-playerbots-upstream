@@ -25,6 +25,7 @@
 // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "GameTime.h"
 #include "MapMgr.h"
+#include "PathGenerator.h"
 // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "PhysicalDeathCountPolicy.h"
 #include "PlayerbotRecoveryPolicy.h"
@@ -357,17 +358,43 @@ bool FindCorpseAction::Execute(Event /*event*/)
                 float const toCorpse = bot->GetAngle(corpsePos.GetPositionX(), corpsePos.GetPositionY());
                 // Straight at the corpse first, then 40 degrees either side: a lake or a cliff on
                 // the direct line is the usual reason a step cannot path.
+                float firstStepX = 0.0f, firstStepY = 0.0f, firstStepZ = INVALID_HEIGHT;
                 for (float const turn : {0.0f, 0.7f, -0.7f})
                 {
                     float const sx = bot->GetPositionX() + std::cos(toCorpse + turn) * 100.0f;
                     float const sy = bot->GetPositionY() + std::sin(toCorpse + turn) * 100.0f;
                     float const sz = std::max(bot->GetMap()->GetHeight(sx, sy, MAX_HEIGHT),
                                               bot->GetMap()->GetWaterLevel(sx, sy));
+                    if (turn == 0.0f)
+                    {
+                        firstStepX = sx;
+                        firstStepY = sy;
+                        firstStepZ = sz;
+                    }
                     if (sz == INVALID_HEIGHT || sz == VMAP_INVALID_HEIGHT_VALUE)
                         continue;
                     moved = MoveTo(bot->GetMapId(), sx, sy, sz, false, false);
                     if (moved)
                         break;
+                }
+                // PLB-LOCAL(death-probe): why the straight step cannot path. Temporary diagnostic:
+                // 25 of 35 fallbacks on 2026-09-02 00:42 to 00:56 were far corpses whose steps
+                // failed from the graveyard itself (Pehki, 01:01: 1102 yards, standing still).
+                if (!moved && firstStepZ != INVALID_HEIGHT && firstStepZ != VMAP_INVALID_HEIGHT_VALUE)
+                {
+                    PathGenerator probe(bot);
+                    probe.CalculatePath(firstStepX, firstStepY, firstStepZ);
+                    LOG_DEBUG("playerbots",
+                              "[DeathProbe] {} STEP-PATH type {} length {:.0f} points {} to {:.0f},{:.0f},{:.0f}",
+                              bot->GetName(), static_cast<uint32>(probe.GetPathType()), probe.getPathLength(),
+                              probe.GetPath().size(), firstStepX, firstStepY, firstStepZ);
+                    // PLB-LOCAL(revive-safety): a ghost walks on water, so a step the mesh cannot
+                    // path (Pehki, 2026-09-02 01:01: the Lordamere Lake shore, corpse across the
+                    // water) goes as a straight line. Without it the spirit healer action walked
+                    // the ghost 174 yards back to the graveyard, the next tick stepped it back to
+                    // the shore, and the pair repeated every 47 seconds until the manager sent the
+                    // bot home; spirit revives fell from the majority to 2 of 69 that way.
+                    moved = MoveTo(bot->GetMapId(), firstStepX, firstStepY, firstStepZ, false, false, false, true);
                 }
                 // The first seconds after the graveyard teleport often cannot path at all, and the
                 // spirit healer stands right there: Adelbert (2026-09-02 00:21) was revived by it
