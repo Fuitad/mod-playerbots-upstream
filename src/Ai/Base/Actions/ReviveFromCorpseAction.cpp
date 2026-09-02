@@ -82,6 +82,21 @@ uint32 HostilesInReach(PlayerbotAI* /*botAI*/, Player* bot, Creature** nearest =
     }
     return count;
 }
+// The height a corpse walk may aim at: the surfaces (terrain and models) within the step window of
+// the ghost's own height, or INVALID_HEIGHT. A height read from the top of the world lands on the
+// mesa above a cave (Vavapu, 2026-09-02 05:10: the wait spot 34 yards from her corpse in the
+// Burning Blade cave resolved 100 yards up, the mesh found the ramp, and the vertical cap brought
+// her back down, six times) or on the terrain grid under Teldrassil's tree. See CorpseWalkPolicy.h.
+float CorpseStepHeight(Player* bot, float x, float y)
+{
+    float const from = bot->GetPositionZ() + CORPSE_STEP_HEIGHT_WINDOW_YARDS;
+    float const ground =
+        bot->GetMap()->GetHeight(bot->GetPhaseMask(), x, y, from, true, 2.0f * CORPSE_STEP_HEIGHT_WINDOW_YARDS);
+    float const z = std::max(ground, bot->GetMap()->GetWaterLevel(x, y));
+    if (z == INVALID_HEIGHT || z == VMAP_INVALID_HEIGHT_VALUE || !CorpseStepHeightPlausible(bot->GetPositionZ(), z))
+        return INVALID_HEIGHT;
+    return z;
+}
 }  // namespace
 // PLB-LOCAL END(revive-safety)
 
@@ -339,8 +354,10 @@ bool FindCorpseAction::Execute(Event /*event*/)
             // Height from the top of the world: the search only looks down, so a spot uphill of
             // the corpse read as invalid from corpseZ + 5 and the move failed (SPIRIT-FALLBACK
             // lines at 00:00 on 2026-09-02: corpseDist 22, threat in reach, holding false).
-            float const wz = std::max(bot->GetMap()->GetHeight(wx, wy, MAX_HEIGHT),
-                                      bot->GetMap()->GetWaterLevel(wx, wy));
+            // PLB-LOCAL(revive-safety): the wait spot keeps to the ghost's own floor; see
+            // CorpseStepHeight above. A height from the top of the world put the spot on the mesa
+            // over a cave.
+            float const wz = CorpseStepHeight(bot, wx, wy);
             moveToPos = WorldPosition(corpsePos.GetMapId(), wx, wy, wz, 0.0f);
             holdingAtWaitSpot = bot->GetDistance2d(wx, wy) < 5.0f;
             // A wait spot the path cannot reach (cliff, water, wall) falls back to any reachable
@@ -450,17 +467,6 @@ bool FindCorpseAction::Execute(Event /*event*/)
                 // height (models included), not from the terrain grid: the grid lies under
                 // Teldrassil's tree, and a height read from the top of the world sent Jdyalani
                 // (2026-09-02 01:20) 342 yards below it. See CorpseWalkPolicy.h.
-                auto const stepHeight = [&](float x, float y) -> float
-                {
-                    float const from = bot->GetPositionZ() + CORPSE_STEP_HEIGHT_WINDOW_YARDS;
-                    float const ground = bot->GetMap()->GetHeight(bot->GetPhaseMask(), x, y, from, true,
-                                                                  2.0f * CORPSE_STEP_HEIGHT_WINDOW_YARDS);
-                    float const z = std::max(ground, bot->GetMap()->GetWaterLevel(x, y));
-                    if (z == INVALID_HEIGHT || z == VMAP_INVALID_HEIGHT_VALUE ||
-                        !CorpseStepHeightPlausible(bot->GetPositionZ(), z))
-                        return INVALID_HEIGHT;
-                    return z;
-                };
                 float firstStepX = 0.0f, firstStepY = 0.0f, firstStepZ = INVALID_HEIGHT;
                 for (float const turn : {0.0f, 0.7f, -0.7f})
                 {
