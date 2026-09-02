@@ -261,6 +261,13 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     EXPECT_TRUE(QuestIsRpgBlacklisted(9449));   // Call of Earth, draenei, ends in the Exodar
     EXPECT_TRUE(QuestIsRpgBlacklisted(10491));  // Call of Air, the last id of the family
     EXPECT_FALSE(QuestIsRpgBlacklisted(1515));  // Dogran's Captivity, the id just below the family
+    // Mechanic quests the stay cannot do (Pierre, 2026-09-02): runestone sequence, gate summoning,
+    // self-cast disguise. Cleansing the Scar (9489) stays open: a buff cast on friendly rangers is
+    // doable once the stay can cast a spell on a friendly objective.
+    EXPECT_TRUE(QuestIsRpgBlacklisted(8490));  // Powering our Defenses
+    EXPECT_TRUE(QuestIsRpgBlacklisted(1819));  // Ulag the Cleaver
+    EXPECT_TRUE(QuestIsRpgBlacklisted(9531));  // Tree's Company
+    EXPECT_FALSE(QuestIsRpgBlacklisted(9489));
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }

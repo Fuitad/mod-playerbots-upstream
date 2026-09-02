@@ -66,6 +66,20 @@
         case 9500: case 9501: case 9502: case 9503: case 9504: case 9508: case 9509:
         case 9547: case 9551: case 9552: case 9553: case 9554: case 9555:
         case 10490: case 10491:
+        // Powering our Defenses: credit comes from using the quest's runestone gameobjects in a
+        // sequence the stay never completes (five-minute stays at the stone with every use
+        // candidate refused; four abandons across two bots on 2026-09-02 alone, once after each
+        // restart because the given-up list lives in memory). Pierre called the blacklist on
+        // 2026-09-02.
+        case 8490:
+        // Ulag the Cleaver: Ulag is summoned by using the mausoleum gate, an object-use event
+        // no seek models; 926 and 325 second stays with nothing to kill on 2026-09-02. Pierre
+        // called the blacklist on 2026-09-02.
+        case 1819:
+        // Tree's Company: the quest's disguise is self-cast and the credit comes from standing
+        // near the target while disguised, a use-on-self-then-approach mechanic outside every
+        // seek's model. Pierre called the blacklist on 2026-09-02.
+        case 9531:
             return true;
         default:
             return false;
