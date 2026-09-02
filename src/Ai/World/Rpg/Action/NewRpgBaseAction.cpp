@@ -19,6 +19,7 @@
 #include "Ai/World/Rpg/QuestBlacklistPolicy.h"
 #include "Ai/World/Rpg/QuestPickPolicy.h"
 #include "Ai/World/Rpg/QuestItemDropPolicy.h"
+#include "Ai/World/Rpg/QuestDeathCooldown.h"
 #include "Ai/World/Rpg/QuestRewardBagPolicy.h"
 #include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
 // PLB-LOCAL(maintenance-errand): movement yields to a claimed repair or vendor trip.
@@ -1434,6 +1435,9 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
                 // PLB-LOCAL(quest-blacklist): see QuestBlacklistPolicy.h.
                 if (QuestIsRpgBlacklisted(questId))
                     continue;
+                // PLB-LOCAL(quest-death-cooldown): a quest that just killed the bot waits.
+                if (QuestDeathCooldown::Active(bot->GetGUID().GetCounter(), questId, getMSTime()))
+                    continue;
 
                 std::vector<POIInfo> poiInfo;
                 if (GetQuestPOIPosAndObjectiveIdx(questId, poiInfo, true))
@@ -1566,6 +1570,9 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status, NewRpgStatus
                     continue;
                 // PLB-LOCAL(quest-blacklist): see QuestBlacklistPolicy.h.
                 if (QuestIsRpgBlacklisted(questId))
+                    continue;
+                // PLB-LOCAL(quest-death-cooldown): a quest that just killed the bot waits.
+                if (QuestDeathCooldown::Active(bot->GetGUID().GetCounter(), questId, getMSTime()))
                     continue;
 
                 std::vector<POIInfo> poiInfo;

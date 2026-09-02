@@ -31,6 +31,7 @@
 // that dispatched its tool but lost the race for a creditable target.
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Ai/World/Rpg/QuestItemDropPolicy.h"
+#include "Ai/World/Rpg/QuestDeathCooldown.h"
 #include "Ai/World/Rpg/QuestStayUseTracker.h"
 #include "GameTime.h"
 #include <algorithm>
@@ -736,13 +737,26 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
     // PLB-LOCAL BEGIN(quest-stay-death-rotate): a stay that has cost the bot two deaths ends now,
     // with the same low-priority mark a fruitless stay earns, instead of sending the bot back into
     // the fight for a third time. Upstream: nothing here; the stay ran its five minutes regardless.
-    if (uint32 const deaths = DeathsThisStay(bot, botAI); QuestStayLostToDeaths(deaths))
+    // Refined 2026-09-02 (QuestDeathCooldown.h): the FIRST death ends the stay without blame and
+    // puts the quest on a cooldown for this bot; the blame comes with a second death on the same
+    // quest inside the cooldown. Nine of ten fast relapses had re-picked the same quest.
+    if (DeathsThisStay(bot, botAI) > 0)
     {
-        botAI->lowPriorityQuest.insert(questId);
-        botAI->rpgStatistic.questAbandoned++;
-        LOG_DEBUG("playerbots", "[QuestProbe] {} ABANDON-DEATH quest {} obj {} deaths {} stayed {}s lvl {}",
-                  bot->GetName(), questId, data.objectiveIdx, deaths, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
-                  bot->GetLevel());
+        QuestDeathRecord const record = QuestDeathCooldown::Note(bot->GetGUID().GetCounter(), questId, getMSTime());
+        if (QuestStayLostToDeaths(record.deaths))
+        {
+            botAI->lowPriorityQuest.insert(questId);
+            botAI->rpgStatistic.questAbandoned++;
+            LOG_DEBUG("playerbots", "[QuestProbe] {} ABANDON-DEATH quest {} obj {} deaths {} stayed {}s lvl {}",
+                      bot->GetName(), questId, data.objectiveIdx, record.deaths,
+                      GetMSTimeDiffToNow(data.lastReachPOI) / 1000, bot->GetLevel());
+        }
+        else
+        {
+            LOG_DEBUG("playerbots", "[QuestProbe] {} ROTATE-DEATH quest {} obj {} deaths {} stayed {}s lvl {}",
+                      bot->GetName(), questId, data.objectiveIdx, record.deaths,
+                      GetMSTimeDiffToNow(data.lastReachPOI) / 1000, bot->GetLevel());
+        }
         botAI->rpgInfo.ChangeToIdle();
         return true;
     }

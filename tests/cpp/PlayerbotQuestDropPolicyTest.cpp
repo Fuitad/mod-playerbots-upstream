@@ -9,6 +9,7 @@
  */
 
 #include "Ai/World/Rpg/QuestBlacklistPolicy.h"
+#include "Ai/World/Rpg/QuestDeathCooldown.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Ai/World/Rpg/QuestItemDropPolicy.h"
 #include "Ai/World/Rpg/QuestPickPolicy.h"
@@ -113,6 +114,25 @@ TEST(PlayerbotQuestDropPolicyTest, ReachabilityIsOnlyConsultedWhenItCanChangeThe
     EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 15, true, false, true)));
     EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 15, false, true, true)));
     EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 28, false, false, true)));
+}
+
+TEST(PlayerbotQuestDropPolicyTest, ADeathPutsTheQuestOnCooldownAndTwoCloseDeathsBlameIt)
+{
+    // 2026-09-02: nine of ten fast relapses re-picked the quest the bot had just died on.
+    QuestDeathRecord record;
+    EXPECT_FALSE(QuestOnDeathCooldown(record, 1000));
+    record = RecordQuestDeath(record, 1000);
+    EXPECT_EQ(record.deaths, 1u);
+    EXPECT_TRUE(QuestOnDeathCooldown(record, 1000 + QUEST_DEATH_COOLDOWN_MS - 1));
+    EXPECT_FALSE(QuestOnDeathCooldown(record, 1000 + QUEST_DEATH_COOLDOWN_MS));
+    // One death rotates without blame; a second inside the cooldown is the two-death verdict.
+    EXPECT_FALSE(QuestStayLostToDeaths(record.deaths));
+    record = RecordQuestDeath(record, 5000);
+    EXPECT_EQ(record.deaths, 2u);
+    EXPECT_TRUE(QuestStayLostToDeaths(record.deaths));
+    // A death long after the cooldown starts the count over.
+    record = RecordQuestDeath(record, 5000 + QUEST_DEATH_COOLDOWN_MS);
+    EXPECT_EQ(record.deaths, 1u);
 }
 
 TEST(PlayerbotQuestDropPolicyTest, TwoDeathsInOneStayEndIt)
