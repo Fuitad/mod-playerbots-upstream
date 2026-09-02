@@ -71,11 +71,18 @@ public:
         if (!botAI || !sRandomPlayerbotMgr.IsRandomBot(player))
             return;
         uint32 const questId = DeathProbe::QuestInProgress(botAI);
+        // Power at death: a caster that died dry lost the fight to its mana, one that died full
+        // never cast (33 of 79 deaths on 2026-09-02 02:08 to 02:22 were to mobs two or more
+        // levels below the bot, 17 of them priests and shamans).
+        Powers const powerType = player->getPowerType();
+        uint32 const powerPct =
+            player->GetMaxPower(powerType) ? player->GetPower(powerType) * 100 / player->GetMaxPower(powerType) : 0;
         LOG_DEBUG("playerbots",
-                  "[DeathProbe] {} DIED lvl {} class {} zone {} area {} rpg {} quest {} broken {} money {}c t {}",
+                  "[DeathProbe] {} DIED lvl {} class {} zone {} area {} rpg {} quest {} broken {} money {}c power {}% "
+                  "t {}",
                   player->GetName(), player->GetLevel(), player->getClass(), player->GetZoneId(), player->GetAreaId(),
                   static_cast<uint32>(botAI->rpgInfo.GetStatus()), questId, DeathProbe::BrokenEquipmentSlots(player),
-                  player->GetMoney(), getMSTime());
+                  player->GetMoney(), powerPct, getMSTime());
         // The chain record the corpse walk consults (DeathRecoveryPolicy.h). The killer's level gap
         // arrives through OnPlayerKilledByCreature just before this hook; an environmental death
         // leaves it at zero.
@@ -114,10 +121,11 @@ public:
             return;
         _pendingKillerLevelGap[killed->GetGUID().GetCounter()] =
             static_cast<int32>(killer->GetLevel()) - static_cast<int32>(killed->GetLevel());
-        LOG_DEBUG("playerbots", "[DeathProbe] {} KILLEDBY {} entry {} lvl {} rank {} botlvl {} attackers {}",
+        // The killer's remaining health says how the fight went: near full, the bot never hurt it.
+        LOG_DEBUG("playerbots", "[DeathProbe] {} KILLEDBY {} entry {} lvl {} rank {} botlvl {} killerHealth {}%",
                   killed->GetName(), killer->GetName(), killer->GetEntry(), killer->GetLevel(),
                   killer->GetCreatureTemplate() ? killer->GetCreatureTemplate()->rank : 0, killed->GetLevel(),
-                  killed->getAttackers().size());
+                  static_cast<uint32>(killer->GetHealthPct()));
     }
 
 private:
