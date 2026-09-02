@@ -30,6 +30,7 @@
 // verdict (QuestStayEndDecision in QuestDropPolicy.h) can rotate instead of abandoning a stay
 // that dispatched its tool but lost the race for a creditable target.
 #include "Ai/World/Rpg/QuestDropPolicy.h"
+#include "Ai/World/Rpg/QuestItemDropPolicy.h"
 #include "Ai/World/Rpg/QuestStayUseTracker.h"
 #include "GameTime.h"
 #include <algorithm>
@@ -630,6 +631,14 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 quest->RequiredItemCount[currentObjective - QUEST_OBJECTIVES_COUNT])
                 completed = false;
         }
+        // PLB-LOCAL(quest-itemdrop-phase): a drop objective is complete once the bot holds the drop.
+        else if (IsItemDropObjectiveIndex(currentObjective, QUEST_SOURCE_ITEM_IDS_COUNT))
+        {
+            int32 const dropIdx = currentObjective - QUEST_ITEMDROP_OBJECTIVE_BASE;
+            if (bot->GetItemCount(quest->ItemDrop[dropIdx], false) <
+                std::max<uint32>(quest->ItemDropQuantity[dropIdx], 1))
+                completed = false;
+        }
         // the current objective is completed, clear and find a new objective later
         if (completed)
         {
@@ -755,6 +764,12 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         {
             if (q_status.ItemCount[currentObjective - QUEST_OBJECTIVES_COUNT] != 0 &&
                 quest->RequiredItemCount[currentObjective - QUEST_OBJECTIVES_COUNT])
+                hasProgression = true;
+        }
+        // PLB-LOCAL(quest-itemdrop-phase): holding any of the drop is progress.
+        else if (IsItemDropObjectiveIndex(currentObjective, QUEST_SOURCE_ITEM_IDS_COUNT))
+        {
+            if (bot->GetItemCount(quest->ItemDrop[currentObjective - QUEST_ITEMDROP_OBJECTIVE_BASE], false) != 0)
                 hasProgression = true;
         }
         // PLB-LOCAL BEGIN(quest-stay-use-tracker): a fruitless stay that dispatched objective

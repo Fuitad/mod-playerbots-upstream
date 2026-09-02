@@ -9,6 +9,7 @@
  */
 
 #include "QuestObjectiveSpawnPoints.h"
+#include "Ai/World/Rpg/QuestItemDropPolicy.h"
 
 #include "DatabaseEnv.h"
 #include "Field.h"
@@ -89,10 +90,15 @@ QuestObjectiveSources QuestObjectiveSourceEntriesFor(Quest const* quest, int32 o
         else if (entry < 0)
             sources.gameObjectEntries.push_back(static_cast<uint32>(-entry));
     }
-    else if (objectiveIdx >= QUEST_OBJECTIVES_COUNT &&
-             objectiveIdx < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT)
+    else if ((objectiveIdx >= QUEST_OBJECTIVES_COUNT &&
+              objectiveIdx < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT) ||
+             IsItemDropObjectiveIndex(objectiveIdx, QUEST_SOURCE_ITEM_IDS_COUNT))
     {
-        uint32 const itemId = quest->RequiredItemId[objectiveIdx - QUEST_OBJECTIVES_COUNT];
+        // An ItemDrop objective (QuestItemDropPolicy.h) resolves through the same reverse index:
+        // the drop's loot sources are its spawns.
+        uint32 const itemId = objectiveIdx >= QUEST_ITEMDROP_OBJECTIVE_BASE
+                                  ? quest->ItemDrop[objectiveIdx - QUEST_ITEMDROP_OBJECTIVE_BASE]
+                                  : quest->RequiredItemId[objectiveIdx - QUEST_OBJECTIVES_COUNT];
         if (!itemId)
             return {};
         std::call_once(reverseIndexBuilt, BuildReverseIndexes);

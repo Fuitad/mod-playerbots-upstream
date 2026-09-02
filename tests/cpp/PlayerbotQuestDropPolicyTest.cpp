@@ -10,6 +10,7 @@
 
 #include "Ai/World/Rpg/QuestBlacklistPolicy.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
+#include "Ai/World/Rpg/QuestItemDropPolicy.h"
 #include "Ai/World/Rpg/QuestPickPolicy.h"
 #include "gtest/gtest.h"
 
@@ -242,4 +243,20 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     EXPECT_FALSE(QuestIsRpgBlacklisted(1515));  // Dogran's Captivity, the id just below the family
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
+}
+
+TEST(PlayerbotQuestDropPolicyTest, AMissingToolDropIsWorkedBeforeTheObjectiveThatNeedsIt)
+{
+    // Kyle's Gone Missing: objective 1 is Kyle, the meat is ItemDrop[0] (index 10).
+    std::vector<int32> const kyle{1};
+    std::vector<int32> const meat{QUEST_ITEMDROP_OBJECTIVE_BASE};
+    EXPECT_EQ(QuestObjectivesToWork(kyle, meat, {}), meat);
+    // Meat in the bag: Kyle is the only objective left.
+    EXPECT_EQ(QuestObjectivesToWork(kyle, {}, {}), kyle);
+    // A drop that is not a tool is collected alongside the ordinary objectives.
+    EXPECT_EQ(QuestObjectivesToWork(kyle, {}, {11}), (std::vector<int32>{1, 11}));
+    EXPECT_TRUE(IsItemDropObjectiveIndex(10, 4));
+    EXPECT_TRUE(IsItemDropObjectiveIndex(13, 4));
+    EXPECT_FALSE(IsItemDropObjectiveIndex(14, 4));
+    EXPECT_FALSE(IsItemDropObjectiveIndex(9, 4));
 }

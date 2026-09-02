@@ -18,6 +18,7 @@
 #include "Ai/World/Rpg/QuestDropSweep.h"
 #include "Ai/World/Rpg/QuestBlacklistPolicy.h"
 #include "Ai/World/Rpg/QuestPickPolicy.h"
+#include "Ai/World/Rpg/QuestItemDropPolicy.h"
 #include "Ai/World/Rpg/QuestRewardBagPolicy.h"
 #include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
 // PLB-LOCAL(maintenance-errand): movement yields to a claimed repair or vendor trip.
@@ -42,6 +43,8 @@
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
 #include "ObjectMgr.h"
+
+#include <algorithm>
 #include "OutdoorPvPMgr.h"
 #include "PathGenerator.h"
 #include "Player.h"
@@ -1078,6 +1081,35 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
         if (q_status.ItemCount[i] < quest->RequiredItemCount[i])
             incompleteObjectiveIdx.push_back(QUEST_OBJECTIVES_COUNT + i);
     }
+    // PLB-LOCAL BEGIN(quest-itemdrop-phase): a quest whose tool is a drop is worked in two phases,
+    // the drop's own POI first. See QuestItemDropPolicy.h for the measurement (Kyle's Gone Missing).
+    // Upstream: only the two loops above fed incompleteObjectiveIdx.
+    {
+        std::vector<int32> missingToolDrops;
+        std::vector<int32> missingPlainDrops;
+        for (int i = 0; i < QUEST_SOURCE_ITEM_IDS_COUNT; i++)
+        {
+            uint32 const itemId = quest->ItemDrop[i];
+            if (!itemId)
+                continue;
+            uint32 const wanted = std::max<uint32>(quest->ItemDropQuantity[i], 1);
+            if (bot->GetItemCount(itemId, false) >= wanted)
+                continue;
+            // Only a drop the survey knows where to find takes part. 106 quests carry a
+            // spell-bearing drop with no drop blob (Northrend dailies whose drop is filled by the
+            // objective itself); those keep the upstream path.
+            int32 const dropObjective = QUEST_ITEMDROP_OBJECTIVE_BASE + i;
+            auto const surveysDrop = [dropObjective](QuestPOI const& qPoi)
+            { return qPoi.ObjectiveIndex == dropObjective; };
+            if (std::none_of(poiVector->begin(), poiVector->end(), surveysDrop))
+                continue;
+            ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
+            bool const tool = proto && proto->Spells[0].SpellId != 0;
+            (tool ? missingToolDrops : missingPlainDrops).push_back(QUEST_ITEMDROP_OBJECTIVE_BASE + i);
+        }
+        incompleteObjectiveIdx = QuestObjectivesToWork(incompleteObjectiveIdx, missingToolDrops, missingPlainDrops);
+    }
+    // PLB-LOCAL END(quest-itemdrop-phase)
 
     // Get POIs to go
     for (const QuestPOI& qPoi : *poiVector)
