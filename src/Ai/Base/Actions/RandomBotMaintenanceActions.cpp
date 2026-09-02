@@ -9,6 +9,8 @@
 
 #include "RandomBotMaintenanceActions.h"
 
+#include "MaintenanceErrand.h"
+
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -471,6 +473,7 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
     {
         LOG_DEBUG("playerbots", "[Maintenance] {} repair: repaired at npc {}", bot->GetName(), targetEntry);
         targetEntry = 0;
+        playerbots::maintenance::ReleaseErrand(bot);
         return true;
     }
 
@@ -490,6 +493,7 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
             LOG_DEBUG("playerbots", "[Maintenance] {} repair: dropping stale target {} now {:.0f} yd away",
                       bot->GetName(), targetEntry, bot->GetDistance(targetPosition));
             targetEntry = 0;
+            playerbots::maintenance::ReleaseErrand(bot);
         }
     }
 
@@ -532,6 +536,9 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
         }
     }
 
+    // The claim makes every other movement request yield until the errand ends or its lease lapses;
+    // see MaintenanceErrandPolicy.h for the measurement.
+    playerbots::maintenance::ClaimErrand(bot, targetPosition);
     bool const moving = MoveFarTo(targetPosition);
     if (!moving)
         LOG_DEBUG("playerbots", "[Maintenance] {} repair: MoveFarTo returned false, npc {} at {:.0f} yd, isMoving={}",
@@ -561,6 +568,7 @@ bool RandomBotVendorAction::Execute(Event /*event*/)
                   targetEntry, soldGray, soldVendor);
         targetEntry = 0;
         lastAttempt = getMSTime();
+        playerbots::maintenance::ReleaseErrand(bot);
         return soldGray || soldVendor;
     }
 
@@ -581,6 +589,7 @@ bool RandomBotVendorAction::Execute(Event /*event*/)
                   targetEntry, bot->GetDistance(targetPosition));
     }
 
+    playerbots::maintenance::ClaimErrand(bot, targetPosition);
     bool const moving = MoveFarTo(targetPosition);
     if (!moving)
         LOG_DEBUG("playerbots", "[Maintenance] {} vendor: MoveFarTo returned false, npc {} at {:.0f} yd, isMoving={}",

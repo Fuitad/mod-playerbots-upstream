@@ -9,6 +9,7 @@
 
 #include <limits>
 
+#include "Ai/Base/Actions/MaintenanceErrandPolicy.h"
 #include "Ai/Base/Actions/RandomBotMaintenancePolicy.h"
 #include "gtest/gtest.h"
 
@@ -265,5 +266,21 @@ TEST(RandomBotMaintenancePolicyTest, RoutineMaintenanceWaitsForTheQuestButUrgent
     EXPECT_FALSE(playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(true, true));
     EXPECT_FALSE(playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(false, false));
     EXPECT_FALSE(playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(false, true));
+}
+
+TEST(RandomBotMaintenancePolicyTest, AClaimedErrandOwnsMovementUntilItEndsOrItsLeaseLapses)
+{
+    using playerbots::maintenance::ErrandBlocksOtherMove;
+    using playerbots::maintenance::MAINTENANCE_ERRAND_LEASE_MS;
+    // Ensetsu's repairer drifted 35 -> 334 yards while the RPG loop steered (2026-09-01): a live
+    // claim must refuse any other destination.
+    EXPECT_TRUE(ErrandBlocksOtherMove(true, 0, false));
+    EXPECT_TRUE(ErrandBlocksOtherMove(true, MAINTENANCE_ERRAND_LEASE_MS - 1, false));
+    // The errand's own destination is always allowed.
+    EXPECT_FALSE(ErrandBlocksOtherMove(true, 0, true));
+    // A claim nobody refreshes lapses, so a silent owner cannot freeze the bot.
+    EXPECT_FALSE(ErrandBlocksOtherMove(true, MAINTENANCE_ERRAND_LEASE_MS, false));
+    // No errand, no yielding.
+    EXPECT_FALSE(ErrandBlocksOtherMove(false, 0, false));
 }
 }  // namespace

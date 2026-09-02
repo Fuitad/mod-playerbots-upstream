@@ -20,6 +20,8 @@
 #include "Ai/World/Rpg/QuestPickPolicy.h"
 #include "Ai/World/Rpg/QuestRewardBagPolicy.h"
 #include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
+// PLB-LOCAL(maintenance-errand): movement yields to a claimed repair or vendor trip.
+#include "Ai/Base/Actions/MaintenanceErrand.h"
 #include "Bag.h"
 #include "Item.h"
 #include "ItemUsageValue.h"
@@ -61,6 +63,11 @@
 bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {
     if (dest == WorldPosition())
+        return false;
+
+    // PLB-LOCAL(maintenance-errand): a claimed repair or vendor trip owns the bot's movement until
+    // it ends or its lease lapses; every other destination yields. See MaintenanceErrandPolicy.h.
+    if (playerbots::maintenance::ErrandBlocksMove(bot, dest))
         return false;
 
     // PLB-LOCAL(movefar-stuck) BEGIN: rescue a bot that no single destination can rescue.
@@ -311,6 +318,11 @@ bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid guid, float distance)
 bool NewRpgBaseAction::MoveRandomNear(float moveStep, MovementPriority priority, WorldObject*)
 {
     if (IsWaitingForLastMove(priority))
+        return false;
+
+    // PLB-LOCAL(maintenance-errand): the nudge the RPG actions fall back to when MoveFarTo refuses
+    // would otherwise re-steal the movement slot from a claimed errand every tick.
+    if (playerbots::maintenance::ErrandActive(bot))
         return false;
 
     Map* map = bot->GetMap();
