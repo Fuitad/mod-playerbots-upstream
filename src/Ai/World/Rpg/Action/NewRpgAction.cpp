@@ -828,7 +828,12 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 if (CreatureSpawnsWithin({spawn}, data.pos.GetPositionX(), data.pos.GetPositionY(),
                                          sPlayerbotAIConfig.grindDistance) == 0)
                     continue;
-                if (bot->GetMap()->GetCreatureRespawnTime(spawn.spawnId) > now)
+                // A spawn with no living creature counts too: a pooled or scripted spawn does not
+                // always carry its timer in the map's respawn store (Cayu, 2026-09-01 23:24: the
+                // SOURCE probe read Ferocitas dead at 8 yards while this count stayed 0, and the
+                // stay was blamed as if the place could not progress the quest).
+                Creature* const live = LiveCreatureAt(bot, spawn);
+                if (bot->GetMap()->GetCreatureRespawnTime(spawn.spawnId) > now || !live || !live->IsAlive())
                     ++respawnPending;
             }
         }
