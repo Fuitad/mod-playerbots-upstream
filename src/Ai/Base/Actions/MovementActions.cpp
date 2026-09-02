@@ -1907,7 +1907,14 @@ void MovementAction::DoMovePoint(Unit* unit, float x, float y, float z, bool gen
     if (unit->HasUnitMovementFlag(MOVEMENTFLAG_WATERWALKING) && unit->HasWaterWalkAura())
     {
         float gZ = unit->GetMapWaterOrGroundLevel(unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ());
-        unit->UpdatePosition(unit->GetPositionX(), unit->GetPositionY(), gZ, false);
+        // PLB-LOCAL(revive-safety): a small correction only. Every ghost walks on water, so this ran
+        // before each of its moves, and where a model floor sits far from the terrain grid the
+        // ground lookup answers with the grid: Vavapu (2026-09-02 04:50) was lifted 100 to 114
+        // yards from her corpse in a Durotar cave to the mesa above six times, Damama and Jdyalani
+        // were dropped 600 to 860 yards from Teldrassil's tree to the sea bed. Upstream: the
+        // unconditional UpdatePosition below.
+        if (std::fabs(gZ - unit->GetPositionZ()) <= 10.0f)
+            unit->UpdatePosition(unit->GetPositionX(), unit->GetPositionY(), gZ, false);
     }
 
     mm->Clear();
