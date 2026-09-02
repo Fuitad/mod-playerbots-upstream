@@ -152,21 +152,13 @@ bool CombatStuckTrigger::IsActive()
     if (!botAI->AllowActivity(ALL_ACTIVITY))
         return false;
 
-    WorldPosition botPos(bot);
-
-    MemoryCalculatedValue<bool>* combatVal =
-        dynamic_cast<MemoryCalculatedValue<bool>*>(context->GetUntypedValue("combat::self target"));
-
-    if (combatVal->LastChangeDelay() > 5 * MINUTE)
-    {
-        // LOG_INFO("playerbots", "Bot {} {}:{} <{}> was in combat for {} seconds",
-        // bot->GetGUID().ToString().c_str(), bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(),
-        // bot->GetName(), posVal->LastChangeDelay());
-
-        return true;
-    }
-
-    return false;
+    // PLB-LOCAL(combat-stuck): the fight's own span, not the age of the "combat::self target"
+    // memory value, which is never sampled out of combat and so froze at the bot's first fight.
+    // See CombatStuckPolicy.h. Upstream:
+    //     if (combatVal->LastChangeDelay() > 5 * MINUTE) return true;
+    time_t const now = time(nullptr);
+    _span = NoteCombatTick(_span, now);
+    return CombatStuckFor(_span, now, COMBAT_STUCK_SECONDS);
 }
 
 bool CombatLongStuckTrigger::IsActive()
@@ -180,19 +172,9 @@ bool CombatLongStuckTrigger::IsActive()
     if (!botAI->AllowActivity(ALL_ACTIVITY))
         return false;
 
-    WorldPosition botPos(bot);
-
-    MemoryCalculatedValue<bool>* combatVal =
-        dynamic_cast<MemoryCalculatedValue<bool>*>(context->GetUntypedValue("combat::self target"));
-
-    if (combatVal->LastChangeDelay() > 15 * MINUTE)
-    {
-        // LOG_INFO("playerbots", "Bot {} {}:{} <{}> was in combat for {} seconds",
-        // bot->GetGUID().ToString().c_str(), bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(),
-        // bot->GetName(), posVal->LastChangeDelay());
-
-        return true;
-    }
-
-    return false;
+    // PLB-LOCAL(combat-stuck): same span measurement as CombatStuckTrigger. Upstream:
+    //     if (combatVal->LastChangeDelay() > 15 * MINUTE) return true;
+    time_t const now = time(nullptr);
+    _span = NoteCombatTick(_span, now);
+    return CombatStuckFor(_span, now, COMBAT_LONG_STUCK_SECONDS);
 }

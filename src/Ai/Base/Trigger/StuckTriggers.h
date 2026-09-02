@@ -9,6 +9,9 @@
 
 #include "Trigger.h"
 
+// PLB-LOCAL(combat-stuck): the fight span the two combat triggers measure. See CombatStuckPolicy.h.
+#include "CombatStuckPolicy.h"
+
 class MoveStuckTrigger : public Trigger
 {
 public:
@@ -31,6 +34,9 @@ public:
     CombatStuckTrigger(PlayerbotAI* botAI) : Trigger(botAI, "combat stuck", 5) {}
 
     bool IsActive() override;
+
+private:
+    CombatSpan _span;  // PLB-LOCAL(combat-stuck)
 };
 
 class CombatLongStuckTrigger : public Trigger
@@ -39,6 +45,9 @@ public:
     CombatLongStuckTrigger(PlayerbotAI* botAI) : Trigger(botAI, "combat long stuck", 5) {}
 
     bool IsActive() override;
+
+private:
+    CombatSpan _span;  // PLB-LOCAL(combat-stuck)
 };
 
 #endif

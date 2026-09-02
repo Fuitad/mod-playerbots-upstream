@@ -9,8 +9,34 @@
  */
 
 #include "Ai/Base/Actions/CombatMovementPolicy.h"
+#include "Ai/Base/Trigger/CombatStuckPolicy.h"
 #include "Ai/World/Rpg/MoveFarStuckPolicy.h"
 #include "gtest/gtest.h"
+
+TEST(PlayerbotCombatStuckPolicyTest, AFightIsMeasuredFromItsOwnFirstTickNotFromTheBotsFirstFightEver)
+{
+    // Bots 977, 1057 and 897, 2026-09-02 07:40: a thirty-second fight ten minutes after an earlier
+    // one read as "stuck for over five minutes" and reset the AI every five seconds.
+    time_t const firstFight = 1000;
+    CombatSpan span;
+    for (time_t t = firstFight; t <= firstFight + 30; t += 5)
+        span = NoteCombatTick(span, t);
+    EXPECT_FALSE(CombatStuckFor(span, firstFight + 30, COMBAT_STUCK_SECONDS));
+
+    time_t const laterFight = firstFight + 600;
+    span = NoteCombatTick(span, laterFight);
+    EXPECT_EQ(span.since, laterFight);
+    for (time_t t = laterFight + 5; t <= laterFight + 30; t += 5)
+        span = NoteCombatTick(span, t);
+    EXPECT_FALSE(CombatStuckFor(span, laterFight + 30, COMBAT_STUCK_SECONDS));
+
+    // A fight that really does not end is still caught, at five and at fifteen minutes.
+    for (time_t t = laterFight + 35; t <= laterFight + 305; t += 5)
+        span = NoteCombatTick(span, t);
+    EXPECT_TRUE(CombatStuckFor(span, laterFight + 305, COMBAT_STUCK_SECONDS));
+    EXPECT_FALSE(CombatStuckFor(span, laterFight + 305, COMBAT_LONG_STUCK_SECONDS));
+    EXPECT_TRUE(CombatStuckFor(span, laterFight + 905, COMBAT_LONG_STUCK_SECONDS));
+}
 
 TEST(PlayerbotCombatMovementPolicyTest, AFightTakesASoloRandomBotOffItsForcedWalk)
 {
