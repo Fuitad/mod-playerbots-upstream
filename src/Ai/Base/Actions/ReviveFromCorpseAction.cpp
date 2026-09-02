@@ -359,14 +359,28 @@ bool FindCorpseAction::Execute(Event /*event*/)
                     moved = MoveTo(bot->GetMapId(), sx, sy, sz, false, false);
             }
 
+            // PLB-LOCAL(revive-safety): a ghost beside its corpse with a hostile in reach holds
+            // where it stands when no wait spot can be reached; the spirit healer action would
+            // otherwise teleport it to the graveyard and undo the walk (Ombeline, 2026-09-02
+            // 00:16: corpseDist 14 with a threat, then 806 two seconds later). The eight minute
+            // cap above still lets the revive go ahead.
+            if (!moved && threat && corpseDist < reclaimDist && deadTime < 8 * MINUTE)
+                moved = true;
+
             if (!moved)
             // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             {
                 // PLB-LOCAL(death-probe): why the walk gave the corpse up. Temporary diagnostic.
+                LastMovement const& lastMove = AI_VALUE(LastMovement&, "last movement");
+                float const lastMoveEnd = lastMove.lastdelayTime + static_cast<float>(lastMove.msTime);
+                float const nowMs = static_cast<float>(getMSTime());
+                uint32 const lastMoveLeft = lastMoveEnd > nowMs ? static_cast<uint32>(lastMoveEnd - nowMs) : 0;
                 LOG_DEBUG("playerbots",
-                          "[DeathProbe] {} SPIRIT-FALLBACK corpseDist {:.0f} dead {}s deaths {} holding {} threat {}",
+                          "[DeathProbe] {} SPIRIT-FALLBACK corpseDist {:.0f} dead {}s deaths {} holding {} threat {} "
+                          "canMove {} lastPrio {} lastLeft {}ms",
                           bot->GetName(), corpseDist, deadTime, dCount, holdingAtWaitSpot,
-                          threat ? threat->GetEntry() : 0);
+                          threat ? threat->GetEntry() : 0, botAI->CanMove(), static_cast<uint32>(lastMove.priority),
+                          lastMoveLeft);
                 moved = botAI->DoSpecificAction("spirit healer", Event(), true);
             }
         }
