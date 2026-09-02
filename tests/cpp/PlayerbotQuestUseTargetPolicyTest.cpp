@@ -30,6 +30,42 @@ QuestUseCandidateFacts Candidate(bool matchesEntry, bool alive, float distanceSq
 constexpr float NoAnchorCap = 0.0f;
 }  // namespace
 
+TEST(PlayerbotQuestUseTargetPolicyTest, AToolThatOnlyCreditsSleepersWaitsWhenNoneSleeps)
+{
+    // Lazy Peons, 2026-09-02 05:56 on the final build: 2,558 blackjack uses across seven stays of
+    // 100 to 133 attempts each and one turn-in. The blackjack's spell credits only a target with
+    // the sleeping aura, so every whack on an awake peon was wasted; the seek must return nothing
+    // rather than the nearest awake one when the tool demands a sleeper.
+    QuestUseCandidateFacts awakeNear;
+    awakeNear.matchesEntry = true;
+    awakeNear.alive = true;
+    awakeNear.sleeping = false;
+    awakeNear.distanceSq = 4.0f;
+    awakeNear.anchorDistanceSq = 4.0f;
+    QuestUseCandidateFacts asleepFar = awakeNear;
+    asleepFar.sleeping = true;
+    asleepFar.distanceSq = 400.0f;
+    asleepFar.anchorDistanceSq = 400.0f;
+
+    EXPECT_EQ(BestQuestUseTargetIndex({awakeNear}, 0.0f, true), QUEST_USE_NO_CANDIDATE);
+    EXPECT_EQ(BestQuestUseTargetIndex({awakeNear, asleepFar}, 0.0f, true), 1u);
+    // Tools without the demand keep the awake fallback.
+    EXPECT_EQ(BestQuestUseTargetIndex({awakeNear}, 0.0f, false), 0u);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, TheToolIsUsedFromItsOwnRangeNotFromArmsLength)
+{
+    // Yuhelmeric, 2026-09-02 03:45: the antidote in the bag, ten owlkin around, one use in 310
+    // seconds, because the bot walked to 5.5 yards of a wandering target before every use.
+    // A tool with no range, or one shorter than arm's length, keeps arm's length.
+    EXPECT_FLOAT_EQ(QuestUseEngageDistance(0.0f), QUEST_USE_ARMS_LENGTH);
+    EXPECT_FLOAT_EQ(QuestUseEngageDistance(4.0f), QUEST_USE_ARMS_LENGTH);
+    // A 20-yard tool is used from a yard inside its range.
+    EXPECT_FLOAT_EQ(QuestUseEngageDistance(20.0f), 19.0f);
+    // A long-range tool is capped so the bot does not use it from across the camp.
+    EXPECT_FLOAT_EQ(QuestUseEngageDistance(40.0f), QUEST_USE_MAX_ENGAGE_DISTANCE);
+}
+
 TEST(PlayerbotQuestUseTargetPolicyTest, TheProvidedItemOutranksAKnownSpellAndNoToolMeansKill)
 {
     // A quest that hands the bot a tool item is credited through that item; a spell quest has no

@@ -100,6 +100,31 @@ std::vector<uint32> ToolSpellTargetEntries(uint32 spellId)
     return entries;
 }
 
+// Whether the tool spell only credits a sleeping target: a CONDITION_AURA row on the spell (cast
+// or per-effect) whose spell id is a sleep aura. The Foreman's Blackjack's spell 19938 carries
+// aura 17743 ("Awaken Peon" condition). See BestQuestUseTargetIndex for the measurement.
+bool ConditionsDemandAura(ConditionList const& conditions)
+{
+    for (Condition const* cond : conditions)
+        if (cond && !cond->NegativeCondition && cond->ConditionType == CONDITION_AURA && cond->ConditionValue1)
+            return true;
+    return false;
+}
+
+bool ToolSpellRequiresSleeper(uint32 spellId)
+{
+    if (!spellId)
+        return false;
+    if (ConditionsDemandAura(sConditionMgr->GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_SPELL, spellId)))
+        return true;
+    if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId))
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            if (ConditionList const* effectConditions = spellInfo->Effects[i].ImplicitTargetConditions)
+                if (ConditionsDemandAura(*effectConditions))
+                    return true;
+    return false;
+}
+
 uint32 KnownQuestSpell(Player* bot, uint32 questId, uint32 attempt)
 {
     std::vector<uint32> known;
@@ -198,13 +223,14 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
         target.entry = unit->GetEntry();
         target.mode = mode;
         target.toolId = toolId;
+        target.useSpellId = useSpellId;
 
         facts.push_back(candidate);
         targets.push_back(target);
     }
 
-    size_t const best =
-        BestQuestUseTargetIndex(facts, anchorRadius > 0.0f ? anchorRadius * anchorRadius : 0.0f);
+    size_t const best = BestQuestUseTargetIndex(facts, anchorRadius > 0.0f ? anchorRadius * anchorRadius : 0.0f,
+                                                ToolSpellRequiresSleeper(useSpellId));
     if (best == QUEST_USE_NO_CANDIDATE)
         return {};
 

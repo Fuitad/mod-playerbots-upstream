@@ -31,6 +31,8 @@ struct QuestUseTarget
     QuestUseMode mode = QuestUseMode::None;
     // Item mode: the tool's item entry. Spell mode: the known spell id to cast.
     uint32 toolId = 0;
+    // The spell the tool casts (the item's on-use spell, or the quest spell itself), for its range.
+    uint32 useSpellId = 0;
 };
 
 // Filled when a diag pointer is passed: why the seek did or did not produce a target.

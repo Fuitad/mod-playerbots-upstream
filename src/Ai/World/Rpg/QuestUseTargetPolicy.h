@@ -127,6 +127,21 @@ struct QuestUseCandidateFacts
 
 inline constexpr size_t QUEST_USE_NO_CANDIDATE = ~static_cast<size_t>(0);
 
+// How close the bot walks before using the tool. Arm's length (INTERACTION_DISTANCE, 5.5 yards)
+// was the rule for every tool, and a wandering owlkin rarely stays inside it: Yuhelmeric,
+// 2026-09-02 03:45, antidote in the bag, ten candidates, one use in 310 seconds. A tool with a
+// range is used from a yard inside it, capped so a long-range tool is not fired across the camp.
+inline constexpr float QUEST_USE_ARMS_LENGTH = 5.5f;
+inline constexpr float QUEST_USE_MAX_ENGAGE_DISTANCE = 30.0f;
+
+[[nodiscard]] inline float QuestUseEngageDistance(float toolMaxRange)
+{
+    float const fromRange = toolMaxRange - 1.0f;
+    if (fromRange <= QUEST_USE_ARMS_LENGTH)
+        return QUEST_USE_ARMS_LENGTH;
+    return fromRange < QUEST_USE_MAX_ENGAGE_DISTANCE ? fromRange : QUEST_USE_MAX_ENGAGE_DISTANCE;
+}
+
 // A candidate is in range when it sits within the cap of the POI anchor OR of the bot itself.
 // The anchor-only cap filtered a live owlkin standing beside a bot that had drifted 45y chasing
 // combat (Abaka, measured live 2026-08-30: usecand 6/1/1 yet zero engagements in a 316s stay).
@@ -139,9 +154,12 @@ inline constexpr size_t QUEST_USE_NO_CANDIDATE = ~static_cast<size_t>(0);
 }
 
 // Nearest living creature of the objective entry within range (see QuestUseCandidateInRange).
-// A sleeping candidate outranks any awake one; distance breaks ties within each group.
+// A sleeping candidate outranks any awake one; distance breaks ties within each group. When the
+// tool only credits a sleeper (the Foreman's Blackjack's spell carries the sleep aura as its
+// target condition), an awake candidate is no candidate: Lazy Peons, 2026-09-02 05:56, 2,558
+// whacks across seven stays of 100 to 133 attempts each and one turn-in, all on awake peons.
 [[nodiscard]] inline size_t BestQuestUseTargetIndex(std::vector<QuestUseCandidateFacts> const& candidates,
-                                                    float maxAnchorDistanceSq)
+                                                    float maxAnchorDistanceSq, bool requiresSleeping = false)
 {
     size_t best = QUEST_USE_NO_CANDIDATE;
     float bestDistanceSq = -1.0f;
@@ -153,6 +171,8 @@ inline constexpr size_t QUEST_USE_NO_CANDIDATE = ~static_cast<size_t>(0);
         if (!candidate.matchesEntry || !candidate.alive)
             continue;
         if (!QuestUseCandidateInRange(candidate, maxAnchorDistanceSq))
+            continue;
+        if (requiresSleeping && !candidate.sleeping)
             continue;
         if (bestDistanceSq < 0.0f || candidate.distanceSq < bestDistanceSq)
         {

@@ -65,6 +65,8 @@
 #include "PlayerbotTextMgr.h"
 #include "QuestDef.h"
 #include "Random.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "SharedDefines.h"
 #include "Timer.h"
 #include "TravelMgr.h"
@@ -990,12 +992,25 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         if (!aliveNear)
             for (SpawnAnchorPoint const& spawn : sweepSpawns)
             {
-                if (data.pos.GetExactDist2d(spawn.x, spawn.y) < 1.0f ||
-                    data.pos.GetExactDist2d(spawn.x, spawn.y) > QUEST_ANCHOR_MAX_SNAP_DISTANCE)
+                if (data.pos.GetExactDist2d(spawn.x, spawn.y) > QUEST_ANCHOR_MAX_SNAP_DISTANCE)
                     continue;
                 Creature* live = LiveCreatureAt(bot, spawn);
                 if (!live || !live->IsAlive())
                     continue;
+                // The anchor already sits on this spawn's x and y, so a walk to the anchor changes
+                // nothing: the mesh ends a walk to a point upstairs on the floor beneath it, and
+                // REACH counts the last yards in three dimensions. Immodest, 2026-09-02 05:45, on
+                // the sweep build: Benedict alive 7.9 yards away, 8.6 yards up, no line of sight,
+                // five minutes below him. Walk to the creature instead; the mesh knows the stairs.
+                if (data.pos.GetExactDist2d(spawn.x, spawn.y) < 1.0f)
+                {
+                    LOG_DEBUG("playerbots",
+                              "[QuestProbe] {} SWEEP-CLIMB quest {} obj {} to creature {} dist {:.1f} dz {:.1f}",
+                              bot->GetName(), questId, data.objectiveIdx, live->GetEntry(), bot->GetDistance(live),
+                              live->GetPositionZ() - bot->GetPositionZ());
+                    (void)MoveWorldObjectTo(live->GetGUID(), INTERACTION_DISTANCE);
+                    return true;
+                }
                 LOG_DEBUG("playerbots", "[QuestProbe] {} SWEEP quest {} obj {} to spawn {} dist {:.0f}y dz {:.1f}",
                           bot->GetName(), questId, data.objectiveIdx, spawn.spawnId,
                           bot->GetDistance2d(spawn.x, spawn.y), spawn.z - bot->GetPositionZ());
@@ -1136,19 +1151,30 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
     {
         Quest const* qTemplate = sObjectMgr->GetQuestTemplate(questId);
         GuidVector nearbyUnits = context->GetValue<GuidVector>("nearest npcs")->Get();
+        QuestUseSeekDiag useDiag;
         QuestUseTarget const useTarget =
             qTemplate ? FindQuestUseTarget(botAI, qTemplate, data.objectiveIdx, nearbyUnits,
                                            data.pos.GetPositionX(), data.pos.GetPositionY(),
-                                           sPlayerbotAIConfig.grindDistance)
+                                           sPlayerbotAIConfig.grindDistance, &useDiag)
                       : QuestUseTarget{};
+        // PLB-LOCAL(quest-use-sleeper): a tool that only credits a sleeper returns no candidate
+        // while every matching creature is awake. That is a wait, not a place that cannot
+        // progress the quest, so the stay-end verdict still sees a sighting and rotates without
+        // blame instead of abandoning (Lazy Peons, 2026-09-02).
+        if (!useTarget.guid && useDiag.aliveMatching > 0)
+            QuestStayUseTracker::RecordSighting(bot);
         if (useTarget.guid)
         {
             // PLB-LOCAL(quest-stay-use-tracker): same sighting rule as the gameobject seek above.
             QuestStayUseTracker::RecordSighting(bot);
             Unit* useUnit = botAI->GetUnit(useTarget.guid);
-            if (useUnit && bot->GetDistance(useUnit) > INTERACTION_DISTANCE)
+            // PLB-LOCAL(quest-use-range): the tool is used from its own range, not from arm's
+            // length. See QuestUseEngageDistance.
+            SpellInfo const* useSpell = useTarget.useSpellId ? sSpellMgr->GetSpellInfo(useTarget.useSpellId) : nullptr;
+            float const engageDistance = QuestUseEngageDistance(useSpell ? useSpell->GetMaxRange(false) : 0.0f);
+            if (useUnit && bot->GetDistance(useUnit) > engageDistance)
             {
-                bool const moved = MoveWorldObjectTo(useTarget.guid, INTERACTION_DISTANCE);
+                bool const moved = MoveWorldObjectTo(useTarget.guid, engageDistance);
                 // PLB-LOCAL(quest-abandon-probe): temporary diagnostic, same as the gameobject
                 // approach above.
                 if (ApproachProbeDue(bot))
@@ -1164,9 +1190,10 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 // PLB-LOCAL(quest-stay-use-tracker): counts toward the stay-end verdict.
                 QuestStayUseTracker::RecordAttempt(bot);
                 // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
-                LOG_DEBUG("playerbots", "[QuestProbe] {} QUSE quest {} obj {} npc {} mode {} tool {}",
+                LOG_DEBUG("playerbots", "[QuestProbe] {} QUSE quest {} obj {} npc {} mode {} tool {} asleep {}",
                           bot->GetName(), questId, data.objectiveIdx, useTarget.entry,
-                          useTarget.mode == QuestUseMode::Item ? "item" : "spell", useTarget.toolId);
+                          useTarget.mode == QuestUseMode::Item ? "item" : "spell", useTarget.toolId,
+                          useUnit && useUnit->getStandState() == UNIT_STAND_STATE_SLEEP);
                 // Let the use land (cast time, credit, respawn state) before the next decision.
                 return ForceToWait(2000);
             }
