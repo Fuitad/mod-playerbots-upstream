@@ -472,7 +472,7 @@ bool FindCorpseAction::Execute(Event /*event*/)
                 {
                     float const sx = bot->GetPositionX() + std::cos(toCorpse + turn) * 100.0f;
                     float const sy = bot->GetPositionY() + std::sin(toCorpse + turn) * 100.0f;
-                    float const sz = stepHeight(sx, sy);
+                    float const sz = CorpseStepHeight(bot, sx, sy);
                     if (turn == 0.0f)
                     {
                         firstStepX = sx;
