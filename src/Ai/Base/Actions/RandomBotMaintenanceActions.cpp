@@ -519,8 +519,13 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
         // pass can spend the coins on armour.
         uint32 const durabilityBefore = EquippedDurabilitySum(bot);
         float const discount = bot->GetReputationPriceDiscount(repairer);
+        // Player::DurabilityRepair takes a packed position (bag << 8 | slot); a bare equipment slot
+        // resolves to bag 0, finds nothing, and repairs nothing. Upstream's own weapons-first lines
+        // in RepairAllAction pass the bare slot and have never repaired a weapon; measured live
+        // 2026-09-01 22:50, Vavapu at 368c with a 1c axe still "unaffordable".
         for (uint8 const slot : {EQUIPMENT_SLOT_MAINHAND, EQUIPMENT_SLOT_RANGED, EQUIPMENT_SLOT_OFFHAND})
-            (void)bot->DurabilityRepair(slot, true, discount, false);
+            (void)bot->DurabilityRepair(static_cast<uint16>((INVENTORY_SLOT_BAG_0 << 8) | slot), true, discount,
+                                        false);
         bool const weaponStillBroken = HasBrokenWeapon(bot);
         if (!weaponStillBroken)
             (void)botAI->DoSpecificAction("repair", Event("random bot repair"), true);
