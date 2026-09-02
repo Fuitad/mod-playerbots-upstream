@@ -32,6 +32,7 @@
 #include "ServerFacade.h"
 
 #include <algorithm>
+#include <cmath>
 #include <list>
 
 // PLB-LOCAL BEGIN(revive-safety): hostiles whose aggro reach, plus a margin, covers the ghost.
@@ -47,7 +48,7 @@ namespace
 // radius is wider than any aggro reach (the core caps attack distance at 45 yards) plus the margin.
 constexpr float REVIVE_HOSTILE_SCAN_YARDS = 60.0f;
 
-uint32 HostilesInReach(PlayerbotAI* /*botAI*/, Player* bot)
+uint32 HostilesInReach(PlayerbotAI* /*botAI*/, Player* bot, Creature** nearest = nullptr)
 {
     std::list<Creature*> creatures;
     Acore::AnyUnitInObjectRangeCheck check(bot, REVIVE_HOSTILE_SCAN_YARDS);
@@ -55,14 +56,24 @@ uint32 HostilesInReach(PlayerbotAI* /*botAI*/, Player* bot)
     Cell::VisitObjects(bot, searcher, REVIVE_HOSTILE_SCAN_YARDS);
 
     uint32 count = 0;
+    float nearestDist = REVIVE_HOSTILE_SCAN_YARDS + 1.0f;
+    if (nearest)
+        *nearest = nullptr;
     for (Creature* creature : creatures)
     {
         if (!creature->IsAlive() || creature->IsCritter() || creature->IsCivilian() || creature->IsPet() ||
             creature->IsTotem() || !creature->IsHostileTo(bot))
             continue;
         float const reach = creature->GetAttackDistance(bot) + playerbots::recovery::REVIVE_AGGRO_MARGIN_YARDS;
-        if (bot->IsWithinDist(creature, reach, false))
-            ++count;
+        if (!bot->IsWithinDist(creature, reach, false))
+            continue;
+        ++count;
+        float const dist = bot->GetDistance2d(creature);
+        if (nearest && dist < nearestDist)
+        {
+            nearestDist = dist;
+            *nearest = creature;
+        }
     }
     return count;
 }
@@ -234,11 +245,33 @@ bool FindCorpseAction::Execute(Event /*event*/)
     }
 
     // If we are getting close move to a save ressurrection spot instead of just the corpse.
+    // PLB-LOCAL BEGIN(revive-safety): the wait spot comes from the hostile scan, not from the
+    // ghost's visibility list. Upstream ran FleeManager over "possible targets no los", which a
+    // ghost never fills, so with a hostile at the corpse the manager was not useful, the move to
+    // the bot's own position failed, and the fallback below took the spirit healer at once
+    // (Buoyantboy, 2026-09-01 23:04: spirit healer 1.6 s after release). The ghost now walks to
+    // the far edge of the reclaim radius, away from the nearest hostile, and holds there; the
+    // revive gate scans around the ghost, so it revives as soon as that spot is out of reach.
+    bool holdingAtWaitSpot = false;
+    Creature* threat = nullptr;
+    if (corpseDist < sPlayerbotAIConfig.reactDistance && !moveToLeader)
+        (void)HostilesInReach(botAI, bot, &threat);
     if (corpseDist < sPlayerbotAIConfig.reactDistance)
     {
         if (moveToLeader)
             moveToPos = leaderPos;
+        else if (threat)
+        {
+            float const away = threat->GetAngle(corpse);
+            float const wx = corpsePos.GetPositionX() + std::cos(away) * reclaimDist;
+            float const wy = corpsePos.GetPositionY() + std::sin(away) * reclaimDist;
+            float const wz = std::max(bot->GetMap()->GetHeight(wx, wy, corpsePos.GetPositionZ() + 5.0f),
+                                      bot->GetMap()->GetWaterLevel(wx, wy));
+            moveToPos = WorldPosition(corpsePos.GetMapId(), wx, wy, wz, 0.0f);
+            holdingAtWaitSpot = bot->GetDistance2d(wx, wy) < 5.0f;
+        }
         else
+        // PLB-LOCAL END(revive-safety)
         {
             FleeManager manager(bot, reclaimDist, 0.0, urand(0, 1), moveToPos);
 
@@ -283,6 +316,10 @@ bool FindCorpseAction::Execute(Event /*event*/)
                 moved = MoveTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(),
                                moveToPos.GetPositionZ(), false, false);
             }
+
+            // PLB-LOCAL(revive-safety): holding at the wait spot is progress, not a failed walk.
+            if (!moved && holdingAtWaitSpot)
+                moved = true;
 
             if (!moved)
             // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
