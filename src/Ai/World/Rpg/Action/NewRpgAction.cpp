@@ -123,6 +123,31 @@ Creature* LiveCreatureAt(Player* bot, SpawnAnchorPoint const& spawn)
 }  // namespace
 // PLB-LOCAL END(quest-stay-spawn-sweep)
 
+// PLB-LOCAL BEGIN(quest-stay-death-rotate): the death generation at the start of the current stay,
+// so the stay can count the deaths it cost. See QuestStayLostToDeaths in QuestDropPolicy.h.
+namespace
+{
+std::mutex stayDeathMutex;
+std::unordered_map<ObjectGuid::LowType, uint64> stayDeathGeneration;
+
+void MarkStayDeathBaseline(Player* bot, PlayerbotAI* botAI)
+{
+    std::lock_guard<std::mutex> lock(stayDeathMutex);
+    stayDeathGeneration[bot->GetGUID().GetCounter()] = botAI->InspectReviveAttempt().currentDeathGeneration;
+}
+
+uint32 DeathsThisStay(Player* bot, PlayerbotAI* botAI)
+{
+    std::lock_guard<std::mutex> lock(stayDeathMutex);
+    auto const it = stayDeathGeneration.find(bot->GetGUID().GetCounter());
+    if (it == stayDeathGeneration.end())
+        return 0;
+    uint64 const now = botAI->InspectReviveAttempt().currentDeathGeneration;
+    return now > it->second ? static_cast<uint32>(now - it->second) : 0u;
+}
+}  // namespace
+// PLB-LOCAL END(quest-stay-death-rotate)
+
 // PLB-LOCAL BEGIN(quest-loot-container): some quest items only exist inside another item the bot
 // loots as the quest's ItemDrop (measured 2026-09-01: Ferocitas the Dream Eater, quest 2459, drops
 // Gnarlpine Necklace 8049 whose item_loot_template holds Tallonkai's Jewel 8050). Looting the
@@ -695,8 +720,24 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         QuestStayKillProbe::MarkStayStart(bot);
         // PLB-LOCAL(quest-stay-use-tracker): fresh interaction count for this stay.
         QuestStayUseTracker::MarkStayStart(bot);
+        // PLB-LOCAL(quest-stay-death-rotate): deaths are counted from here.
+        MarkStayDeathBaseline(bot, botAI);
         return true;
     }
+    // PLB-LOCAL BEGIN(quest-stay-death-rotate): a stay that has cost the bot two deaths ends now,
+    // with the same low-priority mark a fruitless stay earns, instead of sending the bot back into
+    // the fight for a third time. Upstream: nothing here; the stay ran its five minutes regardless.
+    if (uint32 const deaths = DeathsThisStay(bot, botAI); QuestStayLostToDeaths(deaths))
+    {
+        botAI->lowPriorityQuest.insert(questId);
+        botAI->rpgStatistic.questAbandoned++;
+        LOG_DEBUG("playerbots", "[QuestProbe] {} ABANDON-DEATH quest {} obj {} deaths {} stayed {}s lvl {}",
+                  bot->GetName(), questId, data.objectiveIdx, deaths, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
+                  bot->GetLevel());
+        botAI->rpgInfo.ChangeToIdle();
+        return true;
+    }
+    // PLB-LOCAL END(quest-stay-death-rotate)
     // stayed at this POI for more than 5 minutes
     if (GetMSTimeDiffToNow(data.lastReachPOI) >= poiStayTime)
     {

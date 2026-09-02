@@ -114,6 +114,16 @@ TEST(PlayerbotQuestDropPolicyTest, ReachabilityIsOnlyConsultedWhenItCanChangeThe
     EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 28, false, false, true)));
 }
 
+TEST(PlayerbotQuestDropPolicyTest, TwoDeathsInOneStayEndIt)
+{
+    // Sidurguorl (2026-09-01): five die-revive-die cycles at one objective. One death is bad luck;
+    // the second is the fight the bot cannot win right now.
+    EXPECT_FALSE(QuestStayLostToDeaths(0));
+    EXPECT_FALSE(QuestStayLostToDeaths(1));
+    EXPECT_TRUE(QuestStayLostToDeaths(2));
+    EXPECT_TRUE(QuestStayLostToDeaths(5));
+}
+
 TEST(PlayerbotQuestDropPolicyTest, ReasonNamesFeedTheDropProbeLine)
 {
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropGivenUp), "givenup");

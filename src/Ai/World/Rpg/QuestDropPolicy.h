@@ -105,6 +105,20 @@ enum class QuestDropVerdict : uint8
     }
 }
 
+// A stay the bot keeps dying in is over. Each death sends the bot back to the same anchor with the
+// same fight waiting, and the recovery module only quarantines an objective on an explicit
+// recovery (homebind, stranded ghost), so a relapse loop runs until the fifth death forces one.
+// Measured live 2026-09-01: 72 deaths in nine minutes across 120 bots, 16 bots dying three to
+// five times each at one objective (Sidurguorl: accept, release, revive at body, die, five
+// cycles). Two deaths in one stay mark the quest low priority for this process, like a fruitless
+// stay does; the gray-drop policy retires it later if it never becomes doable.
+inline constexpr uint32 QUEST_STAY_DEATH_LIMIT = 2;
+
+[[nodiscard]] inline bool QuestStayLostToDeaths(uint32 deathsThisStay)
+{
+    return deathsThisStay >= QUEST_STAY_DEATH_LIMIT;
+}
+
 // How a finished POI stay ends. A stay with objective progress rotates normally. A stay with no
 // progress used to abandon unconditionally, which is right for a kill stay (five minutes of
 // grinding with nothing to show means the place cannot progress the quest) but wrong for an
