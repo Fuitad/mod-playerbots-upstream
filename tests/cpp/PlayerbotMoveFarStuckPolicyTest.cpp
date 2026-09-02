@@ -8,8 +8,33 @@
  * PLB-LOCAL FILE. This file does not exist upstream and never conflicts on a merge.
  */
 
+#include "Ai/Base/Actions/CombatMovementPolicy.h"
 #include "Ai/World/Rpg/MoveFarStuckPolicy.h"
 #include "gtest/gtest.h"
+
+TEST(PlayerbotCombatMovementPolicyTest, AFightTakesASoloRandomBotOffItsForcedWalk)
+{
+    using playerbots::combat::AttackStopsMovement;
+    using playerbots::combat::CombatMoveOverridesForced;
+    // Hemewmew, 2026-09-01: a forced gathering trip continued through the fight that killed her.
+    EXPECT_TRUE(AttackStopsMovement(MovementPriority::MOVEMENT_FORCED, true, false, true));
+    EXPECT_TRUE(CombatMoveOverridesForced(MovementPriority::MOVEMENT_COMBAT, MovementPriority::MOVEMENT_FORCED,
+                                          true, true));
+    // Upstream's rule stays for a mastered bot: a raid mechanic's forced move is not interrupted.
+    EXPECT_FALSE(AttackStopsMovement(MovementPriority::MOVEMENT_FORCED, true, false, false));
+    EXPECT_FALSE(CombatMoveOverridesForced(MovementPriority::MOVEMENT_COMBAT, MovementPriority::MOVEMENT_FORCED,
+                                           true, false));
+    // Below the combat band the walk always stops, as before.
+    EXPECT_TRUE(AttackStopsMovement(MovementPriority::MOVEMENT_NORMAL, true, false, false));
+    // Not moving, or a controlled movement generator, is never touched.
+    EXPECT_FALSE(AttackStopsMovement(MovementPriority::MOVEMENT_NORMAL, false, false, true));
+    EXPECT_FALSE(AttackStopsMovement(MovementPriority::MOVEMENT_NORMAL, true, true, true));
+    // Out of combat a forced walk keeps its rank, and a normal move never outranks it.
+    EXPECT_FALSE(CombatMoveOverridesForced(MovementPriority::MOVEMENT_COMBAT, MovementPriority::MOVEMENT_FORCED,
+                                           false, true));
+    EXPECT_FALSE(CombatMoveOverridesForced(MovementPriority::MOVEMENT_NORMAL, MovementPriority::MOVEMENT_FORCED,
+                                           true, true));
+}
 
 namespace
 {

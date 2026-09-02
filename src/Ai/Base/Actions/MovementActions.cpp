@@ -14,6 +14,9 @@
 #include "FleeManager.h"
 #include "GameObject.h"
 #include "LastMovementValue.h"
+// PLB-LOCAL(combat-overrides-forced-travel): the policy and the random bot test it needs.
+#include "Ai/Base/Actions/CombatMovementPolicy.h"
+#include "RandomPlayerbotMgr.h"
 #include "LootObjectStack.h"
 #include "Map.h"
 #include "MotionMaster.h"
@@ -1014,6 +1017,12 @@ bool MovementAction::IsWaitingForLastMove(MovementPriority priority)
     LastMovement& lastMove = *context->GetValue<LastMovement&>("last movement");
 
     if (priority > lastMove.priority)
+        return false;
+    // PLB-LOCAL(combat-overrides-forced-travel): a combat move replaces a forced walk for a solo
+    // random bot in combat. See CombatMovementPolicy.h. Upstream: nothing here.
+    if (playerbots::combat::CombatMoveOverridesForced(
+            priority, lastMove.priority, bot->IsInCombat(),
+            !botAI->HasGameClientMaster() && sRandomPlayerbotMgr.IsRandomBot(bot)))
         return false;
 
     // heuristic 5s

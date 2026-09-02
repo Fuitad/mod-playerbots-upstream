@@ -12,6 +12,9 @@
 #include "CreatureAI.h"
 #include "Event.h"
 #include "LastMovementValue.h"
+// PLB-LOCAL(combat-overrides-forced-travel): the policy and the random bot test it needs.
+#include "Ai/Base/Actions/CombatMovementPolicy.h"
+#include "RandomPlayerbotMgr.h"
 #include "LootObjectStack.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotTextMgr.h"
@@ -187,7 +190,13 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
 
     LastMovement& lastMovement = AI_VALUE(LastMovement&, "last movement");
     bool moveControlled = bot->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_CONTROLLED) != NULL_MOTION_TYPE;
-    if (lastMovement.priority < MovementPriority::MOVEMENT_COMBAT && bot->isMoving() && !moveControlled)
+    // PLB-LOCAL BEGIN(combat-overrides-forced-travel): a solo random bot's forced walk stops too.
+    // See CombatMovementPolicy.h. Upstream:
+    //     if (lastMovement.priority < MovementPriority::MOVEMENT_COMBAT && bot->isMoving() && !moveControlled)
+    bool const soloRandomBot = !botAI->HasGameClientMaster() && sRandomPlayerbotMgr.IsRandomBot(bot);
+    if (playerbots::combat::AttackStopsMovement(lastMovement.priority, bot->isMoving(), moveControlled,
+                                                soloRandomBot))
+    // PLB-LOCAL END(combat-overrides-forced-travel)
     {
         AI_VALUE(LastMovement&, "last movement").clear();
         bot->GetMotionMaster()->Clear(false);
