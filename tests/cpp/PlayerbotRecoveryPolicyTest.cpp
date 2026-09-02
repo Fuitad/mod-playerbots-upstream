@@ -394,6 +394,21 @@ TEST(PlayerbotRecoveryPolicyTest, ASecondDeathOrAnOutmatchedKillerSendsTheBotHom
     EXPECT_EQ(later.deathsInWindow, 1u);
 }
 
+TEST(PlayerbotRecoveryPolicyTest, TheVerticalCapSetsAGhostOntoItsCorpseOnceThenSendsItHome)
+{
+    // Dorothe, 2026-09-02 06:28: set onto her camped Barrow Den corpse ten times, never revived.
+    VerticalCapRecord first = NoteVerticalCap(VerticalCapRecord{}, 1788344854);
+    EXPECT_EQ(first.caps, 1u);
+    EXPECT_FALSE(RecoverAtHomebindAfterVerticalCap(first.caps));
+    VerticalCapRecord second = NoteVerticalCap(first, 1788344854);
+    EXPECT_EQ(second.caps, 2u);
+    EXPECT_TRUE(RecoverAtHomebindAfterVerticalCap(second.caps));
+    // A later death is a new corpse and gets its own single cap.
+    VerticalCapRecord nextCorpse = NoteVerticalCap(second, 1788345900);
+    EXPECT_EQ(nextCorpse.caps, 1u);
+    EXPECT_FALSE(RecoverAtHomebindAfterVerticalCap(nextCorpse.caps));
+}
+
 TEST(PlayerbotRecoveryPolicyTest, ACorpseStepKeepsToTheGhostsOwnFloor)
 {
     // Jdyalani, 2026-09-02 01:20: on Teldrassil's tree at 134, the terrain grid under the tree

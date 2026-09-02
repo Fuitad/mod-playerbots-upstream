@@ -49,6 +49,48 @@ inline RecentDeathRecord NoteRecentDeath(RecentDeathRecord previous, uint32_t no
     return record;
 }
 
+// The vertical cap sets a ghost standing far above or below its corpse onto it. A ghost that ends
+// up off the vertical a second time on the same corpse was pulled away again by whatever moved it
+// the first time (Dorothe, 2026-09-02 06:28: ten caps in nine minutes over the Ban'ethil Barrow Den,
+// the corpse camped 150 yards under the surface, no reclaim between them). Setting it down again
+// repeats the loop; the manager's homebind recovery ends it.
+inline constexpr uint32_t VERTICAL_CAPS_PER_CORPSE = 1;
+
+struct VerticalCapRecord
+{
+    uint64_t corpseGhostTime = 0;
+    uint32_t caps = 0;
+};
+
+inline VerticalCapRecord NoteVerticalCap(VerticalCapRecord previous, uint64_t corpseGhostTime)
+{
+    VerticalCapRecord record;
+    record.corpseGhostTime = corpseGhostTime;
+    record.caps = previous.corpseGhostTime == corpseGhostTime ? previous.caps + 1 : 1;
+    return record;
+}
+
+inline bool RecoverAtHomebindAfterVerticalCap(uint32_t capsOnThisCorpse)
+{
+    return capsOnThisCorpse > VERTICAL_CAPS_PER_CORPSE;
+}
+
+namespace VerticalCaps
+{
+inline std::unordered_map<uint32_t, VerticalCapRecord>& Registry()
+{
+    static std::unordered_map<uint32_t, VerticalCapRecord> registry;
+    return registry;
+}
+
+inline VerticalCapRecord Note(uint32_t botGuidLow, uint64_t corpseGhostTime)
+{
+    VerticalCapRecord const record = NoteVerticalCap(Registry()[botGuidLow], corpseGhostTime);
+    Registry()[botGuidLow] = record;
+    return record;
+}
+}  // namespace VerticalCaps
+
 namespace RecentDeaths
 {
 inline std::unordered_map<uint32_t, RecentDeathRecord>& Registry()

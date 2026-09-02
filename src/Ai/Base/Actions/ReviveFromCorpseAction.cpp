@@ -291,6 +291,19 @@ bool FindCorpseAction::Execute(Event /*event*/)
         if (bot->GetDistance2d(corpsePos.GetPositionX(), corpsePos.GetPositionY()) < reclaimDist &&
             heightGap > CORPSE_STEP_HEIGHT_WINDOW_YARDS)
         {
+            // Once per corpse. A ghost off the vertical again after being set onto its corpse is
+            // being pulled away by the walk itself; see DeathRecoveryPolicy.h.
+            VerticalCapRecord const cap = VerticalCaps::Note(bot->GetGUID().GetCounter(),
+                                                             static_cast<uint64_t>(corpse->GetGhostTime()));
+            if (RecoverAtHomebindAfterVerticalCap(cap.caps))
+            {
+                LOG_DEBUG("playerbots", "[DeathProbe] {} CORPSE-VERTICAL gap {:.0f}y, cap {} on this corpse, home",
+                          bot->GetName(), heightGap, cap.caps);
+                bool const recovered = RecoverAtHomebind();
+                context->GetValue<uint32>("death count")
+                    ->Set(playerbots::recovery::DeathCountAfterForcedRecovery(dCount, recovered));
+                return recovered;
+            }
             LOG_DEBUG("playerbots", "[DeathProbe] {} CORPSE-VERTICAL gap {:.0f}y, set onto the corpse",
                       bot->GetName(), heightGap);
             bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
