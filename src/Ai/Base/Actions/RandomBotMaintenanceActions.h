@@ -38,6 +38,9 @@ public:
 
 private:
     uint32 targetEntry = 0;
+    // Set when the bot stood at a repairer and still could not pay for a single item: the errand
+    // is released and not replanned for a while, so the bot can go and earn instead of parking.
+    uint32 unaffordableAt = 0;
     WorldPosition targetPosition;
 };
 

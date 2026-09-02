@@ -98,6 +98,22 @@ enum class RepairPlan : std::uint8_t
 
 [[nodiscard]] bool ShouldRepairItem(std::uint32_t durability, std::uint32_t maximumDurability,
                                     std::uint32_t thresholdPercent);
+
+/*
+ * Whether worn gear justifies a repair trip. Merely worn gear waits until the bot can pay for
+ * the whole repair. Broken gear (an item at zero durability) goes regardless of the purse: the
+ * economy stands aside while gear is broken and a bot with broken weapons cannot kill, so the
+ * coins never arrive on their own. Measured live 2026-09-01: Vavapu, level 8 for 14.8 of her
+ * 19.8 played hours, 40c, four items at zero durability, 300 s at a quest POI with 18 targets
+ * and no kill. The repairer repairs item by item, so a small purse still buys a weapon back.
+ */
+[[nodiscard]] inline bool RepairTripWorthPlanning(bool hasBrokenEquipment, std::uint32_t repairCost,
+                                                  std::uint32_t repairBudget)
+{
+    if (hasBrokenEquipment)
+        return true;
+    return repairCost && repairCost <= repairBudget;
+}
 [[nodiscard]] bool IsVendorTrash(std::uint32_t quality, bool vendorUsage);
 [[nodiscard]] MountTier RequiredMountTier(std::uint32_t level, MountLevelThresholds const& thresholds);
 [[nodiscard]] std::uint32_t RequiredRidingSkill(MountTier tier);

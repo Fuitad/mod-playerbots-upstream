@@ -268,6 +268,19 @@ TEST(RandomBotMaintenancePolicyTest, RoutineMaintenanceWaitsForTheQuestButUrgent
     EXPECT_FALSE(playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(false, true));
 }
 
+TEST(RandomBotMaintenancePolicyTest, BrokenGearEarnsARepairTripWhateverThePurseHolds)
+{
+    using playerbots::maintenance::RepairTripWorthPlanning;
+    // Vavapu (2026-09-01): 40c against a repair cost far above it, four items at zero durability,
+    // and no trip ever planned. Broken gear must go regardless.
+    EXPECT_TRUE(RepairTripWorthPlanning(true, 300, 40));
+    EXPECT_TRUE(RepairTripWorthPlanning(true, 300, 0));
+    // Merely worn gear keeps the affordability gate.
+    EXPECT_TRUE(RepairTripWorthPlanning(false, 300, 300));
+    EXPECT_FALSE(RepairTripWorthPlanning(false, 300, 299));
+    EXPECT_FALSE(RepairTripWorthPlanning(false, 0, 1000));
+}
+
 TEST(RandomBotMaintenancePolicyTest, AClaimedErrandOwnsMovementUntilItEndsOrItsLeaseLapses)
 {
     using playerbots::maintenance::ErrandBlocksOtherMove;

@@ -373,7 +373,8 @@ bool playerbots::maintenance::NeedsRepair(PlayerbotAI* botAI)
         return false;
 
     uint32 const repairCost = AI_VALUE(uint32, "repair cost");
-    return repairCost && repairCost <= AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair));
+    return RepairTripWorthPlanning(HasBrokenEquipment(botAI), repairCost,
+                                   AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair)));
 }
 
 /*
@@ -468,13 +469,41 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
     if (!NeedsRepair(botAI))
         return false;
 
-    if (FindNearbyNpc(botAI, targetEntry, UNIT_NPC_FLAG_REPAIR) &&
-        botAI->DoSpecificAction("repair", Event("random bot repair"), true))
+    if (unaffordableAt && GetMSTimeDiffToNow(unaffordableAt) < 300000)
+        return false;
+
+    if (Creature* repairer = FindNearbyNpc(botAI, targetEntry, UNIT_NPC_FLAG_REPAIR))
     {
-        LOG_DEBUG("playerbots", "[Maintenance] {} repair: repaired at npc {}", bot->GetName(), targetEntry);
+        // A purse below the repair cost sells first when the repairer also buys: the economy
+        // stands aside while gear is broken, so nothing else turns Vavapu's ore and belts into
+        // the coins her blunderbuss needs (RandomBotMaintenancePolicy.h, RepairTripWorthPlanning).
+        AiObjectContext* context = botAI->GetAiObjectContext();
+        if (repairer->IsVendor() &&
+            AI_VALUE(uint32, "repair cost") >
+                AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair)))
+        {
+            bool const soldGray = botAI->DoSpecificAction("sell", Event("random bot repair", "gray"), true);
+            bool const soldVendor = botAI->DoSpecificAction("sell", Event("random bot repair", "vendor"), true);
+            LOG_DEBUG("playerbots", "[Maintenance] {} repair: sold first at npc {} gray={} vendor={} money {}c",
+                      bot->GetName(), targetEntry, soldGray, soldVendor, bot->GetMoney());
+        }
+        if (botAI->DoSpecificAction("repair", Event("random bot repair"), true))
+        {
+            LOG_DEBUG("playerbots", "[Maintenance] {} repair: repaired at npc {}", bot->GetName(), targetEntry);
+            targetEntry = 0;
+            unaffordableAt = 0;
+            playerbots::maintenance::ReleaseErrand(bot);
+            return true;
+        }
+        // Standing at the repairer with nothing repaired means the purse cannot cover one item
+        // even after selling. Parking here with the errand claimed would freeze the bot; let it
+        // go and earn, and replan in five minutes.
+        LOG_DEBUG("playerbots", "[Maintenance] {} repair: unaffordable at npc {} with {}c, backing off",
+                  bot->GetName(), targetEntry, bot->GetMoney());
         targetEntry = 0;
+        unaffordableAt = getMSTime();
         playerbots::maintenance::ReleaseErrand(bot);
-        return true;
+        return false;
     }
 
     /*
