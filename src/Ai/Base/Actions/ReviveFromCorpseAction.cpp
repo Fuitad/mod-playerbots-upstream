@@ -12,6 +12,9 @@
 // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
 #include "Corpse.h"
+// PLB-LOCAL(revive-safety): the hostile-in-reach count reads creatures directly.
+#include "Creature.h"
+#include "ObjectAccessor.h"
 #include "Event.h"
 #include "FleeManager.h"
 #include "GameGraveyard.h"
@@ -25,6 +28,31 @@
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "ServerFacade.h"
+
+#include <algorithm>
+
+// PLB-LOCAL BEGIN(revive-safety): hostiles whose aggro reach, plus a margin, covers the ghost.
+// Shared by the revive gate and the corpse walk so both judge the same radius; see
+// PlayerbotRecoveryPolicy.h, ReviveAtBodyAllowed, for the measurement.
+namespace
+{
+uint32 HostilesInReach(PlayerbotAI* botAI, Player* bot)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    uint32 count = 0;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "possible targets no los"))
+    {
+        Creature* creature = ObjectAccessor::GetCreature(*bot, guid);
+        if (!creature || !creature->IsAlive())
+            continue;
+        float const reach = creature->GetAttackDistance(bot) + playerbots::recovery::REVIVE_AGGRO_MARGIN_YARDS;
+        if (bot->IsWithinDist(creature, reach, false))
+            ++count;
+    }
+    return count;
+}
+}  // namespace
+// PLB-LOCAL END(revive-safety)
 
 bool ReviveFromCorpseAction::Execute(Event event)
 {
@@ -87,6 +115,25 @@ bool ReviveFromCorpseAction::Execute(Event event)
             return false;
         }
     }
+
+    // PLB-LOCAL BEGIN(revive-safety): a random bot does not take its body back inside a hostile's
+    // reach; the corpse walk keeps moving it to a safer spot. See PlayerbotRecoveryPolicy.h.
+    // Upstream: nothing here, the revive went ahead whatever stood at the corpse.
+    if (!botAI->HasGameClientMaster())
+    {
+        uint32 const hostiles = HostilesInReach(botAI, bot);
+        uint32 const deadSeconds =
+            static_cast<uint32>(std::max<int64>(0, static_cast<int64>(now) - corpse->GetGhostTime()));
+        if (!playerbots::recovery::ReviveAtBodyAllowed(hostiles, deadSeconds))
+        {
+            LOG_DEBUG("playerbots", "[DeathProbe] {} REVIVE-DEFERRED hostiles {} dead {}s", bot->GetName(), hostiles,
+                      deadSeconds);
+            botAI->RecordReviveAttempt(timestampMs, playerbots::recovery::CorpseReviveOutcome(eligibility, true, false),
+                                       bot->IsAlive());
+            return false;
+        }
+    }
+    // PLB-LOCAL END(revive-safety)
 
     LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> revives at body", bot->GetGUID().ToString().c_str(),
               bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName().c_str());
@@ -163,13 +210,12 @@ bool FindCorpseAction::Execute(Event /*event*/)
         }
         else if (deadTime > 8 * MINUTE)  // We have walked too long already.
             return false;
-        else
-        {
-            GuidVector units = AI_VALUE(GuidVector, "possible targets no los");
-
-            if (botPos.getUnitsAggro(units, bot) == 0)  // There are no mobs near.
-                return false;
-        }
+        // PLB-LOCAL(revive-safety): the same reach-plus-margin the revive gate uses, so the walk
+        // does not stop at a spot the gate then refuses. Upstream:
+        //     GuidVector units = AI_VALUE(GuidVector, "possible targets no los");
+        //     if (botPos.getUnitsAggro(units, bot) == 0) return false;
+        else if (HostilesInReach(botAI, bot) == 0)  // There are no mobs near.
+            return false;
     }
 
     // If we are getting close move to a save ressurrection spot instead of just the corpse.

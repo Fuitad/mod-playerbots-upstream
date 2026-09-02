@@ -98,6 +98,28 @@ struct CorpseReclaimEligibility
 [[nodiscard]] bool ShouldCountPhysicalDeath(bool alreadyInDeadEngine, bool alive, bool inBattleground,
                                             bool hasRealPlayerMaster);
 [[nodiscard]] bool IsHomebindRecoverySuccessful(bool aliveAfterRevive, bool teleportAccepted);
+
+/*
+ * Whether a ghost may take its body back right now.
+ *
+ * Measured live 2026-09-01 (first eight minutes after the 22:13 restart): 13 of 15 body revives
+ * were followed by another death within about a minute, against 2 of 23 spirit healer revives.
+ * The killer stands where it killed, the corpse action's "no mobs near" test has no margin and
+ * runs at the ghost's last position, and the revive action never asks at all, so a ghost could be
+ * revived the same tick the corpse action judged the spot unsafe (Alma, level 9 warlock: revived
+ * at 317.6 s, corruption on the same wolf at 318.8 s, dead again at 323 s).
+ *
+ * A hostile inside its aggro reach plus a margin defers the revive; the ghost keeps walking to a
+ * safer spot and tries again. The wait is bounded: after REVIVE_HOSTILE_WAIT_SECONDS the revive
+ * goes ahead regardless, the same cap the corpse walk already uses.
+ */
+inline constexpr std::uint32_t REVIVE_HOSTILE_WAIT_SECONDS = 8 * 60;
+inline constexpr float REVIVE_AGGRO_MARGIN_YARDS = 10.0f;
+
+[[nodiscard]] inline bool ReviveAtBodyAllowed(std::uint32_t hostilesInReach, std::uint32_t deadSeconds)
+{
+    return hostilesInReach == 0 || deadSeconds >= REVIVE_HOSTILE_WAIT_SECONDS;
+}
 // The last fact is a broken main-hand WEAPON, not any broken equipment: banning combat over broken
 // armor starved bots of the income they needed to repair (see PlayerbotAI::HasBrokenWeapon).
 [[nodiscard]] bool ShouldRequireRepairBeforeCombat(bool economyManagedSupplies, bool randomBot, bool alive,

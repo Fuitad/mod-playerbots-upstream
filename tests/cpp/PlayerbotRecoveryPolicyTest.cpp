@@ -349,6 +349,18 @@ TEST_F(PlayerbotRecoveryActionTest, ForcedRecoveryWritesBackOnlyAcceptedOutcome)
     EXPECT_EQ(botAI->GetAiObjectContext()->GetValue<uint32>("death count")->Get(), 0u);
 }
 
+TEST(PlayerbotRecoveryPolicyTest, ABodyReviveWaitsWhileAHostileIsInReachButNotForever)
+{
+    using playerbots::recovery::REVIVE_HOSTILE_WAIT_SECONDS;
+    using playerbots::recovery::ReviveAtBodyAllowed;
+    // Alma, 2026-09-01: revived beside the wolf that killed her and died six seconds later.
+    EXPECT_FALSE(ReviveAtBodyAllowed(1, 0));
+    EXPECT_FALSE(ReviveAtBodyAllowed(3, REVIVE_HOSTILE_WAIT_SECONDS - 1));
+    EXPECT_TRUE(ReviveAtBodyAllowed(0, 0));
+    // The wait is bounded so a camped corpse does not keep a bot dead all night.
+    EXPECT_TRUE(ReviveAtBodyAllowed(1, REVIVE_HOSTILE_WAIT_SECONDS));
+}
+
 TEST(PlayerbotCombatSafetyTest, PetAndPullEntrypointsHonorCentralCombatSafety)
 {
     CombatBlockedPlayerbotAI botAI;
