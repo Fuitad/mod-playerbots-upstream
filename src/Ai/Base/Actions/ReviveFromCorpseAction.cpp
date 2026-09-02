@@ -12,9 +12,11 @@
 // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
 #include "Corpse.h"
-// PLB-LOCAL(revive-safety): the hostile-in-reach count reads creatures directly.
+// PLB-LOCAL(revive-safety): the hostile-in-reach count scans the grid directly.
+#include "CellImpl.h"
 #include "Creature.h"
-#include "ObjectAccessor.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Event.h"
 #include "FleeManager.h"
 #include "GameGraveyard.h"
@@ -30,20 +32,33 @@
 #include "ServerFacade.h"
 
 #include <algorithm>
+#include <list>
 
 // PLB-LOCAL BEGIN(revive-safety): hostiles whose aggro reach, plus a margin, covers the ghost.
 // Shared by the revive gate and the corpse walk so both judge the same radius; see
 // PlayerbotRecoveryPolicy.h, ReviveAtBodyAllowed, for the measurement.
 namespace
 {
-uint32 HostilesInReach(PlayerbotAI* botAI, Player* bot)
+// A ghost cannot see living creatures, so any list built through the bot's own visibility (the
+// "possible targets" values, and upstream's "no mobs near" test on top of them) is empty for the
+// whole corpse walk. Measured live 2026-09-01 22:57: Sugandhi revived at her body with the gate
+// counting zero and was in combat with the Defias Smuggler that killed her two seconds later. The
+// scan below walks the grid directly and judges hostility by faction, which a ghost keeps. The
+// radius is wider than any aggro reach (the core caps attack distance at 45 yards) plus the margin.
+constexpr float REVIVE_HOSTILE_SCAN_YARDS = 60.0f;
+
+uint32 HostilesInReach(PlayerbotAI* /*botAI*/, Player* bot)
 {
-    AiObjectContext* context = botAI->GetAiObjectContext();
+    std::list<Creature*> creatures;
+    Acore::AnyUnitInObjectRangeCheck check(bot, REVIVE_HOSTILE_SCAN_YARDS);
+    Acore::CreatureListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(bot, creatures, check);
+    Cell::VisitObjects(bot, searcher, REVIVE_HOSTILE_SCAN_YARDS);
+
     uint32 count = 0;
-    for (ObjectGuid const guid : AI_VALUE(GuidVector, "possible targets no los"))
+    for (Creature* creature : creatures)
     {
-        Creature* creature = ObjectAccessor::GetCreature(*bot, guid);
-        if (!creature || !creature->IsAlive())
+        if (!creature->IsAlive() || creature->IsCritter() || creature->IsCivilian() || creature->IsPet() ||
+            creature->IsTotem() || !creature->IsHostileTo(bot))
             continue;
         float const reach = creature->GetAttackDistance(bot) + playerbots::recovery::REVIVE_AGGRO_MARGIN_YARDS;
         if (bot->IsWithinDist(creature, reach, false))
