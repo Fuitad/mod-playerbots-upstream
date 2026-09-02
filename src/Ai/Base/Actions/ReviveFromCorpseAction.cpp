@@ -386,6 +386,14 @@ bool FindCorpseAction::Execute(Event /*event*/)
         }
     }
 
+    // PLB-LOCAL(revive-safety): whatever chose the target (the wait spot, the flee manager, a
+    // reachable random point), a height outside the ghost's window is another floor: the sea bed
+    // under Teldrassil's tree (Jdyalani, 2026-09-02 05:25, 572 yards down on a build that had
+    // already fixed the wait spot and the water-walking snap) or the mesa over a mine (Sinette,
+    // Popoto, 100 yards up). The walk then aims at the corpse itself.
+    if (!moveToLeader && !CorpseStepHeightPlausible(bot->GetPositionZ(), moveToPos.GetPositionZ()))
+        moveToPos = corpsePos;
+
     // Actual mobing part.
     bool moved = false;
 
