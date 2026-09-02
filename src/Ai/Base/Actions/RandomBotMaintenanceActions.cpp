@@ -398,6 +398,32 @@ bool playerbots::maintenance::CriticallyFullBags(PlayerbotAI* botAI)
     return AI_VALUE(uint8, "bag space") > 95;
 }
 
+/*
+ * The two gear readings RepairVisitVerdict is fed: every equipped item's durability summed, and
+ * whether any weapon slot is still at zero. Both read the items directly so the verdict cannot be
+ * fooled by an action that reports success without spending anything.
+ */
+uint32 playerbots::maintenance::EquippedDurabilitySum(Player* bot)
+{
+    uint32 total = 0;
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+        if (Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            total += item->GetUInt32Value(ITEM_FIELD_DURABILITY);
+    return total;
+}
+
+bool playerbots::maintenance::HasBrokenWeapon(Player* bot)
+{
+    for (uint8 const slot : {EQUIPMENT_SLOT_MAINHAND, EQUIPMENT_SLOT_RANGED, EQUIPMENT_SLOT_OFFHAND})
+    {
+        Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+        if (item && item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY) > 0 &&
+            item->GetUInt32Value(ITEM_FIELD_DURABILITY) == 0)
+            return true;
+    }
+    return false;
+}
+
 bool playerbots::maintenance::HasBrokenEquipment(PlayerbotAI* botAI)
 {
     if (!IsEligible(botAI))
@@ -487,19 +513,39 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
             LOG_DEBUG("playerbots", "[Maintenance] {} repair: sold first at npc {} gray={} vendor={} money {}c",
                       bot->GetName(), targetEntry, soldGray, soldVendor, bot->GetMoney());
         }
-        if (botAI->DoSpecificAction("repair", Event("random bot repair"), true))
+        // The verdict reads the gear, not the repair action's return value, which is true whenever
+        // a repairer is in reach (RandomBotMaintenancePolicy.h, RepairVisitVerdict). Weapons go
+        // first on their own, and a weapon the purse cannot cover ends the visit before the generic
+        // pass can spend the coins on armour.
+        uint32 const durabilityBefore = EquippedDurabilitySum(bot);
+        float const discount = bot->GetReputationPriceDiscount(repairer);
+        for (uint8 const slot : {EQUIPMENT_SLOT_MAINHAND, EQUIPMENT_SLOT_RANGED, EQUIPMENT_SLOT_OFFHAND})
+            (void)bot->DurabilityRepair(slot, true, discount, false);
+        bool const weaponStillBroken = HasBrokenWeapon(bot);
+        if (!weaponStillBroken)
+            (void)botAI->DoSpecificAction("repair", Event("random bot repair"), true);
+        switch (RepairVisitVerdict(weaponStillBroken, durabilityBefore, EquippedDurabilitySum(bot)))
         {
-            LOG_DEBUG("playerbots", "[Maintenance] {} repair: repaired at npc {}", bot->GetName(), targetEntry);
-            targetEntry = 0;
-            unaffordableAt = 0;
-            playerbots::maintenance::ReleaseErrand(bot);
-            return true;
+            case RepairVisitOutcome::Repaired:
+                LOG_DEBUG("playerbots", "[Maintenance] {} repair: repaired at npc {} money {}c", bot->GetName(),
+                          targetEntry, bot->GetMoney());
+                targetEntry = 0;
+                unaffordableAt = 0;
+                playerbots::maintenance::ReleaseErrand(bot);
+                return true;
+            case RepairVisitOutcome::WeaponStarved:
+                LOG_DEBUG("playerbots",
+                          "[Maintenance] {} repair: weapon unaffordable at npc {} with {}c, keeping the purse",
+                          bot->GetName(), targetEntry, bot->GetMoney());
+                break;
+            case RepairVisitOutcome::Unaffordable:
+                // Standing at the repairer with nothing repaired means the purse cannot cover one
+                // item even after selling. Parking here with the errand claimed would freeze the
+                // bot; let it go and earn, and replan in five minutes.
+                LOG_DEBUG("playerbots", "[Maintenance] {} repair: unaffordable at npc {} with {}c, backing off",
+                          bot->GetName(), targetEntry, bot->GetMoney());
+                break;
         }
-        // Standing at the repairer with nothing repaired means the purse cannot cover one item
-        // even after selling. Parking here with the errand claimed would freeze the bot; let it
-        // go and earn, and replan in five minutes.
-        LOG_DEBUG("playerbots", "[Maintenance] {} repair: unaffordable at npc {} with {}c, backing off",
-                  bot->GetName(), targetEntry, bot->GetMoney());
         targetEntry = 0;
         unaffordableAt = getMSTime();
         playerbots::maintenance::ReleaseErrand(bot);

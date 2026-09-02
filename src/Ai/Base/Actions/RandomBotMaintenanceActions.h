@@ -22,6 +22,8 @@ namespace playerbots::maintenance
 [[nodiscard]] bool NeedsVendor(PlayerbotAI* botAI);
 [[nodiscard]] bool NeedsMount(PlayerbotAI* botAI);
 [[nodiscard]] bool HasBrokenEquipment(PlayerbotAI* botAI);
+[[nodiscard]] bool HasBrokenWeapon(Player* bot);
+[[nodiscard]] uint32 EquippedDurabilitySum(Player* bot);
 // Facts feeding DeferRoutineMaintenanceDuringQuest: whether the bot is in RPG_DO_QUEST right now,
 // and whether its bags are too full to keep looting (the vendor urgency).
 [[nodiscard]] bool DoingQuestNow(PlayerbotAI* botAI);

@@ -114,6 +114,35 @@ enum class RepairPlan : std::uint8_t
         return true;
     return repairCost && repairCost <= repairBudget;
 }
+/*
+ * What a visit to the repairer achieved. The generic repair action reports success whenever a
+ * repairer is in reach, whatever the purse bought, so a bot with two copper and three broken
+ * items heard "repaired" every five seconds and never backed off (Vavapu, 2026-09-01, 22:00:
+ * "sold first ... money 2c" then "repaired" in an endless five second loop, gear still broken).
+ * The verdict here reads the gear instead of the action's word.
+ *
+ * WeaponStarved is the case the purse must be protected in: the weapon is the item a bot cannot
+ * fight without, the repairer takes weapons first but skips one it cannot afford, and the generic
+ * pass then spends whatever is left on armour. Vavapu's 40c went to a vest and gloves while her
+ * axe and gun stayed at zero. When a weapon is still broken after the weapon pass, nothing else
+ * is bought: the bot leaves with its coins and comes back when it can afford the weapon.
+ */
+enum class RepairVisitOutcome : std::uint8_t
+{
+    Repaired,
+    WeaponStarved,
+    Unaffordable
+};
+
+[[nodiscard]] inline RepairVisitOutcome RepairVisitVerdict(bool weaponStillBroken, std::uint32_t durabilityBefore,
+                                                           std::uint32_t durabilityAfter)
+{
+    if (weaponStillBroken)
+        return RepairVisitOutcome::WeaponStarved;
+    if (durabilityAfter > durabilityBefore)
+        return RepairVisitOutcome::Repaired;
+    return RepairVisitOutcome::Unaffordable;
+}
 [[nodiscard]] bool IsVendorTrash(std::uint32_t quality, bool vendorUsage);
 [[nodiscard]] MountTier RequiredMountTier(std::uint32_t level, MountLevelThresholds const& thresholds);
 [[nodiscard]] std::uint32_t RequiredRidingSkill(MountTier tier);

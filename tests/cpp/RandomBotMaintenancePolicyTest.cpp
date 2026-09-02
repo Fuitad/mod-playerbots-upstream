@@ -281,6 +281,18 @@ TEST(RandomBotMaintenancePolicyTest, BrokenGearEarnsARepairTripWhateverThePurseH
     EXPECT_FALSE(RepairTripWorthPlanning(false, 0, 1000));
 }
 
+TEST(RandomBotMaintenancePolicyTest, ARepairVisitIsJudgedByTheGearNotByTheActionsWord)
+{
+    using playerbots::maintenance::RepairVisitOutcome;
+    using playerbots::maintenance::RepairVisitVerdict;
+    // Vavapu, 2026-09-01: "repaired" logged every five seconds with 2c and nothing repaired.
+    EXPECT_EQ(RepairVisitVerdict(false, 45, 45), RepairVisitOutcome::Unaffordable);
+    EXPECT_EQ(RepairVisitVerdict(false, 45, 46), RepairVisitOutcome::Repaired);
+    // A weapon the purse cannot cover ends the visit whatever the armour pass would have bought.
+    EXPECT_EQ(RepairVisitVerdict(true, 45, 45), RepairVisitOutcome::WeaponStarved);
+    EXPECT_EQ(RepairVisitVerdict(true, 45, 90), RepairVisitOutcome::WeaponStarved);
+}
+
 TEST(RandomBotMaintenancePolicyTest, AClaimedErrandOwnsMovementUntilItEndsOrItsLeaseLapses)
 {
     using playerbots::maintenance::ErrandBlocksOtherMove;
