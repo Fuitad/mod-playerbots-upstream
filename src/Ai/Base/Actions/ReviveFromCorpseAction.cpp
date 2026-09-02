@@ -260,6 +260,37 @@ bool FindCorpseAction::Execute(Event /*event*/)
 
     bool moveToLeader = groupLeader && groupLeader != bot && leaderPos.fDist(corpsePos) < reclaimDist;
 
+    // PLB-LOCAL BEGIN(revive-safety): two caps for a masterless random bot. A ghost standing over
+    // or under its corpse (within the reclaim radius on the map, far off in height) cannot walk the
+    // vertical and the reclaim radius is measured in three dimensions: Damama, 2026-09-02 04:05,
+    // stood 604 yards straight below her corpse under Teldrassil's tree. It is set onto the corpse.
+    // And a ghost dead longer than the walk window goes home alive instead of asking the spirit
+    // healer every tick: at Auberdine the healer search finds nothing (Damama again, 109 fallback
+    // lines in 14 minutes; Jdyalani 01:20), and the manager's own timer had not fired in 825 s.
+    if (!botAI->HasGameClientMaster() && sRandomPlayerbotMgr.IsRandomBot(bot))
+    {
+        float const heightGap = std::fabs(bot->GetPositionZ() - corpsePos.GetPositionZ());
+        if (bot->GetDistance2d(corpsePos.GetPositionX(), corpsePos.GetPositionY()) < reclaimDist &&
+            heightGap > CORPSE_STEP_HEIGHT_WINDOW_YARDS / 2.0f)
+        {
+            LOG_DEBUG("playerbots", "[DeathProbe] {} CORPSE-VERTICAL gap {:.0f}y, set onto the corpse",
+                      bot->GetName(), heightGap);
+            bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
+            return bot->TeleportTo(corpsePos.GetMapId(), corpsePos.GetPositionX(), corpsePos.GetPositionY(),
+                                   corpsePos.GetPositionZ(), bot->GetOrientation());
+        }
+        if (deadTime >= 10 * MINUTE)
+        {
+            LOG_DEBUG("playerbots", "[DeathProbe] {} HOMEBIND-AFTER-WALK dead {}s corpseDist {:.0f}", bot->GetName(),
+                      deadTime, corpseDist);
+            bool const recovered = RecoverAtHomebind();
+            context->GetValue<uint32>("death count")
+                ->Set(playerbots::recovery::DeathCountAfterForcedRecovery(dCount, recovered));
+            return recovered;
+        }
+    }
+    // PLB-LOCAL END(revive-safety)
+
     // Should we ressurect? If so, return false.
     // PLB-LOCAL(corpse-walk-arrival): arrived means inside the radius the reclaim accepts, not
     // five yards inside it. Upstream: `if (corpseDist < reclaimDist)`, which left a ring where the
