@@ -269,9 +269,12 @@ bool FindCorpseAction::Execute(Event /*event*/)
     // lines in 14 minutes; Jdyalani 01:20), and the manager's own timer had not fired in 825 s.
     if (!botAI->HasGameClientMaster() && sRandomPlayerbotMgr.IsRandomBot(bot))
     {
+        // The full step window, not half of it: a wait spot 34 yards up a hillside from the corpse
+        // is a legitimate 50 to 60 yards higher (Ombeline, 04:26, teleported back onto her camped
+        // corpse three times), while a ghost under the world is hundreds of yards off.
         float const heightGap = std::fabs(bot->GetPositionZ() - corpsePos.GetPositionZ());
         if (bot->GetDistance2d(corpsePos.GetPositionX(), corpsePos.GetPositionY()) < reclaimDist &&
-            heightGap > CORPSE_STEP_HEIGHT_WINDOW_YARDS / 2.0f)
+            heightGap > CORPSE_STEP_HEIGHT_WINDOW_YARDS)
         {
             LOG_DEBUG("playerbots", "[DeathProbe] {} CORPSE-VERTICAL gap {:.0f}y, set onto the corpse",
                       bot->GetName(), heightGap);
