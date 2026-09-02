@@ -787,6 +787,30 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                       static_cast<uint32>(useDiag.mode), useDiag.nearbyUnits, useDiag.matchingEntry,
                       useDiag.aliveMatching, useDiag.inRange, goDiag.nearbyGos, goDiag.matching,
                       goDiag.usableMatching, goDiag.inRange);
+            // PLB-LOCAL(quest-abandon-probe): one SOURCE line per source creature spawn near the
+            // anchor, with the facts the grind candidate filter gates on (alive, distance, z gap,
+            // line of sight, attackers). Measured 2026-09-01: Damama stood 21y from an alive
+            // Ferocitas for 494s, killed 17 bystanders and never him; nothing above says why.
+            if (quest)
+                for (SpawnAnchorPoint const& spawn :
+                     QuestObjectiveSpawnPointsFor(quest, currentObjective, bot->GetMapId()))
+                {
+                    if (!spawn.creature || spawn.spawnId == 0 ||
+                        CreatureSpawnsWithin({spawn}, data.pos.GetPositionX(), data.pos.GetPositionY(),
+                                             sPlayerbotAIConfig.grindDistance) == 0)
+                        continue;
+                    auto const liveRange = bot->GetMap()->GetCreatureBySpawnIdStore().equal_range(spawn.spawnId);
+                    Creature* live = liveRange.first != liveRange.second ? liveRange.first->second : nullptr;
+                    LOG_DEBUG("playerbots",
+                              "[QuestProbe] {} SOURCE quest {} obj {} spawn {} alive {} dist {:.1f} dz {:.1f} los {} "
+                              "attackers {} react {}",
+                              bot->GetName(), questId, currentObjective, spawn.spawnId,
+                              live ? live->IsAlive() : false, live ? bot->GetDistance(live) : -1.0f,
+                              live ? std::abs(bot->GetPositionZ() - live->GetPositionZ()) : -1.0f,
+                              live ? bot->IsWithinLOSInMap(live) : false,
+                              live ? static_cast<uint32>(live->getAttackers().size()) : 0u,
+                              live ? static_cast<int32>(bot->GetReactionTo(live)) : -1);
+                }
             botAI->rpgInfo.ChangeToIdle();
             return true;
         }

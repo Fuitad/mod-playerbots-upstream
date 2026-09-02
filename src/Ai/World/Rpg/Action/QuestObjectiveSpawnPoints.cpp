@@ -10,7 +10,10 @@
 
 #include "QuestObjectiveSpawnPoints.h"
 
+#include "DatabaseEnv.h"
+#include "Field.h"
 #include "ObjectMgr.h"
+#include "QueryResult.h"
 #include "QuestDef.h"
 
 #include <algorithm>
@@ -42,6 +45,33 @@ void BuildReverseIndexes()
             for (uint32 itemId : *items)
                 if (itemId)
                     itemToGameObjectEntries[itemId].push_back(entry);
+
+    // A quest item that only exists INSIDE another item (Tallonkai's Jewel 8050 inside the
+    // Gnarlpine Necklace 8049 that Ferocitas drops, measured 2026-09-01: the objective had no
+    // source, so no anchor, no relevant kills, no respawn sightings, and 8 bots abandoned at his
+    // spot) inherits the container's sources. LootTemplate keeps its entries private, so the
+    // container relation comes from the world table once, at first use.
+    std::unordered_map<uint32, std::vector<uint32>> containerToQuestItems;
+    if (QueryResult result = WorldDatabase.Query("SELECT Entry, Item FROM item_loot_template WHERE QuestRequired = 1"))
+        do
+        {
+            Field* fields = result->Fetch();
+            containerToQuestItems[fields[0].Get<uint32>()].push_back(fields[1].Get<uint32>());
+        } while (result->NextRow());
+    for (auto const& [container, questItems] : containerToQuestItems)
+    {
+        auto const creatures = itemToCreatureEntries.find(container);
+        auto const objects = itemToGameObjectEntries.find(container);
+        for (uint32 questItem : questItems)
+        {
+            if (creatures != itemToCreatureEntries.end())
+                for (uint32 entry : creatures->second)
+                    itemToCreatureEntries[questItem].push_back(entry);
+            if (objects != itemToGameObjectEntries.end())
+                for (uint32 entry : objects->second)
+                    itemToGameObjectEntries[questItem].push_back(entry);
+        }
+    }
 }
 }  // namespace
 
