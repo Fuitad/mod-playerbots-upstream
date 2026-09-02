@@ -350,13 +350,26 @@ bool FindCorpseAction::Execute(Event /*event*/)
             // corpseDist 680 dead 2s). Step toward the corpse a hundred yards at a time instead.
             if (!moved && corpseDist > 150.0f && deadTime < 10 * MINUTE && dCount < 5)
             {
-                float const stepAngle = bot->GetAngle(corpsePos.GetPositionX(), corpsePos.GetPositionY());
-                float const sx = bot->GetPositionX() + std::cos(stepAngle) * 100.0f;
-                float const sy = bot->GetPositionY() + std::sin(stepAngle) * 100.0f;
-                float const sz = std::max(bot->GetMap()->GetHeight(sx, sy, MAX_HEIGHT),
-                                          bot->GetMap()->GetWaterLevel(sx, sy));
-                if (sz != INVALID_HEIGHT && sz != VMAP_INVALID_HEIGHT_VALUE)
+                float const toCorpse = bot->GetAngle(corpsePos.GetPositionX(), corpsePos.GetPositionY());
+                // Straight at the corpse first, then 40 degrees either side: a lake or a cliff on
+                // the direct line is the usual reason a step cannot path.
+                for (float const turn : {0.0f, 0.7f, -0.7f})
+                {
+                    float const sx = bot->GetPositionX() + std::cos(toCorpse + turn) * 100.0f;
+                    float const sy = bot->GetPositionY() + std::sin(toCorpse + turn) * 100.0f;
+                    float const sz = std::max(bot->GetMap()->GetHeight(sx, sy, MAX_HEIGHT),
+                                              bot->GetMap()->GetWaterLevel(sx, sy));
+                    if (sz == INVALID_HEIGHT || sz == VMAP_INVALID_HEIGHT_VALUE)
+                        continue;
                     moved = MoveTo(bot->GetMapId(), sx, sy, sz, false, false);
+                    if (moved)
+                        break;
+                }
+                // The first seconds after the graveyard teleport often cannot path at all, and the
+                // spirit healer stands right there: Adelbert (2026-09-02 00:21) was revived by it
+                // one second after death with his corpse 639 yards away. Holding is cheaper.
+                if (!moved && deadTime < 20)
+                    moved = true;
             }
 
             // PLB-LOCAL(revive-safety): a ghost beside its corpse with a hostile in reach holds
