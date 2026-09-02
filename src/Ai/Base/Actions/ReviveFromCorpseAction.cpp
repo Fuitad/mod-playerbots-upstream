@@ -377,6 +377,20 @@ bool FindCorpseAction::Execute(Event /*event*/)
                     moved = MoveTo(fallback.GetMapId(), fallback.GetPositionX(), fallback.GetPositionY(),
                                    fallback.GetPositionZ(), false, false);
             }
+            // PLB-LOCAL(revive-safety): a corpse below a ledge or across water inside the walk's
+            // reach has no mesh path from where the ghost stands, so the ghost goes straight: it
+            // walks on water and a straight spline ignores the cliff. Kasumi, 2026-09-02 01:55:
+            // thirteen fallbacks from the Sepulcher cliff top with her corpse 54 yards below in the
+            // lake, the spirit healer action walking her back to the graveyard each time.
+            if (!moved && !threat && corpseDist <= 150.0f && deadTime < 10 * MINUTE && dCount < 5 &&
+                CorpseStepHeightPlausible(bot->GetPositionZ(), moveToPos.GetPositionZ()))
+            {
+                if (IsWaitingForLastMove(MovementPriority::MOVEMENT_NORMAL))
+                    moved = true;
+                else
+                    moved = MoveTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(),
+                                   moveToPos.GetPositionZ(), false, false, false, true);
+            }
             // A corpse hundreds of yards away defeats a single move: the ghost spawns at the
             // graveyard, the path fails at once, and upstream took the spirit healer one second
             // after the release (SPIRIT-FALLBACK 2026-09-02 00:00: corpseDist 644 dead 1s,
