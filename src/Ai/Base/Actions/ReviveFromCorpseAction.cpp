@@ -17,6 +17,7 @@
 #include "Creature.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "IVMapMgr.h"
 #include "Event.h"
 #include "FleeManager.h"
 #include "GameGraveyard.h"
@@ -268,10 +269,22 @@ bool FindCorpseAction::Execute(Event /*event*/)
             float const away = threat->GetAngle(corpse);
             float const wx = corpsePos.GetPositionX() + std::cos(away) * reclaimDist;
             float const wy = corpsePos.GetPositionY() + std::sin(away) * reclaimDist;
-            float const wz = std::max(bot->GetMap()->GetHeight(wx, wy, corpsePos.GetPositionZ() + 5.0f),
+            // Height from the top of the world: the search only looks down, so a spot uphill of
+            // the corpse read as invalid from corpseZ + 5 and the move failed (SPIRIT-FALLBACK
+            // lines at 00:00 on 2026-09-02: corpseDist 22, threat in reach, holding false).
+            float const wz = std::max(bot->GetMap()->GetHeight(wx, wy, MAX_HEIGHT),
                                       bot->GetMap()->GetWaterLevel(wx, wy));
             moveToPos = WorldPosition(corpsePos.GetMapId(), wx, wy, wz, 0.0f);
             holdingAtWaitSpot = bot->GetDistance2d(wx, wy) < 5.0f;
+            // A wait spot the path cannot reach (cliff, water, wall) falls back to any reachable
+            // point inside the reclaim radius rather than to the spirit healer.
+            if (!holdingAtWaitSpot && (wz == INVALID_HEIGHT || wz == VMAP_INVALID_HEIGHT_VALUE ||
+                                       !bot->IsWithinLOS(wx, wy, wz)))
+            {
+                WorldPosition fallback = corpsePos;
+                if (fallback.GetReachableRandomPointOnGround(bot, reclaimDist, urand(0, 1)))
+                    moveToPos = fallback;
+            }
         }
         else
         // PLB-LOCAL END(revive-safety)
@@ -320,9 +333,31 @@ bool FindCorpseAction::Execute(Event /*event*/)
                                moveToPos.GetPositionZ(), false, false);
             }
 
-            // PLB-LOCAL(revive-safety): holding at the wait spot is progress, not a failed walk.
+            // PLB-LOCAL(revive-safety): holding at the wait spot is progress, not a failed walk,
+            // and a wait spot the walk cannot reach tries any reachable point in the radius first.
             if (!moved && holdingAtWaitSpot)
                 moved = true;
+            if (!moved && threat && deadTime < 10 * MINUTE && dCount < 5)
+            {
+                WorldPosition fallback = corpsePos;
+                if (fallback.GetReachableRandomPointOnGround(bot, reclaimDist, urand(0, 1)))
+                    moved = MoveTo(fallback.GetMapId(), fallback.GetPositionX(), fallback.GetPositionY(),
+                                   fallback.GetPositionZ(), false, false);
+            }
+            // A corpse hundreds of yards away defeats a single move: the ghost spawns at the
+            // graveyard, the path fails at once, and upstream took the spirit healer one second
+            // after the release (SPIRIT-FALLBACK 2026-09-02 00:00: corpseDist 644 dead 1s,
+            // corpseDist 680 dead 2s). Step toward the corpse a hundred yards at a time instead.
+            if (!moved && corpseDist > 150.0f && deadTime < 10 * MINUTE && dCount < 5)
+            {
+                float const stepAngle = bot->GetAngle(corpsePos.GetPositionX(), corpsePos.GetPositionY());
+                float const sx = bot->GetPositionX() + std::cos(stepAngle) * 100.0f;
+                float const sy = bot->GetPositionY() + std::sin(stepAngle) * 100.0f;
+                float const sz = std::max(bot->GetMap()->GetHeight(sx, sy, MAX_HEIGHT),
+                                          bot->GetMap()->GetWaterLevel(sx, sy));
+                if (sz != INVALID_HEIGHT && sz != VMAP_INVALID_HEIGHT_VALUE)
+                    moved = MoveTo(bot->GetMapId(), sx, sy, sz, false, false);
+            }
 
             if (!moved)
             // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
