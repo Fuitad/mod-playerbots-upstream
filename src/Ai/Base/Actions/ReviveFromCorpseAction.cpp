@@ -376,6 +376,18 @@ bool FindCorpseAction::Execute(Event /*event*/)
                 if (fallback.GetReachableRandomPointOnGround(bot, reclaimDist, urand(0, 1)))
                     moved = MoveTo(fallback.GetMapId(), fallback.GetPositionX(), fallback.GetPositionY(),
                                    fallback.GetPositionZ(), false, false);
+                // PLB-LOCAL(revive-safety): a camped corpse with no reachable point near it
+                // (Kamolodomilo, 2026-09-02 02:30: a quilboar camp on a slope 22 yards below the
+                // ghost, 17 fallbacks in ten minutes) sends the ghost straight to the wait spot
+                // when the height is plausible, and otherwise holds it. The spirit healer action
+                // only walked the ghost to the graveyard and the next tick walked it back.
+                if (!moved && IsWaitingForLastMove(MovementPriority::MOVEMENT_NORMAL))
+                    moved = true;
+                if (!moved && CorpseStepHeightPlausible(bot->GetPositionZ(), moveToPos.GetPositionZ()))
+                    moved = MoveTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(),
+                                   moveToPos.GetPositionZ(), false, false, false, true);
+                if (!moved && deadTime < 8 * MINUTE)
+                    moved = true;
             }
             // PLB-LOCAL(revive-safety): a corpse below a ledge or across water inside the walk's
             // reach has no mesh path from where the ghost stands, so the ghost goes straight: it
