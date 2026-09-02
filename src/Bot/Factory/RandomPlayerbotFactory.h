@@ -9,18 +9,18 @@
 #ifndef PLAYERBOTS_RANDOMPLAYERBOTFACTORY_H
 #define PLAYERBOTS_RANDOMPLAYERBOTFACTORY_H
 
+#include "ArenaTeam.h"
+#include "Battleground.h"
 #include "Common.h"
 #include "DBCEnums.h"
-// PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "SharedDefines.h"
 #include <map>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 class Player;
 class WorldSession;
-
-enum ArenaType : uint8;
 
 class RandomPlayerbotFactory
 {
@@ -62,18 +62,34 @@ public:
     Player* CreateRandomBot(WorldSession* session, uint8 cls, bool alliance,
                             std::unordered_map<NameRaceAndGender, std::vector<std::string>>& names);
     static void CreateRandomBots();
-    static void CreateRandomArenaTeams(ArenaType slot, uint32 count);
     static std::string const CreateRandomGuildName();
     static uint32 CalculateTotalAccountCount();
     static uint32 CalculateAvailableCharsPerAccount();
 
+    // Arena team management
+    static void AssignBotToArenaTeam(Player* bot);
+    static void DeleteBotArenaTeams();
+    static uint32 GetBotArenaTeamCount(ArenaType type);
+    static void LoadArenaTeamData();
+
 private:
+    friend class ArenaTeamAssignOperation;
+
     static bool IsValidRaceClassCombination(uint8 race, uint8 class_, uint32 expansion);
     // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     static std::vector<uint8> GetAvailableClasses(bool alliance);
     static std::vector<uint8> GetAvailableRaces(uint8 class_, bool alliance);
     std::string const CreateRandomBotName(NameRaceAndGender raceAndGender);
-    static std::string const CreateRandomArenaTeamName();
+
+    static void AssignBotToArenaTeamInternal(Player* bot);
+    static void CollectJoinableBotArenaTeams(ArenaType type, TeamId faction, std::vector<ArenaTeam*>& out);
+    static void CreateBotArenaTeam(Player* bot, ArenaType type);
+    static bool IsBotArenaTeam(ArenaTeam const* team);
+    static std::string CreateRandomArenaTeamName();
+
+    static inline std::vector<std::string> _availableArenaTeamNames;
+    static inline std::map<ArenaType, std::vector<uint32>> _botArenaTeamRegistry;
+    static inline std::map<ArenaType, uint32> _configTargets;
 };
 
 #endif
