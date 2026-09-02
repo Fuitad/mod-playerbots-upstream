@@ -17,6 +17,8 @@
 #ifndef _PLAYERBOT_DEATHPROBE_H
 #define _PLAYERBOT_DEATHPROBE_H
 
+#include "Ai/World/Rpg/QuestDeathCooldown.h"
+#include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Creature.h"
 #include "CreatureData.h"
 #include "Item.h"
@@ -66,11 +68,28 @@ public:
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
         if (!botAI || !sRandomPlayerbotMgr.IsRandomBot(player))
             return;
+        uint32 const questId = DeathProbe::QuestInProgress(botAI);
         LOG_DEBUG("playerbots",
                   "[DeathProbe] {} DIED lvl {} class {} zone {} area {} rpg {} quest {} broken {} money {}c t {}",
                   player->GetName(), player->GetLevel(), player->getClass(), player->GetZoneId(), player->GetAreaId(),
-                  static_cast<uint32>(botAI->rpgInfo.GetStatus()), DeathProbe::QuestInProgress(botAI),
-                  DeathProbe::BrokenEquipmentSlots(player), player->GetMoney(), getMSTime());
+                  static_cast<uint32>(botAI->rpgInfo.GetStatus()), questId, DeathProbe::BrokenEquipmentSlots(player),
+                  player->GetMoney(), getMSTime());
+        // The quest death cooldown is recorded here, at the death, not from the quest stay tick:
+        // after the revive the bot re-reaches the anchor and the stay's death count starts over,
+        // so the stay never saw its own death (0 ABANDON-DEATH lines all night on 2026-09-01).
+        // See QuestDeathCooldown.h. The second death inside the cooldown carries the blame.
+        if (questId)
+        {
+            QuestDeathRecord const record =
+                QuestDeathCooldown::Note(player->GetGUID().GetCounter(), questId, getMSTime());
+            if (QuestStayLostToDeaths(record.deaths))
+            {
+                botAI->lowPriorityQuest.insert(questId);
+                botAI->rpgStatistic.questAbandoned++;
+            }
+            LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-COOLDOWN quest {} deaths {} blamed {}", player->GetName(),
+                      questId, record.deaths, QuestStayLostToDeaths(record.deaths));
+        }
     }
 
     void OnPlayerKilledByCreature(Creature* killer, Player* killed) override
