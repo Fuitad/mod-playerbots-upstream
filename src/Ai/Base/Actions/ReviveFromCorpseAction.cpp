@@ -324,6 +324,11 @@ bool FindCorpseAction::Execute(Event /*event*/)
             if (!moved)
             // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
             {
+                // PLB-LOCAL(death-probe): why the walk gave the corpse up. Temporary diagnostic.
+                LOG_DEBUG("playerbots",
+                          "[DeathProbe] {} SPIRIT-FALLBACK corpseDist {:.0f} dead {}s deaths {} holding {} threat {}",
+                          bot->GetName(), corpseDist, deadTime, dCount, holdingAtWaitSpot,
+                          threat ? threat->GetEntry() : 0);
                 moved = botAI->DoSpecificAction("spirit healer", Event(), true);
             }
         }
