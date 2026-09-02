@@ -12,6 +12,7 @@
 // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 
 #include "Corpse.h"
+#include "CorpseWalkPolicy.h"
 // PLB-LOCAL(revive-safety): the hostile-in-reach count scans the grid directly.
 #include "CellImpl.h"
 #include "Creature.h"
@@ -231,7 +232,10 @@ bool FindCorpseAction::Execute(Event /*event*/)
     bool moveToLeader = groupLeader && groupLeader != bot && leaderPos.fDist(corpsePos) < reclaimDist;
 
     // Should we ressurect? If so, return false.
-    if (corpseDist < reclaimDist)
+    // PLB-LOCAL(corpse-walk-arrival): arrived means inside the radius the reclaim accepts, not
+    // five yards inside it. Upstream: `if (corpseDist < reclaimDist)`, which left a ring where the
+    // walk failed to close the last yards and the allowed revive never ran. See CorpseWalkPolicy.h.
+    if (CorpseWalkArrived(corpseDist, CORPSE_RECLAIM_RADIUS))
     {
         if (moveToLeader)  // We are near group leader.
         {
@@ -377,7 +381,7 @@ bool FindCorpseAction::Execute(Event /*event*/)
             // otherwise teleport it to the graveyard and undo the walk (Ombeline, 2026-09-02
             // 00:16: corpseDist 14 with a threat, then 806 two seconds later). The eight minute
             // cap above still lets the revive go ahead.
-            if (!moved && threat && corpseDist < reclaimDist && deadTime < 8 * MINUTE)
+            if (!moved && threat && CorpseWalkArrived(corpseDist, CORPSE_RECLAIM_RADIUS) && deadTime < 8 * MINUTE)
                 moved = true;
 
             if (!moved)
@@ -390,10 +394,13 @@ bool FindCorpseAction::Execute(Event /*event*/)
                 uint32 const lastMoveLeft = lastMoveEnd > nowMs ? static_cast<uint32>(lastMoveEnd - nowMs) : 0;
                 LOG_DEBUG("playerbots",
                           "[DeathProbe] {} SPIRIT-FALLBACK corpseDist {:.0f} dead {}s deaths {} holding {} threat {} "
-                          "canMove {} lastPrio {} lastLeft {}ms",
+                          "canMove {} lastPrio {} lastLeft {}ms at {:.0f},{:.0f},{:.0f} corpse {:.0f},{:.0f},{:.0f} "
+                          "moving {} swim {} water {}",
                           bot->GetName(), corpseDist, deadTime, dCount, holdingAtWaitSpot,
                           threat ? threat->GetEntry() : 0, botAI->CanMove(), static_cast<uint32>(lastMove.priority),
-                          lastMoveLeft);
+                          lastMoveLeft, bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(),
+                          corpsePos.GetPositionX(), corpsePos.GetPositionY(), corpsePos.GetPositionZ(),
+                          bot->isMoving(), bot->isSwimming(), bot->IsInWater());
                 moved = botAI->DoSpecificAction("spirit healer", Event(), true);
             }
         }

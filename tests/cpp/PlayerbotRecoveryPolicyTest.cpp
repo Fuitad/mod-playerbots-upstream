@@ -13,6 +13,7 @@
  */
 
 #include "Ai/Base/Actions/AcceptResurrectAction.h"
+#include "Ai/Base/Actions/CorpseWalkPolicy.h"
 #include "Ai/Base/Actions/GenericActions.h"
 #include "Ai/Base/Actions/PhysicalDeathCountPolicy.h"
 #include "Ai/Base/Actions/PullActions.h"
@@ -359,6 +360,18 @@ TEST(PlayerbotRecoveryPolicyTest, ABodyReviveWaitsWhileAHostileIsInReachButNotFo
     EXPECT_TRUE(ReviveAtBodyAllowed(0, 0));
     // The wait is bounded so a camped corpse does not keep a bot dead all night.
     EXPECT_TRUE(ReviveAtBodyAllowed(1, REVIVE_HOSTILE_WAIT_SECONDS));
+}
+
+TEST(PlayerbotRecoveryPolicyTest, TheCorpseWalkArrivesAnywhereTheReclaimRadiusAllows)
+{
+    float const reclaimRadius = 39.0f;
+    // Sinette, 2026-09-02 00:44: 34 yards from her body, nothing hostile near, and the walk kept
+    // failing to close the last yards instead of letting the revive run.
+    EXPECT_TRUE(CorpseWalkArrived(34.4f, reclaimRadius));
+    EXPECT_TRUE(CorpseWalkArrived(37.9f, reclaimRadius));
+    // Outside the radius the server would refuse the reclaim, so the walk goes on.
+    EXPECT_FALSE(CorpseWalkArrived(38.5f, reclaimRadius));
+    EXPECT_FALSE(CorpseWalkArrived(60.0f, reclaimRadius));
 }
 
 TEST(PlayerbotCombatSafetyTest, PetAndPullEntrypointsHonorCentralCombatSafety)
