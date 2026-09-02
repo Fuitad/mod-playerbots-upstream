@@ -3,6 +3,7 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
 
 #ifndef PLAYERBOTS_STUCKTRIGGERS_H
 #define PLAYERBOTS_STUCKTRIGGERS_H

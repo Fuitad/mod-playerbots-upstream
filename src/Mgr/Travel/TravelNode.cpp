@@ -3,10 +3,10 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+// PLB-LOCAL(working-tree): Uncommitted local change.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 13 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 14 region(s) of this upstream file.
 
 #include "TravelNode.h"
 #include "BudgetValues.h"
@@ -827,6 +827,8 @@ bool TravelPath::hasPathType(PathNodeType type) const
 
 // Next position to move to
 WorldPosition TravelPath::getNextPoint(WorldPosition startPos, float maxDist, TravelNodePathType& pathType,
+                                       // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations.
+                                       // Upstream: uint32& entry) (base 8d9f6aa6bc6d).
                                        uint32& entry, uint32 currentTransportEntry)
 {
     // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
@@ -1405,6 +1407,8 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
             // Check if the bot can actually walk to this start position.
             newStartPath = startPath;
             if (startNodePosition.cropPathTo(newStartPath, maxStartDistance) ||
+                // PLB-LOCAL(8ba3eed46d03): fix(travel): attach graph routes through the bot pathfinder.
+                // Upstream: startNode->getPosition()->isPathTo(newStartPath = startPos.getPathTo(startNodePosition,...
                 startNode->getPosition()->isPathTo(newStartPath = startPos.getPathTo(startNodePosition, bot),
                                                    maxStartDistance))
             {

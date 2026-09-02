@@ -1,3 +1,4 @@
+# PLB-LOCAL FILE. Local only; see docs/local-changes.md.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20)
   project(mod_playerbots_extension_seams LANGUAGES CXX)

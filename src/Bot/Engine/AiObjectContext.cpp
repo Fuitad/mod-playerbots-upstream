@@ -5,8 +5,6 @@
  */
 
 // PLB-LOCAL UPSTREAM-FILE: this fork changes 4 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
 #include "AiObjectContext.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations

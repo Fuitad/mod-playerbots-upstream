@@ -4,9 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 15 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 14 region(s) of this upstream file.
 
 #include "RandomPlayerbotFactory.h"
 #include "AccountMgr.h"
@@ -77,6 +75,8 @@ Player* RandomPlayerbotFactory::CreateRandomBot(
 {
     LOG_DEBUG("playerbots", "Creating a new random bot for class: {}", cls);
 
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations.
+    // Upstream: const bool alliance = static_cast<bool>(urand(0, 1));  std::vector<uint8> raceOptions; for (uint8 ra...
     std::vector<uint8> const raceOptions = GetAvailableRaces(cls, alliance);
 
     if (raceOptions.empty())

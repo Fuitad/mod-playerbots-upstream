@@ -1,3 +1,4 @@
+<!-- PLB-LOCAL FILE. Local only; see docs/local-changes.md. -->
 # Playerbots extraction report
 
 ## Scope and immutable source

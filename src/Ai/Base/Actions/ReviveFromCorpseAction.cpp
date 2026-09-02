@@ -4,9 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 14 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 36 region(s) of this upstream file.
 
 #include "ReviveFromCorpseAction.h"
 // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
@@ -110,6 +108,8 @@ bool ReviveFromCorpseAction::Execute(Event event)
     if (!p.empty() && p.GetOpcode() == CMSG_RECLAIM_CORPSE && groupLeader && !corpse && bot->IsAlive())
     {
         if (ServerFacade::instance().IsDistanceLessThan(AI_VALUE2(float, "distance", "group leader"),
+                                                        // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a w...
+                                                        // Upstream: sPlayerbotAIConfig.farDistance)) (base 8d9f6aa6b...
                                                         sPlayerbotAIConfig.farDistance))
         {
             if (!botAI->HasStrategy("follow", BOT_STATE_NON_COMBAT))
@@ -145,6 +145,8 @@ bool ReviveFromCorpseAction::Execute(Event event)
         botAI->RecordReviveAttempt(timestampMs, playerbots::recovery::CorpseReviveOutcome(eligibility, false, false),
                                    bot->IsAlive());
         return false;
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful.
+    // Upstream:  // if (corpse->GetGhostTime() + bot->GetCorpseReclaimDelay(corpse->GetType() == CORPSE_RESURRECTABL...
     }
 
     if (groupLeader)
@@ -159,6 +161,8 @@ bool ReviveFromCorpseAction::Execute(Event event)
             botAI->RecordReviveAttempt(timestampMs, playerbots::recovery::CorpseReviveOutcome(eligibility, true, false),
                                        bot->IsAlive());
             return false;
+        // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful.
+        // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
         }
     }
 
@@ -220,6 +224,8 @@ bool FindCorpseAction::Execute(Event /*event*/)
         return false;
 
     Player* groupLeader = botAI->GetGroupLeader();
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful.
+    // Upstream: Corpse* corpse = bot->GetCorpse(); (base 8d9f6aa6bc6d).
     Corpse* corpse = GetBotCorpse();
     if (!corpse)
         return false;
@@ -257,6 +263,8 @@ bool FindCorpseAction::Execute(Event /*event*/)
             // LOG_INFO("playerbots", "Bot {} {}:{} <{}>: died too many times, was revived and teleported",
             //     bot->GetGUID().ToString().c_str(), bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(),
             //     bot->GetName().c_str());
+            // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful.
+            // Upstream: context->GetValue<uint32>("death count")->Set(0); // sRandomPlayerbotMgr.RandomTeleportForLe...
             bool const recovered = RecoverAtHomebind();
             context->GetValue<uint32>("death count")
                 ->Set(playerbots::recovery::DeathCountAfterForcedRecovery(dCount, recovered));
@@ -420,6 +428,8 @@ bool FindCorpseAction::Execute(Event /*event*/)
         {
             bot->GetMotionMaster()->Clear();
             bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
+            // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+            // Upstream: bot->TeleportTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(), mo...
             bot->TeleportTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(),
                             moveToPos.GetPositionZ(), 0);
         }
@@ -434,6 +444,8 @@ bool FindCorpseAction::Execute(Event /*event*/)
         {
             if (deadTime < 10 * MINUTE && dCount < 5)  // Look for corpse up to 30 minutes.
             {
+                // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                // Upstream: moved = MoveTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(),...
                 moved = MoveTo(moveToPos.GetMapId(), moveToPos.GetPositionX(), moveToPos.GetPositionY(),
                                moveToPos.GetPositionZ(), false, false);
             }
@@ -570,6 +582,8 @@ bool FindCorpseAction::Execute(Event /*event*/)
 
     return moved;
 }
+// PLB-LOCAL(working-tree): Uncommitted local change.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
 Corpse* FindCorpseAction::GetBotCorpse() const { return bot->GetCorpse(); }
 
@@ -615,11 +629,14 @@ GraveyardStruct const* SpiritHealerAction::GetGrave(bool startZone)
             {
                 uint32 areaId = 0;
                 uint32 zoneId = 0;
+                // PLB-LOCAL BEGIN(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                // Upstream: sMapMgr->GetZoneAndAreaId(bot->GetPhaseMask(), zoneId, areaId, travelPos.GetMapId(), tra...
                 sMapMgr->GetZoneAndAreaId(bot->GetPhaseMask(), zoneId, areaId, travelPos.GetMapId(),
                                           travelPos.GetPositionX(), travelPos.GetPositionY(), travelPos.GetPositionZ());
                 ClosestGrave = sGraveyard->GetClosestGraveyard(
                     travelPos.GetMapId(), travelPos.GetPositionX(), travelPos.GetPositionY(), travelPos.GetPositionZ(),
                     bot->GetTeamId(), areaId, zoneId, bot->getClass() == CLASS_DEATH_KNIGHT);
+                // PLB-LOCAL END(66dbf2793b3a)
 
                 if (ClosestGrave)
                     return ClosestGrave;
@@ -687,6 +704,8 @@ bool SpiritHealerAction::Execute(Event /*event*/)
     GraveyardStruct const* ClosestGrave =
         GetGrave(dCount > 10 || deadTime > 15 * MINUTE || AI_VALUE(uint8, "durability") < 10);
 
+    // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     if (!ClosestGrave)
         return false;
 
@@ -722,6 +741,8 @@ bool SpiritHealerAction::Execute(Event /*event*/)
                 if (success && dCount > 20)
                     context->GetValue<uint32>("death count")->Set(0);
 
+                // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful.
+                // Upstream: return true; (base 8d9f6aa6bc6d).
                 return success;
             }
         }

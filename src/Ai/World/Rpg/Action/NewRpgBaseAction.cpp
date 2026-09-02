@@ -4,9 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 11 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 38 region(s) of this upstream file.
 
 #include "NewRpgBaseAction.h"
 
@@ -44,6 +42,8 @@
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
 #include "ObjectMgr.h"
+// PLB-LOCAL(a45806b9d05f): feat(rpg): work a quest's drop-sourced tool before the objective that needs it.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
 #include <algorithm>
 #include "OutdoorPvPMgr.h"
@@ -1188,6 +1188,8 @@ bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, std::vector
         if (bot->GetZoneId() != bot->GetMap()->GetZoneId(bot->GetPhaseMask(), dx, dy, dz))
             continue;
 
+        // PLB-LOCAL(41d8ddad854b): feat(rpg): anchor quest stays on the objective's real spawn points.
+        // Upstream: poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex}); (base 8d9f6aa6bc6d).
         poiInfo.push_back({{dx, dy}, qPoi.ObjectiveIndex, spawnZ, hasSpawnZ});
     }
 
@@ -1513,6 +1515,8 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
     return false;
 }
 
+// PLB-LOCAL(e04473c8db13): perf(rpg): stop evaluating each RPG status twice per status change.
+// Upstream: bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status) (base 8d9f6aa6bc6d).
 bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status, NewRpgStatusPreparation* prepared)
 {
     switch (status)

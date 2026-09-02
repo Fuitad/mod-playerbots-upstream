@@ -1,3 +1,4 @@
+<!-- PLB-LOCAL FILE. Local only; see docs/local-changes.md. -->
 # Marking local changes in this fork
 
 This checkout is a fork. `origin` is `Fuitad/mod-playerbots-upstream` and `upstream` is
@@ -46,7 +47,7 @@ Use a BEGIN and END pair when the change spans more than a few lines:
 ```
 
 The `<tag>` groups every hunk of one logical change, across every file it touches, so
-`grep -rn 'PLB-LOCAL(revive-outcome)' src` collects the whole thing.
+`rg -n 'PLB-LOCAL\(revive-outcome\)' src` collects the whole thing.
 
 ## Prefer a local file over an upstream edit
 
@@ -61,24 +62,44 @@ Resolve each conflict against the marker, not against the diff alone. A `PLB-LOC
 upstream has since rewritten needs a decision, not a reflex: keep the local behaviour, adopt
 upstream's, or reconcile. Record which, by updating the marker.
 
-`grep -rn 'PLB-LOCAL' src tests` lists every local region under the marker convention.
+`rg -n 'PLB-LOCAL' src tests` lists every local region under the marker convention.
 
-## Coverage as of the backfill (2026-08-25)
+## Coverage and verification
 
-`tools/plb_local_markers.py --apply` backfilled the convention across the whole fork:
+The current counts and exact locations live in `docs/local-changes-inventory.md`. Regenerate
+that inventory rather than relying on historical counts from the original 2026-08-25 backfill.
+Run from this module's root:
 
-| | |
-|---|---|
-| Local only files bannered | 38 |
-| Upstream files carrying a file delta header | 62 |
-| Regions found in those files | 358 |
-| Marked inline with the commit that introduced them | 351 |
-| Unmarkable, listed in the inventory for hand checking | 5 |
+```bash
+uv run --no-project python tools/plb_local_markers.py --check
+uv run --no-project python tools/plb_local_markers.py --apply
+```
 
-The five unmarkable regions begin mid expression, so a comment could not be inserted above them
-without splitting an argument list or an initialiser. The tool reports them rather than guessing,
-and `docs/local-changes-inventory.md` names them. Those are the regions to read by hand during a
-merge.
+`--check` is read-only. Exit `0` means coverage and inventory are current, including explicitly
+listed manual exceptions. Exit `1` means missing markers or stale metadata. Exit `2` means the
+check could not run. `--apply` inserts safe markers and refreshes the inventory. Review the diff
+and rerun `--check`; a second `--apply` must not change files. Existing tags anywhere in a local
+region count as markers, not as proposed insertions.
+
+The check includes the current working tree, staged changes, and non-ignored new files. It also
+accounts for deletion-only regions and formats that cannot carry a safe comment. The generated
+inventory excludes its own diff so refreshing it does not manufacture another coverage change.
+
+### Explicit manual exceptions
+
+Keep code and data behavior unchanged. Use the documented manual-inventory mechanism whenever
+a marker cannot be inserted safely. An exception must name the current location and its reason.
+
+1. Tracked SQL migration contents remain unchanged because the updater hashes their exact bytes,
+   including comments. Record their local ownership in the inventory instead of adding a banner.
+2. JSON, TSV, patch artifacts, and Node version pins remain unchanged. Their formats or consumers
+   do not permit inserting ordinary comments safely.
+3. Never insert inside a string, continued macro, or unsafe expression boundary. List such regions
+   for manual review during a merge. Prefer a safe enclosing boundary when one is clear.
+4. Include deletion-only regions in the inventory. No replacement line does not mean no change.
+
+Inventoried exceptions are reported separately from inline coverage. A successful marker check
+does not prove that an upstream integration preserves runtime behavior.
 
 Coverage is measured against the merge base, not against `upstream/master`. This matters: a plain
 `git diff upstream/master..HEAD` also contains upstream's own commits, so it overstates what this
@@ -89,14 +110,31 @@ MB=$(git merge-base upstream/master HEAD)
 git diff --name-only $MB..HEAD
 ```
 
-At the time of the backfill that is 104 files, where `upstream/master..HEAD` reported 194.
+The commands above illustrate committed changes. The checker additionally includes working-tree
+changes, so its inventory is current before a commit as well as after one.
+
+## Testing the checker
+
+The checker itself uses only Python's standard library. Run its tests and type check in an
+isolated dependency environment, without changing the project's Python configuration:
+
+```bash
+uv run --no-project --with pytest pytest -q tests/python
+uv run --no-project --with basedpyright --with pytest basedpyright \
+  tools/plb_local_markers.py tests/python/test_plb_local_markers.py
+ruff check --ignore EXE001 tools/plb_local_markers.py tests/python/test_plb_local_markers.py
+ruff format --check tools/plb_local_markers.py tests/python/test_plb_local_markers.py
+```
+
+`EXE001` is excluded because the existing script has a shebang but is intentionally invoked
+through Python with its existing non-executable Git mode. Marker backfills do not change that mode.
 
 ## Before the next upstream merge
 
 Read this section first. It records decisions taken while the convention was built, so the merge
 does not have to rediscover them.
 
-1. **Regenerate first.** `python3 tools/plb_local_markers.py --check` reports drift, and `--apply`
+1. **Regenerate first.** `uv run --no-project python tools/plb_local_markers.py --check` reports drift, and `--apply`
    refreshes markers and the inventory. Do this before starting the merge and again after, so the
    region counts in the file headers describe the tree you actually have.
 2. **Resolve against the marker, not the diff alone.** A `PLB-LOCAL` region upstream has since
@@ -109,9 +147,7 @@ does not have to rediscover them.
    Reformatting adds conflict surface wherever upstream also touched those lines, and the same
    reformat costs nothing once the merge has landed. Five files were reformatted deliberately on
    2026-08-25; anything broader waits.
-4. **The root AzerothCore checkout is a separate question.** Its `upstream` remote is
-   `mod-playerbots/azerothcore-wotlk`, which as of 2026-08-25 is zero commits ahead of the local
-   `Playerbot` branch, so there is nothing to merge from it. The local branch is about 1323 commits
-   and 1734 files ahead of the shared base, which is a different scale of job from this module and
-   has NOT been marked. Merging real upstream AzerothCore would mean adding a different remote,
-   which is a deliberate act rather than an assumption.
+4. **Check AzerothCore independently.** Its upstream is `mod-playerbots/azerothcore-wotlk:Playerbot`,
+   not official AzerothCore `master`. Follow the root `docs/local-changes.md` and its separate
+   inventory. The same checker supports `--repo` and `--upstream upstream/Playerbot`. Do not use
+   historical ahead/behind counts as evidence of current merge readiness.

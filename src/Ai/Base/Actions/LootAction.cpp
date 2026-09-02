@@ -2,10 +2,10 @@
  * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
+// PLB-LOCAL(working-tree): Uncommitted local change.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 22 region(s) of this upstream file.
 
 #include "LootAction.h"
 #include "BroadcastHelper.h"
@@ -15,6 +15,8 @@
 #include "GuildTaskMgr.h"
 #include "ItemUsageValue.h"
 #include "LootObjectStack.h"
+// PLB-LOCAL(dd9f39755fca): fix(loot): never drop a quest-needed item on the bag-space guard.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 #include "LootStorePolicy.h"
 #include "LootStrategyValue.h"
 #include "PlayerbotAIConfig.h"
@@ -158,12 +160,16 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
     {
         probeGate("distance");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    // PLB-LOCAL(e751abb39bec): fix(rpg): accept use-targets near the bot and probe the loot pipeline.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     }
 
     if (go && (go->GetGoState() != GO_STATE_READY))
     {
         probeGate("state");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    // PLB-LOCAL(e751abb39bec): fix(rpg): accept use-targets near the bot and probe the loot pipeline.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     }
 
     // This prevents dungeon chests like Tribunal Chest (Halls of Stone) from being ninja'd by the bots.
@@ -172,6 +178,8 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
     {
         probeGate("interactcond");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    // PLB-LOCAL(e751abb39bec): fix(rpg): accept use-targets near the bot and probe the loot pipeline.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     }
 
     // This prevents raid chests like Gunship Armory (ICC) from being ninja'd by the bots
@@ -179,6 +187,8 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
     {
         probeGate("notselectable");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    // PLB-LOCAL(e751abb39bec): fix(rpg): accept use-targets near the bot and probe the loot pipeline.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     }
 
     if (lootObject.skillId == SKILL_MINING)
@@ -195,6 +205,8 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
     {
         probeGate("nospell");  // PLB-LOCAL(loot-skip-probe)
         return false;
+    // PLB-LOCAL(e751abb39bec): fix(rpg): accept use-targets near the bot and probe the loot pipeline.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     }
 
     bool const castResult = botAI->CastSpell(spellId, bot);

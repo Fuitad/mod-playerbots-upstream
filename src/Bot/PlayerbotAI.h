@@ -2,10 +2,10 @@
  * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
+// PLB-LOCAL(working-tree): Uncommitted local change.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 11 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 22 region(s) of this upstream file.
 
 #ifndef PLAYERBOTS_PLAYERBOTAI_H
 #define PLAYERBOTS_PLAYERBOTAI_H
@@ -23,6 +23,8 @@
 // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
 #include "PlayerbotSecurity.h"
 #include "PlayerbotTextMgr.h"
+// PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 #include "Recovery/PlayerbotRecoveryPolicy.h"
 #include "SpellAuras.h"
 #include "Util.h"
@@ -208,6 +210,8 @@ enum ChatChannelId
 
 enum RoguePoisonId
 {
+    // PLB-LOCAL BEGIN(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: INSTANT_POISON      = 6947, INSTANT_POISON_II   = 6949, INSTANT_POISON_III  = 6950, INSTANT_POISON_I...
     INSTANT_POISON = 6947,
     INSTANT_POISON_II = 6949,
     INSTANT_POISON_III = 6950,
@@ -215,7 +219,10 @@ enum RoguePoisonId
     INSTANT_POISON_V = 8927,
     INSTANT_POISON_VI = 8928,
     INSTANT_POISON_VII = 21927,
+    // PLB-LOCAL END(66dbf2793b3a)
     INSTANT_POISON_VIII = 43230,
+    // PLB-LOCAL BEGIN(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: INSTANT_POISON_IX   = 43231, DEADLY_POISON       = 2892, DEADLY_POISON_II    = 2893, DEADLY_POISON_I...
     INSTANT_POISON_IX = 43231,
     DEADLY_POISON = 2892,
     DEADLY_POISON_II = 2893,
@@ -226,10 +233,13 @@ enum RoguePoisonId
     DEADLY_POISON_VII = 22054,
     DEADLY_POISON_VIII = 43232,
     DEADLY_POISON_IX = 43233
+    // PLB-LOCAL END(66dbf2793b3a)
 };
 
 enum SharpeningStoneId
 {
+    // PLB-LOCAL BEGIN(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: ROUGH_SHARPENING_STONE      = 2862, COARSE_SHARPENING_STONE     = 2863, HEAVY_SHARPENING_STONE...
     ROUGH_SHARPENING_STONE = 2862,
     COARSE_SHARPENING_STONE = 2863,
     HEAVY_SHARPENING_STONE = 2871,
@@ -237,31 +247,40 @@ enum SharpeningStoneId
     DENSE_SHARPENING_STONE = 12404,
     ELEMENTAL_SHARPENING_STONE = 18262,
     FEL_SHARPENING_STONE = 23528,
+    // PLB-LOCAL END(66dbf2793b3a)
     ADAMANTITE_SHARPENING_STONE = 23529
 };
 
 enum WeightstoneId
 {
+    // PLB-LOCAL BEGIN(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: ROUGH_WEIGHTSTONE      = 3239, COARSE_WEIGHTSTONE     = 3240, HEAVY_WEIGHTSTONE      = 3241, SOLID_W...
     ROUGH_WEIGHTSTONE = 3239,
     COARSE_WEIGHTSTONE = 3240,
     HEAVY_WEIGHTSTONE = 3241,
     SOLID_WEIGHTSTONE = 7965,
     DENSE_WEIGHTSTONE = 12643,
     FEL_WEIGHTSTONE = 28420,
+    // PLB-LOCAL END(66dbf2793b3a)
     ADAMANTITE_WEIGHTSTONE = 28421
 };
 
 enum WizardOilId
 {
+    // PLB-LOCAL BEGIN(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: MINOR_WIZARD_OIL      = 20744, LESSER_WIZARD_OIL     = 20746, WIZARD_OIL            = 20750, BRILLIA...
     MINOR_WIZARD_OIL = 20744,
     LESSER_WIZARD_OIL = 20746,
     WIZARD_OIL = 20750,
     BRILLIANT_WIZARD_OIL = 20749,
     SUPERIOR_WIZARD_OIL = 22522
+    // PLB-LOCAL END(66dbf2793b3a)
 };
 
 enum ManaOilId
 {
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: MINOR_MANA_OIL        = 20745, LESSER_MANA_OIL       = 20747, BRILLIANT_MANA_OIL    = 20748, SUPERIO...
     MINOR_MANA_OIL = 20745,
     LESSER_MANA_OIL = 20747,
     BRILLIANT_MANA_OIL = 20748,
@@ -562,6 +581,8 @@ public:
     bool CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell = true, Item* itemTarget = nullptr,
                       Item* castItem = nullptr);
     bool CanCastSpell(uint32 spellid, GameObject* goTarget, bool checkHasSpell = true);
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: bool CanCastSpell(uint32 spellid, float x, float y, float z, bool checkHasSpell = true, Item* itemTa...
     bool CanCastSpell(uint32 spellid, float x, float y, float z, bool checkHasSpell = true, Item* itemTarget = nullptr);
 
     Aura* GetAura(std::string const spellName, Unit* unit, bool checkIsOwner = false, bool checkDuration = false,
@@ -577,6 +598,8 @@ public:
                      bool fixed = false);
 
     uint32 GetEquipGearScore(Player* player);
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: //uint32 GetEquipGearScore(Player* player, bool withBags, bool withBank); (base 8d9f6aa6bc6d).
     // uint32 GetEquipGearScore(Player* player, bool withBags, bool withBank);
     static uint32 GetMixedGearScore(Player* player, bool withBags, bool withBank, uint32 topN = 0);
     bool HasSkill(SkillType skill);
@@ -619,10 +642,14 @@ public:
     bool IsSafe(WorldObject* obj);
     ChatChannelSource GetChatChannelSource(Player* bot, uint32 type, std::string channelName);
 
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: bool StarterLevelDistanceCheck(Player* player, const WorldLocation &loc, bool fromStartUp = false);...
     bool StarterLevelDistanceCheck(Player* player, const WorldLocation& loc, bool fromStartUp = false);
 
     bool HasCheat(BotCheatMask mask)
     {
+        // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+        // Upstream: return ((uint32)mask & (uint32)cheatMask) != 0 || ((uint32)mask & (uint32)sPlayerbotAIConfig.bot...
         return ((uint32)mask & (uint32)cheatMask) != 0 || ((uint32)mask & (uint32)sPlayerbotAIConfig.botCheatMask) != 0;
     }
     BotCheatMask GetCheat() { return cheatMask; }
@@ -675,10 +702,14 @@ private:
     // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     void UpdateAIGroupMaster();
     Item* FindItemInInventory(std::function<bool(ItemTemplate const*)> checkItem) const;
+    // PLB-LOCAL(35d49bd15810): fix(recovery): only a broken main-hand weapon blocks combat initiation.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     [[nodiscard]] bool HasBrokenWeapon() const;
     // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     void HandleCommands();
     void HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang = LANG_UNIVERSAL);
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     void HandlePendingGroupInvite();
     inline bool IsValidUnit(const Unit* unit) const
     {
@@ -689,6 +720,8 @@ private:
         return player && player->GetSession() && player->IsInWorld() && !player->IsDuringRemoveFromWorld() &&
                !player->IsBeingTeleported();
     }
+// PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
 protected:
     Player* bot;
@@ -712,6 +745,8 @@ protected:
     // PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases
     bool allowActive[MAX_ACTIVITY_TYPE];
     time_t allowActiveCheckTimer[MAX_ACTIVITY_TYPE];
+    // PLB-LOCAL(e55cffff1538): feat(activity): add bounded bot activity leases.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     mutable std::mutex activityLeaseMutex;
     std::string activityLeaseToken;
     std::atomic<uint64> activityLeaseExpiresAt{0};

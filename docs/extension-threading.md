@@ -1,3 +1,4 @@
+<!-- PLB-LOCAL FILE. Local only; see docs/local-changes.md. -->
 # Extension threading contract
 
 `PlayerbotExtensionRegistry` invokes every extension hook synchronously. The registry does not isolate,

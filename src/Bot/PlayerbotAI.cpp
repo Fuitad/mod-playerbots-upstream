@@ -3,11 +3,11 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 37 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 68 region(s) of this upstream file.
 
 #include "PlayerbotAI.h"
+// PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
 #include "AiFactory.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
@@ -98,6 +98,8 @@ void PacketHandlingHelper::Handle(ExternalEventHelper& helper)
     while (!queue.empty())
     {
         WorldPacket packet = queue.top();
+        // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+        // Upstream: queue.pop(); // remove first so handling can't modify the queue while we're using it (base 8d9f6...
         queue.pop();  // remove first so handling can't modify the queue while we're using it
 
         helper.HandlePacket(handlers, packet);
@@ -493,9 +495,13 @@ void PlayerbotAI::UpdateAIGroupMaster()
                 botAI->ChangeStrategy("+follow", BOT_STATE_NON_COMBAT);
 
                 if (botAI->GetMaster() == botAI->GetGroupLeader())
+                    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                    // Upstream: botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault( "hello_follow",...
                     botAI->TellMaster(
                         PlayerbotTextMgr::instance().GetBotTextOrDefault("hello_follow", "Hello, I follow you!", {}));
                 else
+                    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                    // Upstream: botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault( "hello", "Hello!...
                     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "Hello!", {}));
             }
             else
@@ -516,10 +522,14 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
         return;
 
     if (!bot->GetMap())
+        // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+        // Upstream: return; // instances are created and destroyed on demand (base 8d9f6aa6bc6d).
         return;  // instances are created and destroyed on demand
 
     // kinda expensive call to make on every single updateAI, do we really need this information?
     std::string const mapString = WorldPosition(bot).isOverworld() ? std::to_string(bot->GetMapId()) : "I";
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + ma...
     PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
 
     ExternalEventHelper helper(aiObjectContext);
@@ -556,6 +566,8 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
 
         if (master &&
             (master->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || master->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
+             // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+             // Upstream: (master->GetSession() && master->GetSession()->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT...
              (master->GetSession() && master->GetSession()->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT))))
         {
             logout = true;
@@ -897,6 +909,8 @@ void PlayerbotAI::Reset(bool full)
     {
         WorldPackets::Character::LogoutCancel data = WorldPacket(CMSG_LOGOUT_CANCEL);
         bot->GetSession()->HandleLogoutCancelOpcode(data);
+        // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+        // Upstream: TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault( "logout_cancel", "Logout cancelled!...
         TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("logout_cancel", "Logout cancelled!", {}));
     }
 
@@ -1097,6 +1111,8 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         {
             if (type == CHAT_MSG_WHISPER)
             {
+                // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                // Upstream: std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault( "bot_not_your_ma...
                 std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault("bot_not_your_master",
                                                                                        "You are not my master!", {});
                 bot->Whisper(message, LANG_UNIVERSAL, fromPlayer);
@@ -1113,6 +1129,8 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         {
             if (type == CHAT_MSG_WHISPER)
             {
+                // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                // Upstream: std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault( "logout_start",...
                 std::string message =
                     PlayerbotTextMgr::instance().GetBotTextOrDefault("logout_start", "I'm logging out!", {});
                 TellMaster(message);
@@ -1134,6 +1152,8 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
 
         if (type == CHAT_MSG_WHISPER)
         {
+            // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+            // Upstream: std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault( "logout_cancel", "Lo...
             std::string message =
                 PlayerbotTextMgr::instance().GetBotTextOrDefault("logout_cancel", "Logout cancelled!", {});
             TellMaster(message);
@@ -1228,6 +1248,8 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
                     return;
 
                 if (lang == LANG_ADDON)
+                    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                    // Upstream: return; (base 8d9f6aa6bc6d).
                     return;
 
                 if (p.GetOpcode() == SMSG_GM_MESSAGECHAT)
@@ -1323,6 +1345,8 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
 
             return;
         }
+        // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+        // Upstream: case SMSG_FORCE_MOVE_ROOT:      // CMSG_FORCE_MOVE_ROOT_ACK case SMSG_FORCE_MOVE_UNROOT:    // C...
         case SMSG_FORCE_MOVE_ROOT:    // CMSG_FORCE_MOVE_ROOT_ACK
         case SMSG_FORCE_MOVE_UNROOT:  // CMSG_FORCE_MOVE_UNROOT_ACK
         {
@@ -1342,6 +1366,8 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
 
             return;
         }
+        // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+        // Upstream: case SMSG_MOVE_KNOCK_BACK:      // CMSG_MOVE_KNOCK_BACK_ACK (base 8d9f6aa6bc6d).
         case SMSG_MOVE_KNOCK_BACK:  // CMSG_MOVE_KNOCK_BACK_ACK
         {
             WorldPacket p(packet);
@@ -1677,12 +1703,15 @@ std::vector<std::string> PlayerbotAI::GetStrategies(BotState type)
 
 void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
 {
+    // PLB-LOCAL BEGIN(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: static const std::vector<std::string> allInstanceStrategies = { "aq20", "blacktemple", "bwl", "gruul...
     static const std::vector<std::string> allInstanceStrategies = {
         "aq20",        "blacktemple", "bwl",       "gruulslair", "hyjal",     "icc",       "karazhan",  "magtheridon",
         "moltencore",  "naxx",        "onyxia",    "rs",         "ssc",       "tbc-ac",    "tbc-mech",  "tbc-seth",
         "tempestkeep", "ulduar",      "voa",       "wotlk-an",   "wotlk-cos", "wotlk-dtk", "wotlk-eoe", "wotlk-fos",
         "wotlk-gd",    "wotlk-hol",   "wotlk-hos", "wotlk-nex",  "wotlk-occ", "wotlk-ok",  "wotlk-os",  "wotlk-pos",
         "wotlk-toc",   "wotlk-uk",    "wotlk-up",  "wotlk-vh",   "zulaman"};
+    // PLB-LOCAL END(66dbf2793b3a)
 
     for (const std::string& strat : allInstanceStrategies)
     {
@@ -1895,6 +1924,8 @@ bool PlayerbotAI::PlayEmote(uint32 emote)
     WorldPacket data(SMSG_TEXT_EMOTE);
     data << (TextEmotes)emote;
     data << EmoteAction::GetNumberOfEmoteVariants((TextEmotes)emote, bot->getRace(), bot->getGender());
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: data << ((master && (ServerFacade::instance().GetDistance2d(bot, master) < 30.0f) && urand(0, 1)) ?...
     data << ((master && (ServerFacade::instance().GetDistance2d(bot, master) < 30.0f) && urand(0, 1))
                  ? master->GetGUID()
              : (bot->GetTarget() && urand(0, 1)) ? bot->GetTarget()
@@ -2037,6 +2068,8 @@ bool PlayerbotAI::IsAssistHealOfIndex(Player* player, uint8 index, bool ignoreDe
 
     // If the player is an assistant, their index is just the number of assistants before them.
     // If they are a non-assistant, their index is shifted by the total number of assistants.
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: uint8 playerIndex = group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistant...
     uint8 playerIndex =
         group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
 
@@ -2087,6 +2120,8 @@ bool PlayerbotAI::IsAssistRangedDpsOfIndex(Player* player, uint8 index, bool ign
 
     // If the player is an assistant, their index is just the number of assistants before them.
     // If they are a non-assistant, their index is shifted by the total number of assistants.
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: uint8 playerIndex = group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistant...
     uint8 playerIndex =
         group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
 
@@ -2607,6 +2642,8 @@ bool PlayerbotAI::IsAssistTankOfIndex(Player* player, uint8 index, bool ignoreDe
 
     // If the player is an assistant, their index is just the number of assistants before them.
     // If they are a non-assistant, their index is shifted by the total number of assistants.
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: uint8 playerIndex = group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistant...
     uint8 playerIndex =
         group->IsAssistant(player->GetGUID()) ? assistantsBeforePlayer : (totalAssistants + nonAssistantsBeforePlayer);
 
@@ -2670,6 +2707,8 @@ Player* PlayerbotAI::GetPlayer(ObjectGuid guid)
 
 uint32 GetCreatureIdForCreatureTemplateId(uint32 creatureTemplateId)
 {
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: QueryResult results = WorldDatabase.Query("SELECT guid FROM `creature` WHERE id = {} LIMIT 1;", crea...
     QueryResult results = WorldDatabase.Query("SELECT guid FROM `creature` WHERE id = {} LIMIT 1;", creatureTemplateId);
     if (results)
     {
@@ -2937,10 +2976,14 @@ bool PlayerbotAI::SayToChannel(const std::string& msg, const ChatChannelId& chan
     if (msg.empty())
         return false;
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams.
+    // Upstream: ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId()); if (!cMgr) (base 8d9f6aa6bc6d).
     Channel* const channel = FindZoneChannel(chanId);
     if (!channel)
         return false;
 
+    // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams.
+    // Upstream: AreaTableEntry const* current_zone = GetCurrentZone(); if (!current_zone) return false;  const auto...
     channel->Say(bot->GetGUID(), msg.c_str(), LANG_UNIVERSAL);
     return true;
 }
@@ -3323,6 +3366,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (!spellid)
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+            // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+            // Upstream: LOG_DEBUG("playerbots", "Can cast spell failed. No spellid. - spellid: {}, bot name: {}", sp...
             LOG_DEBUG("playerbots", "Can cast spell failed. No spellid. - spellid: {}, bot name: {}", spellid,
                       bot->GetName());
 
@@ -3332,6 +3377,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (bot->HasUnitState(UNIT_STATE_LOST_CONTROL))
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+            // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+            // Upstream: LOG_DEBUG("playerbots", "Can cast spell failed. Unit state lost control. - spellid: {}, bot...
             LOG_DEBUG("playerbots", "Can cast spell failed. Unit state lost control. - spellid: {}, bot name: {}",
                       spellid, bot->GetName());
 
@@ -3341,6 +3388,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (!target)
         target = bot;
 
+    // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+    // Upstream: if (!IsValidUnit(target)) (base 8d9f6aa6bc6d).
     if (!IsValidUnit(target))
         return false;
 
@@ -3351,6 +3400,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (checkHasSpell && !bot->HasSpell(spellid))
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+            // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+            // Upstream: LOG_DEBUG("playerbots", "Can cast spell failed. Bot not has spell. - target name: {}, spelli...
             LOG_DEBUG("playerbots",
                       "Can cast spell failed. Bot not has spell. - target name: {}, spellid: {}, bot name: {}",
                       target->GetName(), spellid, bot->GetName());
@@ -3361,6 +3412,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL) != nullptr)
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+            // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+            // Upstream: LOG_DEBUG("playerbots", "CanCastSpell() target name: {}, spellid: {}, bot name: {}, failed b...
             LOG_DEBUG(
                 "playerbots",
                 "CanCastSpell() target name: {}, spellid: {}, bot name: {}, failed because has current channeled spell",
@@ -3372,6 +3425,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (bot->HasSpellCooldown(spellid))
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+            // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+            // Upstream: LOG_DEBUG("playerbots", "Can cast spell failed. Spell not has cooldown. - target name: {}, s...
             LOG_DEBUG("playerbots",
                       "Can cast spell failed. Spell not has cooldown. - target name: {}, spellid: {}, bot name: {}",
                       target->GetName(), spellid, bot->GetName());
@@ -3384,6 +3439,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Can cast spell failed. No spellInfo. - target name: {}, spellid: {}, bot name: {}",
+                      // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                      // Upstream: target->GetName(), spellid, bot->GetName()); (base 8d9f6aa6bc6d).
                       target->GetName(), spellid, bot->GetName());
 
         return false;
@@ -3392,6 +3449,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if ((bot->GetShapeshiftForm() == FORM_FLIGHT || bot->GetShapeshiftForm() == FORM_FLIGHT_EPIC) && !bot->IsInCombat())
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+            // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+            // Upstream: LOG_DEBUG("playerbots", "Can cast spell failed. In flight form (not in combat). - target nam...
             LOG_DEBUG(
                 "playerbots",
                 "Can cast spell failed. In flight form (not in combat). - target name: {}, spellid: {}, bot name: {}",
@@ -3406,6 +3465,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Casting time and bot is moving - target name: {}, spellid: {}, bot name: {}",
+                      // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                      // Upstream: target->GetName(), spellid, bot->GetName()); (base 8d9f6aa6bc6d).
                       target->GetName(), spellid, bot->GetName());
 
         return false;
@@ -3420,6 +3481,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
             {
                 if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
                     LOG_DEBUG("playerbots", "target is immuned to spell - target name: {}, spellid: {}, bot name: {}",
+                              // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed r...
+                              // Upstream: target->GetName(), spellid, bot->GetName()); (base 8d9f6aa6bc6d).
                               target->GetName(), spellid, bot->GetName());
 
                 return false;
@@ -3431,6 +3494,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
         {
             if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
                 LOG_DEBUG("playerbots", "target is out of sight distance - target name: {}, spellid: {}, bot name: {}",
+                          // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                          // Upstream: target->GetName(), spellid, bot->GetName()); (base 8d9f6aa6bc6d).
                           target->GetName(), spellid, bot->GetName());
 
             return false;
@@ -3477,6 +3542,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
             return true;
         default:
             if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+                // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+                // Upstream: LOG_DEBUG("playerbots", "CanCastSpell Check Failed. - target name: {}, spellid: {}, bot...
                 LOG_DEBUG("playerbots",
                           "CanCastSpell Check Failed. - target name: {}, spellid: {}, bot name: {}, result: {}",
                           target->GetName(), spellid, bot->GetName(), result);
@@ -4517,6 +4584,8 @@ Player* PlayerbotAI::FindNewMaster()
     return nullptr;
 }
 
+// PLB-LOCAL BEGIN(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+// Upstream: // An altbot is a bot whose master is client-based (a regular player or a selfbot), and is not a randomb...
 // An altbot is a bot whose master is client-based (a regular player or a selfbot), and is not a randombot, and is not a
 // selfbot. For the purpose of this bool, all addclassbots return true for IsAltBot, but not all altbots return true for
 // IsAddClassBot, since IsAddClassBot requires the bot to come from a type 2 account in playerbots_account_type.
@@ -4524,7 +4593,10 @@ bool PlayerbotAI::IsAltBot()
 {
     return HasGameClientMaster() && !sRandomPlayerbotMgr.IsRandomBot(bot) && !IsSelfBot(bot);
 }
+// PLB-LOCAL END(66dbf2793b3a)
 
+// PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+// Upstream: // True when the bot's master is driven by a player with a game client: a regular player (no bot AI) or...
 // True when the bot's master is driven by a player with a game client: a regular player (no bot AI) or a selfbot
 // player.
 bool PlayerbotAI::HasGameClientMaster() { return IsRealPlayer(master) || IsSelfBot(master); }
@@ -5759,6 +5831,8 @@ Item* PlayerbotAI::FindStoneFor(Item* weapon) const
         SOLID_SHARPENING_STONE,      HEAVY_SHARPENING_STONE, COARSE_SHARPENING_STONE,    ROUGH_SHARPENING_STONE};
 
     static const std::vector<uint32_t> uPrioritizedWeightStoneIds = {
+        // PLB-LOCAL(66dbf2793b3a): fix(recovery): stop reporting a waiting ghost as a failed revive.
+        // Upstream: ADAMANTITE_WEIGHTSTONE, FEL_WEIGHTSTONE,    ELEMENTAL_SHARPENING_STONE, DENSE_WEIGHTSTONE, SOLID...
         ADAMANTITE_WEIGHTSTONE, FEL_WEIGHTSTONE,   ELEMENTAL_SHARPENING_STONE, DENSE_WEIGHTSTONE,
         SOLID_WEIGHTSTONE,      HEAVY_WEIGHTSTONE, COARSE_WEIGHTSTONE,         ROUGH_WEIGHTSTONE};
 
@@ -6560,11 +6634,14 @@ uint8 PlayerbotAI::FindEquipSlot(ItemTemplate const* proto, uint32 slot, bool sw
         for (uint8 i = 0; i < 4; ++i)
             // PLB-LOCAL(c55ef62eb966): fix(equip): never offer the offhand as a swap target under a two-hander
             if (slots[i] != NULL_SLOT && swap)
+                // PLB-LOCAL BEGIN(c55ef62eb966): fix(equip): never offer the offhand as a swap target under a two-ha...
+                // Upstream: return slots[i]; (base 8d9f6aa6bc6d).
                 // same rule as the free-slot search above: a two-hander (without titan grip) blocks
                 // the offhand outright, so offering it as a swap target only produces an equip
                 // attempt the core refuses, repeated forever by every caller that trusts this slot.
                 if (slots[i] != EQUIPMENT_SLOT_OFFHAND || !bot->IsTwoHandUsed())
                     return slots[i];
+                // PLB-LOCAL END(c55ef62eb966)
     }
 
     // no free position
@@ -6654,12 +6731,16 @@ ChatChannelSource PlayerbotAI::GetChatChannelSource(Player* bot, uint32 type, st
             }
             // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
             case CHAT_MSG_PARTY:
+            // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams.
+            // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
             case CHAT_MSG_PARTY_LEADER:
             {
                 return ChatChannelSource::SRC_PARTY;
             }
             // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams
             case CHAT_MSG_RAID:
+            // PLB-LOCAL(99e4c7d19107): feat(extensions): complete generic module event seams.
+            // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
             case CHAT_MSG_RAID_LEADER:
             {
                 return ChatChannelSource::SRC_RAID;

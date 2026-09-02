@@ -10,10 +10,10 @@
  *   Sebastiaan Keek (mostlikely4r) <sebastiaan.keek@gmail.com>
  *   Cyberium <cyberium@users.noreply.github.com>
  */
+// PLB-LOCAL(working-tree): Uncommitted local change.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
 // PLB-LOCAL UPSTREAM-FILE: this fork changes 3 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
 
 #include "PullActions.h"
 #include "AttackersValue.h"

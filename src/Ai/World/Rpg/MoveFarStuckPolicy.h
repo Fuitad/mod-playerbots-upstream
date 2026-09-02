@@ -19,6 +19,7 @@
  * rescue window, it is stuck regardless of which destination was last asked
  * for.
  */
+// PLB-LOCAL FILE. Local only; see docs/local-changes.md.
 
 #ifndef _PLAYERBOT_MOVEFARSTUCKPOLICY_H
 #define _PLAYERBOT_MOVEFARSTUCKPOLICY_H

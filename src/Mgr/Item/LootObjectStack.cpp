@@ -4,9 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 4 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 14 region(s) of this upstream file.
 
 #include "LootObjectStack.h"
 #include "LootMgr.h"
@@ -509,6 +507,8 @@ LootObject LootObjectStack::GetNearest(float maxDistance)
                 LOG_DEBUG("playerbots", "[QuestProbe] {} LOOTSKIP go {} reason range dist {:.1f} max {:.1f}",
                           bot->GetName(), worldObj->GetEntry(), distance, maxDistance);
             continue;
+        // PLB-LOCAL(636de41c53da): chore(rpg): probe why queued quest chests are passed over by loot.
+        // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
         }
 
         LootObject lootObject(bot, guid);
@@ -529,6 +529,8 @@ LootObject LootObjectStack::GetNearest(float maxDistance)
                           lootObject.skillId, lootObject.reqSkillValue);
             }
             continue;
+        // PLB-LOCAL(636de41c53da): chore(rpg): probe why queued quest chests are passed over by loot.
+        // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
         }
 
         nearestDistance = distance;

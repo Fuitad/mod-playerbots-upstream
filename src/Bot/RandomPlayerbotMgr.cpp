@@ -4,9 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 52 region(s) of this upstream file.
-// Each is tagged PLB-LOCAL(<sha>) where a marker could be placed safely; run
-// tools/plb_local_markers.py --check for the authoritative list. docs/local-changes.md.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 56 region(s) of this upstream file.
 
 #include "RandomPlayerbotMgr.h"
 // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
@@ -1727,6 +1725,8 @@ void RandomPlayerbotMgr::Revive(Player* player)
         LOG_WARN("playerbots", "Bot recovery at homebind failed for {}", player ? player->GetName() : "unknown");
 }
 
+// PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful.
+// Upstream: // LOG_INFO("playerbots", "Bot {} revived", player->GetName().c_str()); SetEventValue(bot, "dead", 0, 0)...
 bool RandomPlayerbotMgr::RecoverAtHomebind(Player* player)
 {
     if (!player)
@@ -1941,6 +1941,8 @@ void RandomPlayerbotMgr::PrepareAddclassCache()
         // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     }
 
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+    // Upstream: LOG_INFO("playerbots", ">> {} characters collected for addclass command from {} AddClass accounts.",...
     LOG_INFO("playerbots", ">> {} characters collected for addclass command from {} AddClass accounts.", collected,
              addClassTypeAccounts.size());
 }
@@ -1954,6 +1956,8 @@ void RandomPlayerbotMgr::Init()
         // PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions
         sRandomPlayerbotMgr.LoadBattleMastersCache();
 
+    // PLB-LOCAL(ef3dc879afb7): feat(population): support exact random bot admissions.
+    // Upstream: PlayerbotsDatabase.Execute("DELETE FROM playerbots_random_bots WHERE event = 'add'"); (base 8d9f6aa6...
     if (ShouldClearRandomPlayerbotAdmissions(sPlayerbotAIConfig.preserveRandomBotAdmissions))
         PlayerbotsDatabase.Execute("DELETE FROM playerbots_random_bots WHERE event = 'add'");
 }
@@ -2133,6 +2137,8 @@ void RandomPlayerbotMgr::RandomizeFirst(Player* bot)
     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     uint32 randomTime =
         urand(sPlayerbotAIConfig.minRandomBotRandomizeTime, sPlayerbotAIConfig.maxRandomBotRandomizeTime);
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+    // Upstream: uint32 inworldTime = urand(sPlayerbotAIConfig.minRandomBotInWorldTime, sPlayerbotAIConfig.maxRandomB...
     uint32 inworldTime = urand(sPlayerbotAIConfig.minRandomBotInWorldTime, sPlayerbotAIConfig.maxRandomBotInWorldTime);
 
     PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_UPD_RANDOM_BOTS);
@@ -2174,6 +2180,8 @@ void RandomPlayerbotMgr::RandomizeMin(Player* bot)
     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     uint32 randomTime =
         urand(sPlayerbotAIConfig.minRandomBotRandomizeTime, sPlayerbotAIConfig.maxRandomBotRandomizeTime);
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+    // Upstream: uint32 inworldTime = urand(sPlayerbotAIConfig.minRandomBotInWorldTime, sPlayerbotAIConfig.maxRandomB...
     uint32 inworldTime = urand(sPlayerbotAIConfig.minRandomBotInWorldTime, sPlayerbotAIConfig.maxRandomBotInWorldTime);
 
     PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_UPD_RANDOM_BOTS);
@@ -2259,6 +2267,8 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
     // PLB-LOCAL(6ddb7413ab72): feat(factory): add EconomyManagedSupplies to stop the refresh conjuring goods
     botAI->Reset();
 
+    // PLB-LOCAL(6ddb7413ab72): feat(factory): add EconomyManagedSupplies to stop the refresh conjuring goods.
+    // Upstream: bot->DurabilityRepairAll(false, 1.0f, false); (base 8d9f6aa6bc6d).
     if (!sPlayerbotAIConfig.economyManagedSupplies)
         bot->DurabilityRepairAll(false, 1.0f, false);
     bot->SetFullHealth();
@@ -2273,11 +2283,14 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
         // PLB-LOCAL(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupplies
         bot->SetPower(POWER_ENERGY, bot->GetMaxPower(POWER_ENERGY));
 
+    // PLB-LOCAL BEGIN(37c8545d7510): feat(economy): gate glyphs, free repairs, fares and gifts on EconomyManagedSupp...
+    // Upstream: uint32 money = bot->GetMoney(); bot->SetMoney(money + 500 * sqrt(urand(1, bot->GetLevel() * 5))); (b...
     if (!sPlayerbotAIConfig.economyManagedSupplies)
     {
         uint32 money = bot->GetMoney();
         bot->SetMoney(money + 500 * sqrt(urand(1, bot->GetLevel() * 5)));
     }
+    // PLB-LOCAL END(37c8545d7510)
 
     if (bot->GetGroup())
         botAI->LeaveOrDisbandGroup();
@@ -2348,6 +2361,8 @@ bool RandomPlayerbotMgr::IsAddclassBot(ObjectGuid::LowType bot)
     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     // If not in cache, check the account type
     uint32 accountId = sCharacterCache->GetCharacterAccountIdByGuid(guid);
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+    // Upstream: if (accountId && IsAccountType(accountId, 2)) // Type 2 = AddClass (base 8d9f6aa6bc6d).
     if (accountId && IsAccountType(accountId, 2))  // Type 2 = AddClass
     {
         return true;
@@ -2560,6 +2575,8 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     if (!args || !*args)
     {
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+        // Upstream: LOG_ERROR("playerbots", "Usage: rndbot stats/update/reset/init/refresh/add/remove"); (base 8d9f6...
         LOG_ERROR("playerbots", "Usage: rndbot stats/update/reset/init/refresh/autogear/add/remove");
         return false;
     }
@@ -2600,6 +2617,8 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     handlers["levelup"] = handlers["level"] = &RandomPlayerbotMgr::IncreaseLevel;
     handlers["refresh"] = &RandomPlayerbotMgr::Refresh;
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     handlers["autogear"] = &RandomPlayerbotMgr::AutoGearBot;
     handlers["teleport"] = &RandomPlayerbotMgr::RandomTeleportForLevel;
     // handlers["rpg"] = &RandomPlayerbotMgr::RandomTeleportForRpg;
@@ -2675,6 +2694,8 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
 }
 
+// PLB-LOCAL BEGIN(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+// Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 // Console counterpart of the whisper autogear command, for bots that have no master to whisper
 // them: same quality and item level caps, same incremental regear that replaces pieces the class
 // cannot use. Reachable as `.playerbots rndbot autogear` (all online random bots) or
@@ -2687,6 +2708,7 @@ void RandomPlayerbotMgr::AutoGearBot(Player* bot)
                                static_cast<uint32>(sPlayerbotAIConfig.autoGearScoreLimit), /*incremental*/ true);
 }
 
+// PLB-LOCAL END(b09ea8d03b7c)
 void RandomPlayerbotMgr::HandleCommand(uint32 type, std::string const text, Player* fromPlayer, std::string channelName)
 {
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
@@ -2737,6 +2759,8 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     if (_isBotLogging)
     {
+        // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+        // Upstream: LOG_INFO("playerbots", "{}/{} Bot {} logged in", playerBots.size(), sRandomPlayerbotMgr.GetMaxAl...
         LOG_INFO("playerbots", "{}/{} Bot {} logged in", playerBots.size(), sRandomPlayerbotMgr.GetMaxAllowedBotCount(),
                  bot->GetName().c_str());
 
@@ -2794,6 +2818,8 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
                     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
                     botAI->SetMaster(player);
                     botAI->ResetStrategies();
+                    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+                    // Upstream: botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault( "hello", "Hello"...
                     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "Hello", {}));
                 }
 
@@ -2818,6 +2844,8 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
         // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         else
         {
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+            // Upstream: std::vector<TravelDestination*> dests = TravelMgr::instance().getRpgTravelDestinations(playe...
             std::vector<TravelDestination*> dests =
                 TravelMgr::instance().getRpgTravelDestinations(player, true, true, 200000.0f);
 
@@ -2907,6 +2935,8 @@ void RandomPlayerbotMgr::PrintStats()
     // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
     uint32 tank = 0;
     uint32 active = 0;
+    // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+    // Upstream: /*    uint32 update = 0; uint32 randomize = 0; uint32 teleport = 0; uint32 changeStrategy = 0;*/ (ba...
     /*    uint32 update = 0;
         uint32 randomize = 0;
         uint32 teleport = 0;
@@ -2945,6 +2975,8 @@ void RandomPlayerbotMgr::PrintStats()
         // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots
         if (!botAI)
         {
+            // PLB-LOCAL(b09ea8d03b7c): feat(commands): add rndbot autogear for masterless random bots.
+            // Upstream: LOG_ERROR("playerbots", "Player/Bot {} is registered in sRandomPlayerbotMgr playerBots and h...
             LOG_ERROR("playerbots", "Player/Bot {} is registered in sRandomPlayerbotMgr playerBots and has no bot AI!",
                       bot->GetName().c_str());
             continue;
@@ -3174,6 +3206,8 @@ uint32 RandomPlayerbotMgr::GetTradeDiscount(Player* bot, Player* master)
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 std::string const RandomPlayerbotMgr::HandleRemoteCommand(std::string const request)
 {
+    // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations.
+    // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
     std::string extensionResponse;
     if (GetPlayerbotExtensionRegistry().HandleRemoteCommand(request, extensionResponse))
         return extensionResponse;
