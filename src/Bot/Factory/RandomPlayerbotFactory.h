@@ -4,7 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 5 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 4 region(s) of this upstream file.
 
 #ifndef PLAYERBOTS_RANDOMPLAYERBOTFACTORY_H
 #define PLAYERBOTS_RANDOMPLAYERBOTFACTORY_H
