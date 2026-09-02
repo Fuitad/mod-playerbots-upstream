@@ -374,6 +374,15 @@ TEST(PlayerbotRecoveryPolicyTest, TheCorpseWalkArrivesAnywhereTheReclaimRadiusAl
     EXPECT_FALSE(CorpseWalkArrived(60.0f, reclaimRadius));
 }
 
+TEST(PlayerbotRecoveryPolicyTest, ACorpseStepKeepsToTheGhostsOwnFloor)
+{
+    // Jdyalani, 2026-09-02 01:20: on Teldrassil's tree at 134, the terrain grid under the tree
+    // offered a step at minus 342, and the ghost went below the world.
+    EXPECT_FALSE(CorpseStepHeightPlausible(134.0f, -342.0f));
+    EXPECT_TRUE(CorpseStepHeightPlausible(134.0f, 72.0f));
+    EXPECT_TRUE(CorpseStepHeightPlausible(116.0f, 64.0f));
+}
+
 TEST(PlayerbotCombatSafetyTest, PetAndPullEntrypointsHonorCentralCombatSafety)
 {
     CombatBlockedPlayerbotAI botAI;

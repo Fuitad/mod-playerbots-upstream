@@ -181,6 +181,17 @@ bool ReviveFromCorpseAction::Execute(Event event)
     bool const success = bot->IsAlive();
     if (success)
         botAI->StartPostReviveRepairSafety();
+    // PLB-LOCAL(revive-safety): a reclaimed corpse gives half health, and a masterless random
+    // bot then stands at 50% where it died: 38 of 67 body revives on 2026-09-02 01:15 to 01:30
+    // were followed by a death within two minutes, 19 of them while the bot was still idle. The
+    // manager's own recovery already restores full health; the body revive does the same.
+    // Upstream: nothing here.
+    if (success && !botAI->HasGameClientMaster() && sRandomPlayerbotMgr.IsRandomBot(bot))
+    {
+        bot->SetFullHealth();
+        if (bot->GetMaxPower(POWER_MANA) > 0)
+            bot->SetPower(POWER_MANA, bot->GetMaxPower(POWER_MANA));
+    }
     // PLB-LOCAL(revive-outcome): same verdict as upstream, routed through the shared classifier.
     botAI->RecordReviveAttempt(timestampMs, playerbots::recovery::CorpseReviveOutcome(eligibility, false, success),
                                bot->IsAlive());
@@ -358,20 +369,34 @@ bool FindCorpseAction::Execute(Event /*event*/)
                 float const toCorpse = bot->GetAngle(corpsePos.GetPositionX(), corpsePos.GetPositionY());
                 // Straight at the corpse first, then 40 degrees either side: a lake or a cliff on
                 // the direct line is the usual reason a step cannot path.
+                // The step height comes from the surfaces within a hundred yards of the ghost's own
+                // height (models included), not from the terrain grid: the grid lies under
+                // Teldrassil's tree, and a height read from the top of the world sent Jdyalani
+                // (2026-09-02 01:20) 342 yards below it. See CorpseWalkPolicy.h.
+                auto const stepHeight = [&](float x, float y) -> float
+                {
+                    float const from = bot->GetPositionZ() + CORPSE_STEP_HEIGHT_WINDOW_YARDS;
+                    float const ground = bot->GetMap()->GetHeight(bot->GetPhaseMask(), x, y, from, true,
+                                                                  2.0f * CORPSE_STEP_HEIGHT_WINDOW_YARDS);
+                    float const z = std::max(ground, bot->GetMap()->GetWaterLevel(x, y));
+                    if (z == INVALID_HEIGHT || z == VMAP_INVALID_HEIGHT_VALUE ||
+                        !CorpseStepHeightPlausible(bot->GetPositionZ(), z))
+                        return INVALID_HEIGHT;
+                    return z;
+                };
                 float firstStepX = 0.0f, firstStepY = 0.0f, firstStepZ = INVALID_HEIGHT;
                 for (float const turn : {0.0f, 0.7f, -0.7f})
                 {
                     float const sx = bot->GetPositionX() + std::cos(toCorpse + turn) * 100.0f;
                     float const sy = bot->GetPositionY() + std::sin(toCorpse + turn) * 100.0f;
-                    float const sz = std::max(bot->GetMap()->GetHeight(sx, sy, MAX_HEIGHT),
-                                              bot->GetMap()->GetWaterLevel(sx, sy));
+                    float const sz = stepHeight(sx, sy);
                     if (turn == 0.0f)
                     {
                         firstStepX = sx;
                         firstStepY = sy;
                         firstStepZ = sz;
                     }
-                    if (sz == INVALID_HEIGHT || sz == VMAP_INVALID_HEIGHT_VALUE)
+                    if (sz == INVALID_HEIGHT)
                         continue;
                     moved = MoveTo(bot->GetMapId(), sx, sy, sz, false, false);
                     if (moved)
@@ -380,7 +405,13 @@ bool FindCorpseAction::Execute(Event /*event*/)
                 // PLB-LOCAL(death-probe): why the straight step cannot path. Temporary diagnostic:
                 // 25 of 35 fallbacks on 2026-09-02 00:42 to 00:56 were far corpses whose steps
                 // failed from the graveyard itself (Pehki, 01:01: 1102 yards, standing still).
-                if (!moved && firstStepZ != INVALID_HEIGHT && firstStepZ != VMAP_INVALID_HEIGHT_VALUE)
+                // A move issued a moment ago is still running its delay, so a refused re-issue is
+                // a wait, not a failed walk: the first move toward a far corpse gets a partial path,
+                // the ghost runs it and stops, and for the next seconds every new move is refused
+                // (Cayu, 2026-09-02 01:20: a normal path, 2994 ms of delay left, spirit healer).
+                if (!moved && IsWaitingForLastMove(MovementPriority::MOVEMENT_NORMAL))
+                    moved = true;
+                if (!moved && firstStepZ != INVALID_HEIGHT)
                 {
                     PathGenerator probe(bot);
                     probe.CalculatePath(firstStepX, firstStepY, firstStepZ);
