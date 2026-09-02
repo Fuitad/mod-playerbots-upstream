@@ -87,8 +87,13 @@ public:
                 botAI->lowPriorityQuest.insert(questId);
                 botAI->rpgStatistic.questAbandoned++;
             }
-            LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-COOLDOWN quest {} deaths {} blamed {}", player->GetName(),
-                      questId, record.deaths, QuestStayLostToDeaths(record.deaths));
+            // The cooldown only governs the next pick. A bot revived at its body was still in the
+            // same quest stay and walked back into the same mob without picking anything: 14 of
+            // 25 body relapses on 2026-09-02 00:42 to 00:56 were same quest, same status. Ending
+            // the stay here makes the revived bot pick afresh, and the pick skips the cooled quest.
+            botAI->rpgInfo.ChangeToIdle();
+            LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-COOLDOWN quest {} deaths {} blamed {} stay ended",
+                      player->GetName(), questId, record.deaths, QuestStayLostToDeaths(record.deaths));
         }
     }
 
