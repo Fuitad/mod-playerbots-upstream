@@ -976,7 +976,12 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 std::abs(spawn.z - data.pos.GetPositionZ()) > INTERACTION_DISTANCE)
                 continue;
             Creature* live = LiveCreatureAt(bot, spawn);
-            if (live && live->IsAlive())
+            // A live target the bot cannot see from where it stands does not count as near:
+            // Lieutenant Benedict (784) was alive 11.6 yards away, 10 yards up inside the keep
+            // with no line of sight, and two bots stood below for five minutes and abandoned
+            // (Zlatan, 2026-09-02 03:05). The sweep below walks to him instead.
+            if (live && live->IsAlive() && bot->IsWithinLOSInMap(live) &&
+                std::abs(live->GetPositionZ() - bot->GetPositionZ()) <= INTERACTION_DISTANCE)
             {
                 aliveNear = true;
                 break;
