@@ -26,6 +26,7 @@
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
+#include "Timer.h"
 
 #include <variant>
 
@@ -66,10 +67,10 @@ public:
         if (!botAI || !sRandomPlayerbotMgr.IsRandomBot(player))
             return;
         LOG_DEBUG("playerbots",
-                  "[DeathProbe] {} DIED lvl {} class {} zone {} area {} rpg {} quest {} broken {} money {}c",
+                  "[DeathProbe] {} DIED lvl {} class {} zone {} area {} rpg {} quest {} broken {} money {}c t {}",
                   player->GetName(), player->GetLevel(), player->getClass(), player->GetZoneId(), player->GetAreaId(),
                   static_cast<uint32>(botAI->rpgInfo.GetStatus()), DeathProbe::QuestInProgress(botAI),
-                  DeathProbe::BrokenEquipmentSlots(player), player->GetMoney());
+                  DeathProbe::BrokenEquipmentSlots(player), player->GetMoney(), getMSTime());
     }
 
     void OnPlayerKilledByCreature(Creature* killer, Player* killed) override

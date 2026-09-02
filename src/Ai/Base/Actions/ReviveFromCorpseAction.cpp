@@ -30,6 +30,7 @@
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "ServerFacade.h"
+#include "Timer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -163,6 +164,8 @@ bool ReviveFromCorpseAction::Execute(Event event)
 
     LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> revives at body", bot->GetGUID().ToString().c_str(),
               bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName().c_str());
+    // PLB-LOCAL(death-probe): timestamped twin of the line above, for relapse timing. Temporary.
+    LOG_DEBUG("playerbots", "[DeathProbe] {} REVIVED body t {}", bot->GetName(), getMSTime());
 
     // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
     bot->GetMotionMaster()->Clear();
@@ -465,6 +468,8 @@ bool SpiritHealerAction::Execute(Event /*event*/)
             if (unit && unit->HasNpcFlag(UNIT_NPC_FLAG_SPIRITHEALER))
             {
                 // PLB-LOCAL(ffd415a247b8): fix(recovery): make random bot revival safe and truthful
+                // PLB-LOCAL(death-probe): timestamped twin for relapse timing. Temporary.
+                LOG_DEBUG("playerbots", "[DeathProbe] {} REVIVED spirit t {}", bot->GetName(), getMSTime());
                 LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> revives at spirit healer", bot->GetGUID().ToString().c_str(),
                           bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName());
                 PlayerbotChatHandler ch(bot);
