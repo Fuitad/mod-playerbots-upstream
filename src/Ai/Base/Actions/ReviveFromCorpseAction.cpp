@@ -13,6 +13,7 @@
 
 #include "Corpse.h"
 #include "CorpseWalkPolicy.h"
+#include "DeathRecoveryPolicy.h"
 // PLB-LOCAL(revive-safety): the hostile-in-reach count scans the grid directly.
 #include "CellImpl.h"
 #include "Creature.h"
@@ -220,6 +221,22 @@ bool FindCorpseAction::Execute(Event /*event*/)
 
     if (!botAI->HasGameClientMaster())
     {
+        // PLB-LOCAL(death-chain): a second death within ten minutes, or a killer four or more
+        // levels above the bot, sends a random bot home instead of back to its body. See
+        // DeathRecoveryPolicy.h. Upstream: only the five-death rule below.
+        if (sRandomPlayerbotMgr.IsRandomBot(bot))
+        {
+            RecentDeathRecord const chain = RecentDeaths::Current(bot->GetGUID().GetCounter(), getMSTime());
+            if (RecoverAtHomebindAfterDeath(chain.deathsInWindow, chain.lastKillerLevelGap))
+            {
+                LOG_DEBUG("playerbots", "[DeathProbe] {} HOMEBIND-AFTER-DEATH deaths {} killerGap {}", bot->GetName(),
+                          chain.deathsInWindow, chain.lastKillerLevelGap);
+                bool const recovered = RecoverAtHomebind();
+                context->GetValue<uint32>("death count")
+                    ->Set(playerbots::recovery::DeathCountAfterForcedRecovery(dCount, recovered));
+                return recovered;
+            }
+        }
         if (dCount >= 5)
         {
             // LOG_INFO("playerbots", "Bot {} {}:{} <{}>: died too many times, was revived and teleported",

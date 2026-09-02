@@ -14,6 +14,7 @@
 
 #include "Ai/Base/Actions/AcceptResurrectAction.h"
 #include "Ai/Base/Actions/CorpseWalkPolicy.h"
+#include "Ai/Base/Actions/DeathRecoveryPolicy.h"
 #include "Ai/Base/Actions/GenericActions.h"
 #include "Ai/Base/Actions/PhysicalDeathCountPolicy.h"
 #include "Ai/Base/Actions/PullActions.h"
@@ -372,6 +373,25 @@ TEST(PlayerbotRecoveryPolicyTest, TheCorpseWalkArrivesAnywhereTheReclaimRadiusAl
     // Outside the radius the server would refuse the reclaim, so the walk goes on.
     EXPECT_FALSE(CorpseWalkArrived(38.5f, reclaimRadius));
     EXPECT_FALSE(CorpseWalkArrived(60.0f, reclaimRadius));
+}
+
+TEST(PlayerbotRecoveryPolicyTest, ASecondDeathOrAnOutmatchedKillerSendsTheBotHome)
+{
+    // A lost fight the bot can win next time: back to the body.
+    EXPECT_FALSE(RecoverAtHomebindAfterDeath(1, 0));
+    EXPECT_FALSE(RecoverAtHomebindAfterDeath(1, 3));
+    // Audacious, 2026-09-02 01:40: level 9, killed four times by a level 17 Greater Fleshripper.
+    EXPECT_TRUE(RecoverAtHomebindAfterDeath(1, 8));
+    EXPECT_TRUE(RecoverAtHomebindAfterDeath(2, 0));
+
+    // Deaths ten minutes apart are separate chains; closer ones count up.
+    RecentDeathRecord first = NoteRecentDeath(RecentDeathRecord{}, 1000, 0);
+    EXPECT_EQ(first.deathsInWindow, 1u);
+    RecentDeathRecord second = NoteRecentDeath(first, 1000 + RECENT_DEATH_WINDOW_MS, 2);
+    EXPECT_EQ(second.deathsInWindow, 2u);
+    EXPECT_EQ(second.lastKillerLevelGap, 2);
+    RecentDeathRecord later = NoteRecentDeath(second, second.lastDeathMs + RECENT_DEATH_WINDOW_MS + 1, 0);
+    EXPECT_EQ(later.deathsInWindow, 1u);
 }
 
 TEST(PlayerbotRecoveryPolicyTest, ACorpseStepKeepsToTheGhostsOwnFloor)

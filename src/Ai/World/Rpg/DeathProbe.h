@@ -17,6 +17,7 @@
 #ifndef _PLAYERBOT_DEATHPROBE_H
 #define _PLAYERBOT_DEATHPROBE_H
 
+#include "Ai/Base/Actions/DeathRecoveryPolicy.h"
 #include "Ai/World/Rpg/QuestDeathCooldown.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Creature.h"
@@ -30,6 +31,7 @@
 #include "ScriptMgr.h"
 #include "Timer.h"
 
+#include <unordered_map>
 #include <variant>
 
 namespace DeathProbe
@@ -74,6 +76,15 @@ public:
                   player->GetName(), player->GetLevel(), player->getClass(), player->GetZoneId(), player->GetAreaId(),
                   static_cast<uint32>(botAI->rpgInfo.GetStatus()), questId, DeathProbe::BrokenEquipmentSlots(player),
                   player->GetMoney(), getMSTime());
+        // The chain record the corpse walk consults (DeathRecoveryPolicy.h). The killer's level gap
+        // arrives through OnPlayerKilledByCreature just before this hook; an environmental death
+        // leaves it at zero.
+        uint32 const guidLow = player->GetGUID().GetCounter();
+        int32 const killerGap = _pendingKillerLevelGap.count(guidLow) ? _pendingKillerLevelGap[guidLow] : 0;
+        _pendingKillerLevelGap.erase(guidLow);
+        RecentDeathRecord const chain = RecentDeaths::Note(guidLow, getMSTime(), killerGap);
+        LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-CHAIN deaths {} killerGap {} homebind {}", player->GetName(),
+                  chain.deathsInWindow, killerGap, RecoverAtHomebindAfterDeath(chain.deathsInWindow, killerGap));
         // The quest death cooldown is recorded here, at the death, not from the quest stay tick:
         // after the revive the bot re-reaches the anchor and the stay's death count starts over,
         // so the stay never saw its own death (0 ABANDON-DEATH lines all night on 2026-09-01).
@@ -101,11 +112,16 @@ public:
     {
         if (!killer || !killed || !GET_PLAYERBOT_AI(killed) || !sRandomPlayerbotMgr.IsRandomBot(killed))
             return;
+        _pendingKillerLevelGap[killed->GetGUID().GetCounter()] =
+            static_cast<int32>(killer->GetLevel()) - static_cast<int32>(killed->GetLevel());
         LOG_DEBUG("playerbots", "[DeathProbe] {} KILLEDBY {} entry {} lvl {} rank {} botlvl {} attackers {}",
                   killed->GetName(), killer->GetName(), killer->GetEntry(), killer->GetLevel(),
                   killer->GetCreatureTemplate() ? killer->GetCreatureTemplate()->rank : 0, killed->GetLevel(),
                   killed->getAttackers().size());
     }
+
+private:
+    std::unordered_map<uint32, int32> _pendingKillerLevelGap;
 };
 
 #endif
