@@ -23,6 +23,12 @@ struct GrindCandidateFacts
     // The bot holds an incomplete quest that this creature advances.
     bool neededForQuest = false;
     float distance = 0.0f;
+    // Other hostile creatures standing within their own aggro reach of this one: the adds that
+    // join the fight when it is pulled. Measured at 200 bots on 2026-09-02: four deaths in ten had
+    // the killer untouched at the bot's death, 18 of 30 to creatures two or more levels below the
+    // bot and 20 of 30 inside a quest stay; the bot pulled one mob out of a camp and its neighbours
+    // finished the fight.
+    uint32 hostileNeighbours = 0;
 };
 
 // Ranks one candidate against the incumbent best.
@@ -49,6 +55,10 @@ struct GrindCandidateFacts
         return true;
     if (questPriorityActive && candidate.neededForQuest != incumbent.neededForQuest)
         return candidate.neededForQuest;
+    // A creature with fewer hostile neighbours is the safer pull, whatever the distance; only
+    // among equally crowded candidates does nearest win. See hostileNeighbours above.
+    if (candidate.hostileNeighbours != incumbent.hostileNeighbours)
+        return candidate.hostileNeighbours < incumbent.hostileNeighbours;
     return candidate.distance < incumbent.distance;
 }
 

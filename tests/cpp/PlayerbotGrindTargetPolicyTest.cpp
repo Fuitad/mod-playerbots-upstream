@@ -59,6 +59,30 @@ TEST(PlayerbotGrindTargetPolicyTest, WithinTheSameClassTheNearerCandidateStillWi
     EXPECT_FALSE(GrindCandidatePreferred(Candidate(false, 25.0f), Candidate(false, 5.0f), true, true));
 }
 
+TEST(PlayerbotGrindTargetPolicyTest, ALoneCreatureOutranksOneStandingAmongOthers)
+{
+    // The defect this pins: at 200 bots on 2026-09-02, four deaths in ten had the killer untouched
+    // at the bot's death, 18 of 30 to creatures two or more levels below the bot, 20 of 30 inside a
+    // quest stay: the bot pulled one mob out of a camp and the neighbours finished it. A creature
+    // with no hostile neighbour in its aggro reach is the safer pull, whatever the distance.
+    GrindCandidateFacts lone = Candidate(false, 20.0f);
+    GrindCandidateFacts crowded = Candidate(false, 5.0f);
+    crowded.hostileNeighbours = 2;
+
+    EXPECT_TRUE(GrindCandidatePreferred(lone, crowded, true, true));
+    EXPECT_FALSE(GrindCandidatePreferred(crowded, lone, true, true));
+    // Fewer neighbours also wins over more.
+    GrindCandidateFacts lessCrowded = Candidate(false, 25.0f);
+    lessCrowded.hostileNeighbours = 1;
+    EXPECT_TRUE(GrindCandidatePreferred(lessCrowded, crowded, true, true));
+    // The quest objective still outranks a lone bystander: the stay exists to progress the quest.
+    GrindCandidateFacts crowdedObjective = Candidate(true, 15.0f);
+    crowdedObjective.hostileNeighbours = 2;
+    EXPECT_TRUE(GrindCandidatePreferred(crowdedObjective, lone, true, true));
+    // Off a quest the same preference holds: a wandering bot should not pull camps either.
+    EXPECT_TRUE(GrindCandidatePreferred(lone, crowded, false, true));
+}
+
 TEST(PlayerbotGrindTargetPolicyTest, AnEqualDistanceDoesNotDisplaceTheIncumbent)
 {
     // Strict less-than keeps the scan stable: an equal candidate must not churn the choice.

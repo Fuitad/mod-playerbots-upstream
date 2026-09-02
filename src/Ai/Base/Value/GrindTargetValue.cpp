@@ -63,6 +63,7 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
     // distance, and note once whether the bot is working a quest at all.
     // Upstream: neither existed, because selection compared distance only.
     bool resultNeededForQuest = false;
+    uint32 resultNeighbours = 0;
     bool const questPriorityActive = botAI->rpgInfo.GetStatus() == RPG_DO_QUEST;
     // PLB-LOCAL END(grind-quest-priority)
     // PLB-LOCAL BEGIN(grind-poi-stay-engage): once the POI stay is running, the eligibility gate
@@ -176,6 +177,23 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
                 needForQuestMap[unit->GetEntry()] = needForQuest(unit);
             candidateNeededForQuest = needForQuestMap[unit->GetEntry()];
         }
+        // PLB-LOCAL BEGIN(grind-camp-pull): the other hostile creatures that would join this pull,
+        // each within its own aggro reach of the candidate. See GrindCandidateFacts::hostileNeighbours.
+        // Upstream: nothing here, the choice was distance only.
+        uint32 hostileNeighbours = 0;
+        for (ObjectGuid const otherGuid : targets)
+        {
+            if (otherGuid == guid)
+                continue;
+            Unit* other = botAI->GetUnit(otherGuid);
+            if (!other || !other->IsAlive() || !other->IsInWorld() || !bot->IsHostileTo(other))
+                continue;
+            Creature* otherCreature = other->ToCreature();
+            float const reach = otherCreature ? otherCreature->GetAggroRange(bot) : 0.0f;
+            if (reach > 0.0f && other->GetDistance(unit) <= reach)
+                ++hostileNeighbours;
+        }
+        // PLB-LOCAL END(grind-camp-pull)
 
         if (group)
         {
@@ -187,24 +205,28 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
                     continue;
 
                 float d = member->GetDistance(unit);
-                if (GrindCandidatePreferred({candidateNeededForQuest, d}, {resultNeededForQuest, distance},
-                                            questPriorityActive, result != nullptr))
+                if (GrindCandidatePreferred({candidateNeededForQuest, d, hostileNeighbours},
+                                            {resultNeededForQuest, distance, resultNeighbours}, questPriorityActive,
+                                            result != nullptr))
                 {
                     distance = d;
                     result = unit;
                     resultNeededForQuest = candidateNeededForQuest;
+                    resultNeighbours = hostileNeighbours;
                 }
             }
         }
         else
         {
             float newdistance = bot->GetDistance(unit);
-            if (GrindCandidatePreferred({candidateNeededForQuest, newdistance}, {resultNeededForQuest, distance},
-                                        questPriorityActive, result != nullptr))
+            if (GrindCandidatePreferred({candidateNeededForQuest, newdistance, hostileNeighbours},
+                                        {resultNeededForQuest, distance, resultNeighbours}, questPriorityActive,
+                                        result != nullptr))
             {
                 distance = newdistance;
                 result = unit;
                 resultNeededForQuest = candidateNeededForQuest;
+                resultNeighbours = hostileNeighbours;
             }
         }
         // PLB-LOCAL END(grind-quest-priority)
