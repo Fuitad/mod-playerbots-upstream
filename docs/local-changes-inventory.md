@@ -8,7 +8,7 @@ Manual exceptions are accounted for, not automatically modified or proof of merg
 
 Local only files: **90**.
 Upstream files changed: **72**.
-Regions: **563**. Covered inline: **536**. Missing markers: **0**.
+Regions: **564**. Covered inline: **537**. Missing markers: **0**.
 
 ## Upstream files
 
@@ -119,8 +119,8 @@ Content fingerprint: `09a80d9d71c04536`.
 1. current 270-271; base 257-257: covered.
 
 ### `src/Ai/Base/Actions/LootAction.cpp`
-Content fingerprint: `cefa5cf583ad25c3`.
-22 region(s). Header: current.
+Content fingerprint: `bab424388bade927`.
+23 region(s). Header: current.
 1. current 20-20; base boundary after line 13: covered.
 1. current 51-55; base boundary after line 42: covered.
 1. current boundary after line 75; base 63-63: manual. deletion-only region; inspect the base lines during a merge.
@@ -143,6 +143,7 @@ Content fingerprint: `cefa5cf583ad25c3`.
 1. current 251-252; base 180-180: covered.
 1. current 266-267; base 193-193: covered.
 1. current 479-484; base 404-404: covered.
+1. current 498-502; base 416-416: covered.
 
 ### `src/Ai/Base/Actions/MoveToTravelTargetAction.cpp`
 Content fingerprint: `2b13e93d502a9b7b`.
@@ -918,7 +919,7 @@ Content fingerprint: `3a1678e9a391cec6`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/LootStorePolicy.h`
-Content fingerprint: `a5e9161e8405a524`.
+Content fingerprint: `186ee61098ff37f1`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/MaintenanceErrand.h`
@@ -1146,7 +1147,7 @@ Content fingerprint: `f451a9546f427f83`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotLootStorePolicyTest.cpp`
-Content fingerprint: `988b07af19fc4a4b`.
+Content fingerprint: `149f25ac0c44929d`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotMoveFarStuckPolicyTest.cpp`

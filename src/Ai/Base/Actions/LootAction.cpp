@@ -5,7 +5,7 @@
 // PLB-LOCAL(working-tree): Uncommitted local change.
 // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 22 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 23 region(s) of this upstream file.
 
 #include "LootAction.h"
 #include "BroadcastHelper.h"
@@ -493,7 +493,14 @@ bool StoreLootAction::Execute(Event event)
 
             for (auto stack : found)
             {
-                if (stack->GetCount() + itemcount < maxStack)
+                // PLB-LOCAL BEGIN(working-tree): Uncommitted local change.
+                // Upstream: if (stack->GetCount() + itemcount < maxStack) (base 2f7d9f774987).
+                // <=, not <: a loot that fills a stack exactly is storable. Upstream's < refused
+                // 12 Light Leather plus 8 looted against a max of 20. Unreachable while
+                // LootStoreBagSpaceGuardApplies returns false, corrected so that re-enabling a bag
+                // rule does not revive the off-by-one with it.
+                if (stack->GetCount() + itemcount <= maxStack)
+                // PLB-LOCAL END(working-tree)
                 {
                     hasFreeStack = true;
                     break;
