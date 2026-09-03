@@ -18,6 +18,7 @@
 #define _PLAYERBOT_DEATHPROBE_H
 
 #include "Ai/Base/Actions/DeathRecoveryPolicy.h"
+#include "Ai/World/Rpg/CampPullPolicy.h"
 #include "Ai/World/Rpg/QuestDeathCooldown.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Creature.h"
@@ -115,21 +116,73 @@ public:
         }
     }
 
+    // The fight's first target, so a death can say whether the killer came out of the same camp.
+    // See CampPullPolicy.h. Combat is re-entered mid-fight often enough (a second attacker joins,
+    // the bot drops out for a tick) that the first engagement is kept until combat ends rather than
+    // overwritten on every entry.
+    void OnPlayerEnterCombat(Player* player, Unit* enemy) override
+    {
+        if (!player || !enemy || !GET_PLAYERBOT_AI(player) || !sRandomPlayerbotMgr.IsRandomBot(player))
+            return;
+
+        time_t const now = time(nullptr);
+        FirstEngagement& held = _firstEngagement[player->GetGUID().GetCounter()];
+        if (!ShouldReplaceEngagement(held, now, CAMP_PULL_ENGAGEMENT_MAX_AGE_SECONDS))
+            return;
+
+        held.entry = enemy->GetEntry();
+        held.guidLow = enemy->GetGUID().GetCounter();
+        held.x = enemy->GetPositionX();
+        held.y = enemy->GetPositionY();
+        held.z = enemy->GetPositionZ();
+        held.since = now;
+    }
+
+    void OnPlayerLeaveCombat(Player* player) override
+    {
+        if (!player)
+            return;
+        _firstEngagement.erase(player->GetGUID().GetCounter());
+    }
+
     void OnPlayerKilledByCreature(Creature* killer, Player* killed) override
     {
         if (!killer || !killed || !GET_PLAYERBOT_AI(killed) || !sRandomPlayerbotMgr.IsRandomBot(killed))
             return;
         _pendingKillerLevelGap[killed->GetGUID().GetCounter()] =
             static_cast<int32>(killer->GetLevel()) - static_cast<int32>(killed->GetLevel());
+
+        // Where the killer came from, relative to the fight the bot chose to start. The untouched
+        // share alone cannot separate a camp pull from a wanderer, and only the camp pull is
+        // answerable by ranking grind candidates differently. See CampPullPolicy.h.
+        auto const engagement = _firstEngagement.find(killed->GetGUID().GetCounter());
+        bool const haveFirst = engagement != _firstEngagement.end() && engagement->second.since != 0;
+        float distance = -1.0f;
+        float aggroRange = 0.0f;
+        bool killerIsFirst = false;
+        if (haveFirst)
+        {
+            killerIsFirst = killer->GetGUID().GetCounter() == engagement->second.guidLow;
+            distance = killer->GetDistance(engagement->second.x, engagement->second.y, engagement->second.z);
+            aggroRange = killer->GetAggroRange(killed);
+        }
+        KillerOrigin const origin = ClassifyKiller(haveFirst, killerIsFirst, distance, aggroRange);
+
         // The killer's remaining health says how the fight went: near full, the bot never hurt it.
-        LOG_DEBUG("playerbots", "[DeathProbe] {} KILLEDBY {} entry {} lvl {} rank {} botlvl {} killerHealth {}%",
+        LOG_DEBUG("playerbots",
+                  "[DeathProbe] {} KILLEDBY {} entry {} lvl {} rank {} botlvl {} killerHealth {}% "
+                  "origin {} firstEntry {} firstDist {:.1f} aggroReach {:.1f}",
                   killed->GetName(), killer->GetName(), killer->GetEntry(), killer->GetLevel(),
                   killer->GetCreatureTemplate() ? killer->GetCreatureTemplate()->rank : 0, killed->GetLevel(),
-                  static_cast<uint32>(killer->GetHealthPct()));
+                  static_cast<uint32>(killer->GetHealthPct()), KillerOriginName(origin),
+                  haveFirst ? engagement->second.entry : 0, distance, aggroRange);
+
+        _firstEngagement.erase(killed->GetGUID().GetCounter());
     }
 
 private:
     std::unordered_map<uint32, int32> _pendingKillerLevelGap;
+    std::unordered_map<ObjectGuid::LowType, FirstEngagement> _firstEngagement;
 };
 
 #endif

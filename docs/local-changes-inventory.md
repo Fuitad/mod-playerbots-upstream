@@ -6,7 +6,7 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **88**.
+Local only files: **90**.
 Upstream files changed: **72**.
 Regions: **563**. Covered inline: **536**. Missing markers: **0**.
 
@@ -898,7 +898,7 @@ Content fingerprint: `0dcb721b3c5f86dd`.
 Banner: covered.
 
 ### `mod-playerbots.cmake`
-Content fingerprint: `bcf951cfd20c5a97`.
+Content fingerprint: `c15064f7d3242197`.
 Banner: covered.
 
 ### `patches/azerothcore-playerbot-test-harness.patch`
@@ -1009,8 +1009,12 @@ Banner: covered.
 Content fingerprint: `4e272a8c52026644`.
 Banner: covered.
 
+### `src/Ai/World/Rpg/CampPullPolicy.h`
+Content fingerprint: `211d98dc09059ef1`.
+Banner: covered.
+
 ### `src/Ai/World/Rpg/DeathProbe.h`
-Content fingerprint: `0bf2bcd419aa3c3a`.
+Content fingerprint: `1ddf049d0c0f2a0f`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/MoveFarStuckPolicy.h`
@@ -1115,6 +1119,10 @@ Banner: covered.
 
 ### `src/Mgr/Item/LootLockPolicy.h`
 Content fingerprint: `42775fac01139331`.
+Banner: covered.
+
+### `tests/cpp/PlayerbotCampPullPolicyTest.cpp`
+Content fingerprint: `c24fae697ae8c87a`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotExtensionRegistryTests.cpp`
