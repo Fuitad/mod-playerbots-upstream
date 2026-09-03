@@ -6,7 +6,7 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **90**.
+Local only files: **92**.
 Upstream files changed: **72**.
 Regions: **564**. Covered inline: **537**. Missing markers: **0**.
 
@@ -36,11 +36,11 @@ Content fingerprint: `472bb84e4d59341e`.
 Manual exception: migration checksum preserved.
 
 ### `src/Ai/Base/ActionContext.h`
-Content fingerprint: `5474ec8f21d85a14`.
+Content fingerprint: `d38baf980d34bc3c`.
 3 region(s). Header: current.
 1. current 59-59; base boundary after line 53: covered.
-1. current 170-172; base boundary after line 162: covered.
-1. current 499-501; base boundary after line 487: covered.
+1. current 170-175; base boundary after line 162: covered.
+1. current 502-509; base boundary after line 487: covered.
 
 ### `src/Ai/Base/Actions/AcceptInvitationAction.cpp`
 Content fingerprint: `6326c6e8a878359c`.
@@ -313,11 +313,11 @@ Content fingerprint: `0c69092ff4ed40ca`.
 1. current 49-51; base boundary after line 41: covered.
 
 ### `src/Ai/Base/TriggerContext.h`
-Content fingerprint: `c1695dcd2ac1b273`.
+Content fingerprint: `d45e554c829a18a2`.
 3 region(s). Header: current.
 1. current 27-27; base boundary after line 21: covered.
-1. current 254-256; base boundary after line 246: covered.
-1. current 473-475; base boundary after line 461: covered.
+1. current 254-259; base boundary after line 246: covered.
+1. current 476-483; base boundary after line 461: covered.
 
 ### `src/Ai/Base/Value/BudgetValues.cpp`
 Content fingerprint: `d1491a7c5e146f8e`.
@@ -899,7 +899,7 @@ Content fingerprint: `0dcb721b3c5f86dd`.
 Banner: covered.
 
 ### `mod-playerbots.cmake`
-Content fingerprint: `c15064f7d3242197`.
+Content fingerprint: `75f474f631a66866`.
 Banner: covered.
 
 ### `patches/azerothcore-playerbot-test-harness.patch`
@@ -935,11 +935,11 @@ Content fingerprint: `6fcdb6a8aa9b698a`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenanceActions.cpp`
-Content fingerprint: `d1e47b5acca375ea`.
+Content fingerprint: `2e1e482fc50dfc7b`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenanceActions.h`
-Content fingerprint: `e58954f7fc54fcc3`.
+Content fingerprint: `bc5d369ea08bcdbd`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenancePolicy.cpp`
@@ -951,7 +951,7 @@ Content fingerprint: `f45964971a8c54f6`.
 Banner: covered.
 
 ### `src/Ai/Base/Strategy/RandomBotMaintenanceStrategy.cpp`
-Content fingerprint: `654f6e4d726ab88a`.
+Content fingerprint: `99e9664f0a91be55`.
 Banner: covered.
 
 ### `src/Ai/Base/Strategy/RandomBotMaintenanceStrategy.h`
@@ -963,11 +963,11 @@ Content fingerprint: `480434c70e807c07`.
 Banner: covered.
 
 ### `src/Ai/Base/Trigger/RandomBotMaintenanceTriggers.cpp`
-Content fingerprint: `0d2c439e33ad831c`.
+Content fingerprint: `cdd0ede8b68993ba`.
 Banner: covered.
 
 ### `src/Ai/Base/Trigger/RandomBotMaintenanceTriggers.h`
-Content fingerprint: `50bfbcfb6cea492f`.
+Content fingerprint: `34a4c3ad0eb343aa`.
 Banner: covered.
 
 ### `src/Ai/Base/Value/GrindTargetPolicy.h`
@@ -1060,6 +1060,10 @@ Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestRewardBagPolicy.h`
 Content fingerprint: `69a4a474e2aff0d6`.
+Banner: covered.
+
+### `src/Ai/World/Rpg/QuestStartItemPolicy.h`
+Content fingerprint: `96c48d400cbb8600`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestStayAnchorPolicy.h`
@@ -1176,6 +1180,10 @@ Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestShareRoutingTest.cpp`
 Content fingerprint: `93d092cc30a6fe97`.
+Banner: covered.
+
+### `tests/cpp/PlayerbotQuestStartItemPolicyTest.cpp`
+Content fingerprint: `7f15982f430c6286`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestStayAnchorPolicyTest.cpp`

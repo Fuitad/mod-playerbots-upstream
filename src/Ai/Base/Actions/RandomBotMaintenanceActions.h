@@ -13,6 +13,7 @@
 #include "NewRpgBaseAction.h"
 #include "RandomBotMaintenancePolicy.h"
 
+class Item;
 class PlayerbotAI;
 
 namespace playerbots::maintenance
@@ -29,7 +30,26 @@ namespace playerbots::maintenance
 [[nodiscard]] bool DoingQuestNow(PlayerbotAI* botAI);
 [[nodiscard]] bool CriticallyFullBags(PlayerbotAI* botAI);
 [[nodiscard]] bool HearthstoneReady(Player* bot);
+// The first item in the bags that starts a quest the bot should take right now.
+// Decision in QuestStartItemPolicy.h; null when nothing qualifies.
+[[nodiscard]] Item* FindUsableQuestStartItem(PlayerbotAI* botAI);
 }  // namespace playerbots::maintenance
+
+// Uses a quest-starting item out of the bags. Items with a StartQuest are deliberately looted
+// (LootAction.cpp IsLootAllowed) and nothing ever used one, so they accumulated: 129 items across
+// 73 of 200 bots on 2026-09-03, in bags that were 159 of 200 over the old 80% loot line. Each one
+// is a quest never taken and a slot never returned. Pierre, 2026-09-03: use it the moment it
+// arrives unless the quest log is full.
+class RandomBotQuestStartItemAction : public NewRpgBaseAction
+{
+public:
+    explicit RandomBotQuestStartItemAction(PlayerbotAI* botAI)
+        : NewRpgBaseAction(botAI, "random bot quest start item")
+    {
+    }
+
+    bool Execute(Event event) override;
+};
 
 class RandomBotRepairAction : public NewRpgBaseAction
 {

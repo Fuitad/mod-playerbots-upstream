@@ -28,6 +28,12 @@ bool RandomBotVendorTrigger::IsActive()
                playerbots::maintenance::DoingQuestNow(botAI), playerbots::maintenance::CriticallyFullBags(botAI));
 }
 
+bool RandomBotQuestStartItemTrigger::IsActive()
+{
+    return playerbots::maintenance::IsEligible(botAI) &&
+           playerbots::maintenance::FindUsableQuestStartItem(botAI) != nullptr;
+}
+
 bool RandomBotMountTrigger::IsActive()
 {
     return playerbots::maintenance::NeedsMount(botAI) &&

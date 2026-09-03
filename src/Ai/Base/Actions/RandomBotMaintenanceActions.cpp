@@ -9,6 +9,8 @@
 
 #include "RandomBotMaintenanceActions.h"
 
+#include "Ai/World/Rpg/QuestStartItemPolicy.h"
+
 #include "MaintenanceErrand.h"
 
 #include <algorithm>
@@ -630,6 +632,61 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
      * had failed while it was in fact about to succeed.
      */
     return moving || bot->isMoving();
+}
+
+Item* playerbots::maintenance::FindUsableQuestStartItem(PlayerbotAI* botAI)
+{
+    if (!botAI)
+        return nullptr;
+
+    Player* bot = botAI->GetBot();
+    if (!bot)
+        return nullptr;
+
+    Item* usable = nullptr;
+    VisitBagItems(bot,
+                  [&](Item* item)
+                  {
+                      ItemTemplate const* proto = item->GetTemplate();
+                      if (!proto || !proto->StartQuest)
+                          return false;
+
+                      Quest const* quest = sObjectMgr->GetQuestTemplate(proto->StartQuest);
+                      QuestStartItemFacts facts;
+                      facts.questExists = quest != nullptr;
+                      if (quest)
+                      {
+                          uint32 const questId = quest->GetQuestId();
+                          facts.alreadyOnQuest = bot->GetQuestStatus(questId) != QUEST_STATUS_NONE;
+                          facts.alreadyRewarded = bot->GetQuestRewardStatus(questId);
+                          // CanTakeQuest carries level, race, class, prerequisites and exclusivity;
+                          // CanAddQuest carries quest-log room. Neither is restated in the policy.
+                          facts.canTakeQuest = bot->CanTakeQuest(quest, false);
+                          facts.canAddQuest = bot->CanAddQuest(quest, false);
+                      }
+
+                      if (QuestStartItemDecision(facts) != QuestStartItemVerdict::Use)
+                          return false;
+
+                      usable = item;
+                      return true;
+                  });
+    return usable;
+}
+
+bool RandomBotQuestStartItemAction::Execute(Event /*event*/)
+{
+    Item* item = playerbots::maintenance::FindUsableQuestStartItem(botAI);
+    if (!item)
+        return false;
+
+    ItemTemplate const* proto = item->GetTemplate();
+    uint32 const questId = proto ? proto->StartQuest : 0;
+    // Self-use, no target: a quest-starting item offers its quest to its holder.
+    botAI->ImbueItem(item);
+    LOG_DEBUG("playerbots", "[Maintenance] {} quest start item: used item {} for quest {}", bot->GetName(),
+              proto ? proto->ItemId : 0, questId);
+    return true;
 }
 
 bool RandomBotVendorAction::Execute(Event /*event*/)

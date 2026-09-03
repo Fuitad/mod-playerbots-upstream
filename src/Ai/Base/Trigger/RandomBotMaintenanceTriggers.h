@@ -28,6 +28,20 @@ public:
     bool IsActive() override;
 };
 
+// Fires while the bot holds an item that starts a quest it should take now. Deliberately not
+// deferred during a quest the way the vendor and repair errands are: using the item is instant,
+// needs no travel, and a bot mid-quest is exactly the one whose log has room.
+class RandomBotQuestStartItemTrigger : public Trigger
+{
+public:
+    explicit RandomBotQuestStartItemTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "random bot has quest start item", 5)
+    {
+    }
+
+    bool IsActive() override;
+};
+
 class RandomBotMountTrigger : public Trigger
 {
 public:

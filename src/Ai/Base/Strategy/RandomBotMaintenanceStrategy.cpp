@@ -13,5 +13,9 @@ void RandomBotMaintenanceStrategy::InitTriggers(std::vector<TriggerNode*>& trigg
 {
     triggers.push_back(new TriggerNode("random bot needs repair", {NextAction("random bot repair", 105.0f)}));
     triggers.push_back(new TriggerNode("random bot needs vendor", {NextAction("random bot vendor", 104.0f)}));
+    // Cheapest errand of the three: no travel, no vendor, one packet. Ranked above them so a
+    // bot does not walk to a vendor while carrying a quest it could have taken on the spot.
+    triggers.push_back(
+        new TriggerNode("random bot has quest start item", {NextAction("random bot quest start item", 106.0f)}));
     triggers.push_back(new TriggerNode("random bot needs mount", {NextAction("random bot mount", 103.0f)}));
 }

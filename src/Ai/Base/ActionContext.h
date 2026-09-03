@@ -170,6 +170,9 @@ public:
         creators["random bot repair"] = &ActionContext::random_bot_repair;
         creators["random bot vendor"] = &ActionContext::random_bot_vendor;
         creators["random bot mount"] = &ActionContext::random_bot_mount;
+        // PLB-LOCAL(quest-start-item): use a quest-starting item out of the bags. Upstream has no
+        // path that uses one, so they accumulate unused. See QuestStartItemPolicy.h.
+        creators["random bot quest start item"] = &ActionContext::random_bot_quest_start_item;
         creators["delay"] = &ActionContext::delay;
         creators["greet"] = &ActionContext::greet;
         creators["check values"] = &ActionContext::check_values;
@@ -499,6 +502,11 @@ private:
     static Action* random_bot_repair(PlayerbotAI* ai) { return new RandomBotRepairAction(ai); }
     static Action* random_bot_vendor(PlayerbotAI* ai) { return new RandomBotVendorAction(ai); }
     static Action* random_bot_mount(PlayerbotAI* ai) { return new RandomBotMountAction(ai); }
+    // PLB-LOCAL(quest-start-item): see the creators entry above.
+    static Action* random_bot_quest_start_item(PlayerbotAI* ai)
+    {
+        return new RandomBotQuestStartItemAction(ai);
+    }
     static Action* wait_for_attack_keep_safe_distance(PlayerbotAI* ai) { return new WaitForAttackKeepSafeDistanceAction(ai); }
 };
 

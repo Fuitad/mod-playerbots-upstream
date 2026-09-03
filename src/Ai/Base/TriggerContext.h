@@ -253,6 +253,9 @@ public:
         // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
         creators["random bot needs repair"] = &TriggerContext::random_bot_needs_repair;
         creators["random bot needs vendor"] = &TriggerContext::random_bot_needs_vendor;
+        // PLB-LOCAL(quest-start-item): fires while the bot carries a quest-starting item it should
+        // use now. See QuestStartItemPolicy.h.
+        creators["random bot has quest start item"] = &TriggerContext::random_bot_has_quest_start_item;
         creators["random bot needs mount"] = &TriggerContext::random_bot_needs_mount;
         creators["can self resurrect"] = &TriggerContext::can_self_resurrect;
         creators["can fish"] = &TriggerContext::can_fish;
@@ -472,6 +475,11 @@ private:
     // PLB-LOCAL(aff67526d8ca): feat(economy): random bots repair, vendor trash and buy mounts with real gold
     static Trigger* random_bot_needs_repair(PlayerbotAI* botAI) { return new RandomBotRepairTrigger(botAI); }
     static Trigger* random_bot_needs_vendor(PlayerbotAI* botAI) { return new RandomBotVendorTrigger(botAI); }
+    // PLB-LOCAL(quest-start-item): see the creators entry above.
+    static Trigger* random_bot_has_quest_start_item(PlayerbotAI* botAI)
+    {
+        return new RandomBotQuestStartItemTrigger(botAI);
+    }
     static Trigger* random_bot_needs_mount(PlayerbotAI* botAI) { return new RandomBotMountTrigger(botAI); }
     static Trigger* can_self_resurrect(PlayerbotAI* ai) { return new SelfResurrectTrigger(ai); }
     static Trigger* can_fish(PlayerbotAI* ai) { return new CanFishTrigger(ai); }
