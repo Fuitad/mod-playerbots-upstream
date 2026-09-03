@@ -13,9 +13,13 @@ void RandomBotMaintenanceStrategy::InitTriggers(std::vector<TriggerNode*>& trigg
 {
     triggers.push_back(new TriggerNode("random bot needs repair", {NextAction("random bot repair", 105.0f)}));
     triggers.push_back(new TriggerNode("random bot needs vendor", {NextAction("random bot vendor", 104.0f)}));
-    // Cheapest errand of the three: no travel, no vendor, one packet. Ranked above them so a
-    // bot does not walk to a vendor while carrying a quest it could have taken on the spot.
+    // Ranked BELOW repair, vendor and mount. It was 106, above all three, on the reasoning that it
+    // is the cheapest errand: no travel, one packet. That reasoning was wrong twice over. Taking a
+    // quest is never more urgent than keeping a bot's bags and gear working, and when the errand
+    // looped on 2026-09-03 the high rank turned a wasteful loop into a live regression: it won the
+    // action slot about 488 times a minute for thirty minutes and repair fired 165 times against
+    // the vendor's 2846 while bags climbed.
     triggers.push_back(
-        new TriggerNode("random bot has quest start item", {NextAction("random bot quest start item", 106.0f)}));
+        new TriggerNode("random bot has quest start item", {NextAction("random bot quest start item", 102.0f)}));
     triggers.push_back(new TriggerNode("random bot needs mount", {NextAction("random bot mount", 103.0f)}));
 }

@@ -18,6 +18,7 @@
 #include <functional>
 #include <limits>
 #include <unordered_map>
+#include <mutex>
 #include <unordered_set>
 
 #include "Bag.h"
@@ -634,6 +635,28 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
     return moving || bot->isMoving();
 }
 
+namespace
+{
+// Items whose accept was dispatched and did not take, per bot. Cleared only by a restart, which is
+// the right lifetime: the reasons an accept fails are not things that change minute to minute, and
+// an unbounded retry is what turned this errand into a hot loop.
+std::mutex questStartItemRefusalMutex;
+std::unordered_map<ObjectGuid::LowType, std::unordered_set<ObjectGuid::LowType>> questStartItemRefusals;
+}  // namespace
+
+void playerbots::maintenance::MarkQuestStartItemRefused(Player* bot, ObjectGuid item)
+{
+    std::lock_guard<std::mutex> lock(questStartItemRefusalMutex);
+    questStartItemRefusals[bot->GetGUID().GetCounter()].insert(item.GetCounter());
+}
+
+bool playerbots::maintenance::QuestStartItemRefused(Player* bot, ObjectGuid item)
+{
+    std::lock_guard<std::mutex> lock(questStartItemRefusalMutex);
+    auto it = questStartItemRefusals.find(bot->GetGUID().GetCounter());
+    return it != questStartItemRefusals.end() && it->second.count(item.GetCounter()) != 0;
+}
+
 Item* playerbots::maintenance::FindUsableQuestStartItem(PlayerbotAI* botAI)
 {
     if (!botAI)
@@ -649,6 +672,8 @@ Item* playerbots::maintenance::FindUsableQuestStartItem(PlayerbotAI* botAI)
                   {
                       ItemTemplate const* proto = item->GetTemplate();
                       if (!proto || !proto->StartQuest)
+                          return false;
+                      if (QuestStartItemRefused(bot, item->GetGUID()))
                           return false;
 
                       Quest const* quest = sObjectMgr->GetQuestTemplate(proto->StartQuest);
@@ -682,11 +707,34 @@ bool RandomBotQuestStartItemAction::Execute(Event /*event*/)
 
     ItemTemplate const* proto = item->GetTemplate();
     uint32 const questId = proto ? proto->StartQuest : 0;
-    // Self-use, no target: a quest-starting item offers its quest to its holder.
-    botAI->ImbueItem(item);
-    LOG_DEBUG("playerbots", "[Maintenance] {} quest start item: used item {} for quest {}", bot->GetName(),
-              proto ? proto->ItemId : 0, questId);
-    return true;
+    if (!questId)
+        return false;
+
+    // Accepting is the whole handshake, and using the item is only its first half. ImbueItem sends
+    // CMSG_USE_ITEM, which makes the server OFFER the quest and wait for an answer a bot never
+    // gives, so the item stayed in the bag and this errand fired again on the next tick: 14,636
+    // times across 74 bots in thirty minutes on 2026-09-03, one bot using one item 300 times. The
+    // accept opcode carries the questGiver guid, which for an item-started quest is the item.
+    // Same path as QuestAction::AcceptQuest, which is protected on a base this action does not
+    // share.
+    WorldPacket packet(CMSG_QUESTGIVER_ACCEPT_QUEST);
+    uint32 const unused = 0;
+    packet << item->GetGUID() << questId << unused;
+    packet.rpos(0);
+    bot->GetSession()->HandleQuestgiverAcceptQuestOpcode(packet);
+
+    bool const accepted = bot->GetQuestStatus(questId) != QUEST_STATUS_NONE;
+    if (!accepted)
+    {
+        // Belt and braces. Even with the right handshake an accept can fail for a reason the
+        // policy cannot see, and a failure that leaves the item in the bag is exactly the shape
+        // that spun. Remember it and never retry it this run.
+        playerbots::maintenance::MarkQuestStartItemRefused(bot, item->GetGUID());
+    }
+
+    LOG_DEBUG("playerbots", "[Maintenance] {} quest start item: item {} quest {} accepted {}", bot->GetName(),
+              proto->ItemId, questId, accepted ? 1 : 0);
+    return accepted;
 }
 
 bool RandomBotVendorAction::Execute(Event /*event*/)

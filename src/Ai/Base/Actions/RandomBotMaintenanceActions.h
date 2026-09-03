@@ -11,6 +11,7 @@
 #define PLAYERBOTS_RANDOMBOTMAINTENANCEACTIONS_H
 
 #include "NewRpgBaseAction.h"
+#include "ObjectGuid.h"
 #include "RandomBotMaintenancePolicy.h"
 
 class Item;
@@ -33,6 +34,10 @@ namespace playerbots::maintenance
 // The first item in the bags that starts a quest the bot should take right now.
 // Decision in QuestStartItemPolicy.h; null when nothing qualifies.
 [[nodiscard]] Item* FindUsableQuestStartItem(PlayerbotAI* botAI);
+// An accept that was dispatched and did not take. Remembered so the errand cannot retry the
+// same item forever, which is how it first went wrong.
+void MarkQuestStartItemRefused(Player* bot, ObjectGuid item);
+[[nodiscard]] bool QuestStartItemRefused(Player* bot, ObjectGuid item);
 }  // namespace playerbots::maintenance
 
 // Uses a quest-starting item out of the bags. Items with a StartQuest are deliberately looted
