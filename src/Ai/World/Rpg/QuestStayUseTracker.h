@@ -19,6 +19,7 @@
 
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace QuestStayUseTracker
 {
@@ -29,12 +30,17 @@ inline std::unordered_map<ObjectGuid::LowType, uint32> attemptsThisStay;
 // Stay ticks on which a seek returned a usable objective candidate, converged or not. Feeds the
 // candidateSightings parameter of QuestStayEndDecision (the contention class).
 inline std::unordered_map<ObjectGuid::LowType, uint32> sightingsThisStay;
+// Creatures the bot has already used its tool on during this stay, per bot. Credit scripts that
+// fire No Repeat per creature (Cleansing the Scar's Eversong Rangers) never credit a second cast
+// on the same one, so the seek has to move on to a fresh creature.
+inline std::unordered_map<ObjectGuid::LowType, std::unordered_set<ObjectGuid::LowType>> usedTargetsThisStay;
 
 inline void MarkStayStart(Player* bot)
 {
     std::lock_guard<std::mutex> lock(trackerMutex);
     attemptsThisStay[bot->GetGUID().GetCounter()] = 0;
     sightingsThisStay[bot->GetGUID().GetCounter()] = 0;
+    usedTargetsThisStay[bot->GetGUID().GetCounter()].clear();
 }
 
 inline void RecordAttempt(Player* bot)
@@ -47,6 +53,19 @@ inline void RecordSighting(Player* bot)
 {
     std::lock_guard<std::mutex> lock(trackerMutex);
     ++sightingsThisStay[bot->GetGUID().GetCounter()];
+}
+
+inline void RecordUsedTarget(Player* bot, ObjectGuid target)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    usedTargetsThisStay[bot->GetGUID().GetCounter()].insert(target.GetCounter());
+}
+
+[[nodiscard]] inline bool WasTargetUsedThisStay(Player* bot, ObjectGuid target)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    auto it = usedTargetsThisStay.find(bot->GetGUID().GetCounter());
+    return it != usedTargetsThisStay.end() && it->second.count(target.GetCounter()) != 0;
 }
 
 [[nodiscard]] inline uint32 AttemptsThisStay(Player* bot)

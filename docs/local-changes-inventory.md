@@ -982,7 +982,7 @@ Content fingerprint: `ac868a2dd13a868e`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestUseTarget.cpp`
-Content fingerprint: `66103af0bca6f87c`.
+Content fingerprint: `bbe5c6996c073e35`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestUseTarget.h`
@@ -1018,7 +1018,7 @@ Content fingerprint: `4ad9a908df7305c6`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestBlacklistPolicy.h`
-Content fingerprint: `11eb8ffd01e606c2`.
+Content fingerprint: `888e0dc220cd9605`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDeathCooldown.h`
@@ -1066,11 +1066,11 @@ Content fingerprint: `9171b4d25ae8ee65`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestStayUseTracker.h`
-Content fingerprint: `64a76a7bf73bd653`.
+Content fingerprint: `3eed214e33794869`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestUseTargetPolicy.h`
-Content fingerprint: `19bb40a4475802ce`.
+Content fingerprint: `7106163b70ecfd08`.
 Banner: covered.
 
 ### `src/Bot/Extension/PlayerbotExtension.cpp`
@@ -1146,7 +1146,7 @@ Content fingerprint: `5713f92b8f2edb21`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`
-Content fingerprint: `f84e4c09651d8fc6`.
+Content fingerprint: `fa290d764bf6c891`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp`
@@ -1174,7 +1174,7 @@ Content fingerprint: `f650408c19257a28`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestUseTargetPolicyTest.cpp`
-Content fingerprint: `127ee90b67aa41c8`.
+Content fingerprint: `fcb0160cfabc66d6`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotRecoveryPolicyTest.cpp`

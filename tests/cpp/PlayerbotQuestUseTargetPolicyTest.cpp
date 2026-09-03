@@ -228,3 +228,57 @@ TEST(PlayerbotQuestUseTargetPolicyTest, ASingleSpellQuestCastsItOnEveryAttempt)
     EXPECT_EQ(QuestUseSpellForAttempt(spells, 7), 28734u);
     EXPECT_EQ(QuestUseSpellForAttempt({}, 3), 0u);
 }
+
+TEST(PlayerbotQuestUseTargetPolicyTest, ANoRepeatCreditMovesOnToARangerItHasNotBuffedYet)
+{
+    // Cleansing the Scar (9489): smart_scripts rows 3 to 10 on Eversong Ranger 15938 each credit
+    // the quest on a Power Word: Fortitude hit and each carries No Repeat, so a second cast on the
+    // same ranger gives nothing and six DISTINCT rangers are needed. After the first cast the bot
+    // stands beside the ranger it just buffed, which makes that ranger the nearest candidate for
+    // the rest of the stay.
+    QuestUseCandidateFacts buffedAndAdjacent = Candidate(true, true, /*distanceSq*/ 1.0f);
+    buffedAndAdjacent.usedThisStay = true;
+    QuestUseCandidateFacts freshFurther = Candidate(true, true, /*distanceSq*/ 400.0f);
+
+    EXPECT_EQ(BestQuestUseTargetIndex({buffedAndAdjacent, freshFurther}, NoAnchorCap,
+                                      /*requiresSleeping*/ false, /*oncePerCreature*/ true),
+              1u);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, ANoRepeatCreditRetriesTheOnlyRangerLeftRatherThanStalling)
+{
+    // A cast can be lost to range, interruption or resist, and the tracker records the dispatch
+    // rather than the credit. With no fresh ranger in reach the seek must still return the used
+    // one, otherwise one lost cast strands the whole stay.
+    QuestUseCandidateFacts onlyOne = Candidate(true, true, 1.0f);
+    onlyOne.usedThisStay = true;
+
+    EXPECT_EQ(BestQuestUseTargetIndex({onlyOne}, NoAnchorCap, false, /*oncePerCreature*/ true), 0u);
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, AQuestThatCreditsRepeatedlyKeepsTheNearestTarget)
+{
+    // The garment quests need Lesser Heal and then Power Word: Fortitude on the SAME wounded
+    // guard. Their credit is not No Repeat, so the seek must keep returning the guard it is
+    // working on; skipping it after the first cast would strand the sequence.
+    QuestUseCandidateFacts halfDone = Candidate(true, true, 1.0f);
+    halfDone.usedThisStay = true;
+    QuestUseCandidateFacts otherGuard = Candidate(true, true, 400.0f);
+
+    EXPECT_EQ(BestQuestUseTargetIndex({halfDone, otherGuard}, NoAnchorCap, false,
+                                      /*oncePerCreature*/ false),
+              0u);
+    EXPECT_FALSE(QuestUseCreditsOncePerCreature(5624));
+    EXPECT_TRUE(QuestUseCreditsOncePerCreature(9489));
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, CleansingTheScarCastsAnyPowerWordFortitudeRank)
+{
+    // Every rank in creature 15938's spell-hit rows credits the quest; the bot casts whichever it
+    // knows, and Player::HasSpell at the call site drops the ranks it does not.
+    std::vector<uint32> const spells = QuestUseSpellsForQuest(9489);
+    ASSERT_FALSE(spells.empty());
+    EXPECT_NE(std::find(spells.begin(), spells.end(), 1243u), spells.end());
+    EXPECT_NE(std::find(spells.begin(), spells.end(), 48161u), spells.end());
+    EXPECT_TRUE(QuestUseSpellsForQuest(9490).empty());
+}

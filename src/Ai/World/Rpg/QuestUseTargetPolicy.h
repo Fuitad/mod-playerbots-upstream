@@ -56,6 +56,11 @@ enum class QuestUseMode : uint8
             return {28880, 57901, 59542, 59543, 59544, 59545, 59547, 59548};
         case 8346:  // Thirst Unending - Mana Tap
             return {28734};
+        case 9489:  // Cleansing the Scar - Power Word: Fortitude on an Eversong Ranger
+            // smart_scripts rows 3 to 10 on creature 15938 each credit the quest on spell hit of
+            // one Power Word: Fortitude rank, so any rank the bot knows counts. The credit is
+            // No Repeat per ranger and the quest needs six, which is what UsedThisStay is for.
+            return {1243, 1244, 1245, 2791, 10937, 10938, 25389, 48161};
         // Priest garment quests: npc_garments_of_quests credits Lesser Heal rank 2 (2052) on the
         // wounded guard, then Power Word: Fortitude rank 1 (1243) once healed, in that order. The
         // list is a SEQUENCE for these, see QuestUseSpellForAttempt. Measured live 2026-08-31 and
@@ -69,6 +74,17 @@ enum class QuestUseMode : uint8
         default:
             return {};
     }
+}
+
+// Whether the quest's credit script fires once per creature, so a second use on the same one is
+// wasted and the seek has to move on. Deliberately a named list rather than a heuristic: the
+// garment quests (5621 and friends) are the counter-example, they need Lesser Heal and then Power
+// Word: Fortitude on the SAME wounded guard, and skipping the guard after the first cast would
+// strand them. Only quests whose smart_scripts credit row carries No Repeat belong here.
+[[nodiscard]] inline bool QuestUseCreditsOncePerCreature(uint32 questId)
+{
+    // 9489 Cleansing the Scar: creature 15938 rows 3 to 10, "Quest Credit (No Repeat)", six needed.
+    return questId == 9489;
 }
 
 // Which of the bot's known quest spells to cast on this attempt. Single-spell quests always cast
@@ -121,6 +137,11 @@ struct QuestUseCandidateFacts
     // sleeps (Inoculation owlkin never do), the awake nearest still wins, so scripts without a
     // sleep requirement are unaffected.
     bool sleeping = false;
+    // A creature this stay has already been cast on. Scripts that credit No Repeat per creature
+    // give nothing for a second cast: Cleansing the Scar (9489) needs six DISTINCT Eversong
+    // Rangers, and the bot stands next to the one it just buffed, so the nearest candidate is
+    // exactly the wrong one from the second cast onwards.
+    bool usedThisStay = false;
     float distanceSq = 0.0f;
     float anchorDistanceSq = 0.0f;
 };
@@ -158,8 +179,9 @@ inline constexpr float QUEST_USE_MAX_ENGAGE_DISTANCE = 30.0f;
 // tool only credits a sleeper (the Foreman's Blackjack's spell carries the sleep aura as its
 // target condition), an awake candidate is no candidate: Lazy Peons, 2026-09-02 05:56, 2,558
 // whacks across seven stays of 100 to 133 attempts each and one turn-in, all on awake peons.
-[[nodiscard]] inline size_t BestQuestUseTargetIndex(std::vector<QuestUseCandidateFacts> const& candidates,
-                                                    float maxAnchorDistanceSq, bool requiresSleeping = false)
+[[nodiscard]] inline size_t BestQuestUseTargetIndexAmong(std::vector<QuestUseCandidateFacts> const& candidates,
+                                                         float maxAnchorDistanceSq, bool requiresSleeping,
+                                                         bool skipUsed)
 {
     size_t best = QUEST_USE_NO_CANDIDATE;
     float bestDistanceSq = -1.0f;
@@ -174,6 +196,8 @@ inline constexpr float QUEST_USE_MAX_ENGAGE_DISTANCE = 30.0f;
             continue;
         if (requiresSleeping && !candidate.sleeping)
             continue;
+        if (skipUsed && candidate.usedThisStay)
+            continue;
         if (bestDistanceSq < 0.0f || candidate.distanceSq < bestDistanceSq)
         {
             bestDistanceSq = candidate.distanceSq;
@@ -186,6 +210,21 @@ inline constexpr float QUEST_USE_MAX_ENGAGE_DISTANCE = 30.0f;
         }
     }
     return bestSleeping != QUEST_USE_NO_CANDIDATE ? bestSleeping : best;
+}
+
+// A creature already cast on this stay is taken only when no fresh one qualifies, so a cast that
+// was lost (out of range, interrupted, resisted) is still retried rather than stranding the stay.
+[[nodiscard]] inline size_t BestQuestUseTargetIndex(std::vector<QuestUseCandidateFacts> const& candidates,
+                                                    float maxAnchorDistanceSq, bool requiresSleeping = false,
+                                                    bool oncePerCreature = false)
+{
+    if (oncePerCreature)
+    {
+        size_t const fresh = BestQuestUseTargetIndexAmong(candidates, maxAnchorDistanceSq, requiresSleeping, true);
+        if (fresh != QUEST_USE_NO_CANDIDATE)
+            return fresh;
+    }
+    return BestQuestUseTargetIndexAmong(candidates, maxAnchorDistanceSq, requiresSleeping, false);
 }
 
 #endif

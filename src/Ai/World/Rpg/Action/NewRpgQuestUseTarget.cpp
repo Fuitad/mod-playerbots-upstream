@@ -202,6 +202,7 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
             std::find(acceptedEntries.begin(), acceptedEntries.end(), unit->GetEntry()) != acceptedEntries.end();
         candidate.alive = unit->IsAlive();
         candidate.sleeping = unit->getStandState() == UNIT_STAND_STATE_SLEEP;
+        candidate.usedThisStay = QuestStayUseTracker::WasTargetUsedThisStay(bot, guid);
         if (diag)
         {
             ++diag->nearbyUnits;
@@ -230,7 +231,8 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
     }
 
     size_t const best = BestQuestUseTargetIndex(facts, anchorRadius > 0.0f ? anchorRadius * anchorRadius : 0.0f,
-                                                ToolSpellRequiresSleeper(useSpellId));
+                                                ToolSpellRequiresSleeper(useSpellId),
+                                                QuestUseCreditsOncePerCreature(quest->GetQuestId()));
     if (best == QUEST_USE_NO_CANDIDATE)
         return {};
 
@@ -258,8 +260,16 @@ bool EngageQuestUseTarget(PlayerbotAI* botAI, QuestUseTarget const& target)
 
         bot->SetTarget(target.guid);
         botAI->ImbueItem(item, TARGET_FLAG_UNIT, target.guid);
+        QuestStayUseTracker::RecordUsedTarget(bot, target.guid);
         return true;
     }
 
-    return botAI->CastSpell(target.toolId, unit);
+    if (!botAI->CastSpell(target.toolId, unit))
+        return false;
+
+    // The credit script may fire No Repeat on this creature, so the seek must not come back to it
+    // while a fresh one is in reach. Recorded for item mode too: a tool that credits once per
+    // creature behaves the same way.
+    QuestStayUseTracker::RecordUsedTarget(bot, target.guid);
+    return true;
 }
