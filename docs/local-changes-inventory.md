@@ -6,9 +6,9 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **92**.
-Upstream files changed: **72**.
-Regions: **564**. Covered inline: **537**. Missing markers: **0**.
+Local only files: **94**.
+Upstream files changed: **73**.
+Regions: **571**. Covered inline: **544**. Missing markers: **0**.
 
 ## Upstream files
 
@@ -338,6 +338,17 @@ Content fingerprint: `f8aeb9c0a0742252`.
 1. current 215-216; base boundary after line 136: covered.
 1. current 223-225; base 143-143: covered.
 1. current 229-230; base boundary after line 146: covered.
+
+### `src/Ai/Base/Value/ItemUsageValue.cpp`
+Content fingerprint: `c57eb41eb0fb6da7`.
+7 region(s). Header: current.
+1. current 11-12; base boundary after line 7: covered.
+1. current 240-243; base boundary after line 233: covered.
+1. current 247-247; base boundary after line 234: covered.
+1. current 251-252; base boundary after line 235: covered.
+1. current 257-257; base boundary after line 237: covered.
+1. current 261-262; base boundary after line 238: covered.
+1. current 319-323; base 294-294: covered.
 
 ### `src/Ai/Base/Value/PossibleRpgTargetsValue.cpp`
 Content fingerprint: `c490a1a903f9e1ca`.
@@ -899,7 +910,7 @@ Content fingerprint: `0dcb721b3c5f86dd`.
 Banner: covered.
 
 ### `mod-playerbots.cmake`
-Content fingerprint: `75f474f631a66866`.
+Content fingerprint: `2dc4875d20160f55`.
 Banner: covered.
 
 ### `patches/azerothcore-playerbot-test-harness.patch`
@@ -970,6 +981,10 @@ Banner: covered.
 Content fingerprint: `34a4c3ad0eb343aa`.
 Banner: covered.
 
+### `src/Ai/Base/Value/EquipEmptySlotPolicy.h`
+Content fingerprint: `544166a0c5ec5907`.
+Banner: covered.
+
 ### `src/Ai/Base/Value/GrindTargetPolicy.h`
 Content fingerprint: `5a33de7eb0f69510`.
 Banner: covered.
@@ -1023,7 +1038,7 @@ Content fingerprint: `4ad9a908df7305c6`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestBlacklistPolicy.h`
-Content fingerprint: `888e0dc220cd9605`.
+Content fingerprint: `aec4e8f4057f7e02`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDeathCooldown.h`
@@ -1130,6 +1145,10 @@ Banner: covered.
 Content fingerprint: `c24fae697ae8c87a`.
 Banner: covered.
 
+### `tests/cpp/PlayerbotEquipEmptySlotPolicyTest.cpp`
+Content fingerprint: `9f70958fee781b65`.
+Banner: covered.
+
 ### `tests/cpp/PlayerbotExtensionRegistryTests.cpp`
 Content fingerprint: `7b8baa4e8be1b26d`.
 Banner: covered.
@@ -1159,7 +1178,7 @@ Content fingerprint: `5713f92b8f2edb21`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`
-Content fingerprint: `fa290d764bf6c891`.
+Content fingerprint: `194394e9547f0020`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp`

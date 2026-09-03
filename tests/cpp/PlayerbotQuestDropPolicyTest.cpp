@@ -268,6 +268,14 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     EXPECT_TRUE(QuestIsRpgBlacklisted(1819));  // Ulag the Cleaver
     EXPECT_TRUE(QuestIsRpgBlacklisted(9531));  // Tree's Company
     EXPECT_FALSE(QuestIsRpgBlacklisted(9489));
+    // Ferocitas the Dream Eater (Pierre, 2026-09-03): four abandons in 148 minutes, the largest
+    // single cause in that window, and three different failures under one id. The described
+    // jewel-inside-the-necklace mechanic is not in this data: the objective is 7 Gnarlpine Mystics
+    // and the necklace quest drop carries no use spell.
+    EXPECT_TRUE(QuestIsRpgBlacklisted(2459));
+    // The neighbouring ids stay open: the blacklist is a named list, not a range.
+    EXPECT_FALSE(QuestIsRpgBlacklisted(2458));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(2460));
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }

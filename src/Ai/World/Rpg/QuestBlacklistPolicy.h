@@ -80,6 +80,15 @@
         // near the target while disguised, a use-on-self-then-approach mechanic outside every
         // seek's model. Pierre called the blacklist on 2026-09-02.
         case 9531:
+        // Ferocitas the Dream Eater: the objective is 7 Gnarlpine Mystics (RequiredNpcOrGo2 7235)
+        // with the Gnarlpine Necklace as a quest drop, and the necklace carries no use spell, so
+        // the jewel-inside-the-necklace mechanic the guides describe does not exist in this data.
+        // Four abandons in 148 minutes on 2026-09-03, the largest single cause in that window, and
+        // not one failure but three: two stays of about 305s with 2 to 3 kills and no credit, one
+        // with the objective alive at 65.9 yards behind no line of sight, one the probe could not
+        // classify at all. Pierre called the blacklist on 2026-09-03 after the data did not match
+        // the described mechanic.
+        case 2459:
             return true;
         default:
             return false;
