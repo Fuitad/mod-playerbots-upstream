@@ -18,6 +18,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestUseTargetPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotCampPullPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestStartItemPolicyTest.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotEquipEmptySlotPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestStayAnchorPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestDropPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotLootStorePolicyTest.cpp"

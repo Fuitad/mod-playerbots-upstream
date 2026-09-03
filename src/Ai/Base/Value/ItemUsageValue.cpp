@@ -3,8 +3,13 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 7 region(s) of this upstream file.
 
 #include "ItemUsageValue.h"
+// PLB-LOCAL(working-tree): Uncommitted local change.
+// Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
+
+#include "EquipEmptySlotPolicy.h"
 #include "AiFactory.h"
 #include "ChatHelper.h"
 #include "GuildTaskMgr.h"
@@ -231,11 +236,30 @@ ItemUsage ItemUsageValue::QueryItemUsageForEquip(ItemTemplate const* itemProto, 
     if (itemScore)
         shouldEquip = true;
 
+    // PLB-LOCAL(equip-empty-slot): these two say the bot's CLASS cannot wear the item, which is a
+    // different fact from scoring zero, and an empty slot may only be filled by something usable.
+    // Tracked separately so plate on a mage stays refused while a statless tabard does not.
+    // See EquipEmptySlotPolicy.h. Upstream had only shouldEquip here.
+    bool canUseItemClass = true;
     if (itemProto->Class == ITEM_CLASS_WEAPON && !sRandomItemMgr.CanEquipWeapon(itemProto, bot->getClass()))
+    // PLB-LOCAL(working-tree): Uncommitted local change.
+    // Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
+    {
         shouldEquip = false;
+        // PLB-LOCAL(working-tree): Uncommitted local change.
+        // Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
+        canUseItemClass = false;
+    }
     if (itemProto->Class == ITEM_CLASS_ARMOR &&
         !sRandomItemMgr.CanEquipArmor(itemProto, bot->getClass(), bot->GetLevel()))
+    // PLB-LOCAL(working-tree): Uncommitted local change.
+    // Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
+    {
         shouldEquip = false;
+        // PLB-LOCAL(working-tree): Uncommitted local change.
+        // Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
+        canUseItemClass = false;
+    }
 
     uint8 possibleSlots = 1;
     uint8 dstSlot = botAI->FindEquipSlot(itemProto, NULL_SLOT, true);
@@ -291,7 +315,12 @@ ItemUsage ItemUsageValue::QueryItemUsageForEquip(ItemTemplate const* itemProto, 
         // No item equipped
         if (!oldItem)
         {
-            if (shouldEquipInSlot)
+            // PLB-LOCAL(equip-empty-slot): the stat score answers "is this better than what I
+            // have", which is the wrong question for a slot holding nothing. A tabard scores zero
+            // and was refused an empty tabard slot forever: 36 of 200 bots carried one unworn on
+            // 2026-09-03 while 148 wore one from character creation. See EquipEmptySlotPolicy.h.
+            // Upstream: `if (shouldEquipInSlot) return ITEM_USAGE_EQUIP; else return ITEM_USAGE_BAD_EQUIP;`
+            if (ShouldFillEmptyEquipSlot(canUseItemClass, shouldEquipInSlot))
                 return ITEM_USAGE_EQUIP;
             else
                 return ITEM_USAGE_BAD_EQUIP;
