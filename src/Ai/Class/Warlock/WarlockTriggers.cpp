@@ -3,8 +3,13 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 2 region(s) of this upstream file.
 
 #include "WarlockTriggers.h"
+// PLB-LOCAL(working-tree): Uncommitted local change.
+// Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
+
+#include "SoulShardPolicy.h"
 #include "GenericTriggers.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -47,7 +52,15 @@ bool WarlockConjuredItemTrigger::IsActive()
 
 bool OutOfSoulShardsTrigger::IsActive() { return GetSoulShardCount(botAI->GetBot()) == 0; }
 
-bool TooManySoulShardsTrigger::IsActive() { return GetSoulShardCount(botAI->GetBot()) >= 26; }
+// PLB-LOCAL(soul-shard-cap): a masterless bot keeps 5 shards, not 26. A shard does not stack, so
+// 26 shards is 26 bag slots, more than the whole backpack of a warlock with no bags, and the
+// trigger could never fire for exactly the bots it was meant to help. All 22 online warlocks held
+// shards on 2026-09-03, 120 slots between them. See SoulShardPolicy.h.
+// Upstream: `return GetSoulShardCount(botAI->GetBot()) >= 26;`
+bool TooManySoulShardsTrigger::IsActive()
+{
+    return HoldingTooManySoulShards(GetSoulShardCount(botAI->GetBot()), IsRealPlayer(botAI->GetMaster()));
+}
 
 bool OutOfSoulstoneTrigger::IsActive() { return GetSoulstoneCount(botAI->GetBot()) == 0; }
 

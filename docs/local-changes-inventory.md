@@ -6,9 +6,9 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **94**.
-Upstream files changed: **73**.
-Regions: **571**. Covered inline: **544**. Missing markers: **0**.
+Local only files: **96**.
+Upstream files changed: **74**.
+Regions: **573**. Covered inline: **546**. Missing markers: **0**.
 
 ## Upstream files
 
@@ -355,6 +355,12 @@ Content fingerprint: `c490a1a903f9e1ca`.
 2 region(s). Header: current.
 1. current boundary after line 44; base 41-41: manual. deletion-only region; inspect the base lines during a merge.
 1. current 71-75; base boundary after line 67: covered.
+
+### `src/Ai/Class/Warlock/WarlockTriggers.cpp`
+Content fingerprint: `59fc204c4d917a00`.
+2 region(s). Header: current.
+1. current 11-12; base boundary after line 7: covered.
+1. current 56-63; base 50-50: covered.
 
 ### `src/Ai/Raid/BT/BTActions.cpp`
 Content fingerprint: `7a2a0dfce6da355a`.
@@ -910,7 +916,7 @@ Content fingerprint: `0dcb721b3c5f86dd`.
 Banner: covered.
 
 ### `mod-playerbots.cmake`
-Content fingerprint: `2dc4875d20160f55`.
+Content fingerprint: `54cf54d1fe09d497`.
 Banner: covered.
 
 ### `patches/azerothcore-playerbot-test-harness.patch`
@@ -987,6 +993,10 @@ Banner: covered.
 
 ### `src/Ai/Base/Value/GrindTargetPolicy.h`
 Content fingerprint: `5a33de7eb0f69510`.
+Banner: covered.
+
+### `src/Ai/Class/Warlock/SoulShardPolicy.h`
+Content fingerprint: `03f5536691067f0e`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestGameObject.cpp`
@@ -1215,6 +1225,10 @@ Banner: covered.
 
 ### `tests/cpp/PlayerbotRecoveryPolicyTest.cpp`
 Content fingerprint: `34675eee6557a119`.
+Banner: covered.
+
+### `tests/cpp/PlayerbotSoulShardPolicyTest.cpp`
+Content fingerprint: `2f0d1af35dc2341b`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotTravelTargetTest.cpp`
