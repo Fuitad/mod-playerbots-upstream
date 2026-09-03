@@ -32,6 +32,9 @@ enum class QuestGoInteraction : uint8
     Skip = 0,
     Use,
     Loot,
+    // A spell focus (type 8): not operated at all. The bot walks inside its reach and self-uses
+    // the quest tool whose spell requires it. See QuestSpellFocusPolicy.h.
+    CastAtFocus,
 };
 
 // quest_template.RequiredNpcOrGo: > 0 names a creature to kill, < 0 names a gameobject entry
@@ -41,12 +44,15 @@ enum class QuestGoInteraction : uint8
     return requiredNpcOrGo < 0 ? static_cast<uint32>(-requiredNpcOrGo) : 0u;
 }
 
-[[nodiscard]] inline QuestGoInteraction QuestGoInteractionForType(bool isGoober, bool isChest)
+[[nodiscard]] inline QuestGoInteraction QuestGoInteractionForType(bool isGoober, bool isChest,
+                                                                  bool isSpellFocus = false)
 {
     if (isGoober)
         return QuestGoInteraction::Use;
     if (isChest)
         return QuestGoInteraction::Loot;
+    if (isSpellFocus)
+        return QuestGoInteraction::CastAtFocus;
     return QuestGoInteraction::Skip;
 }
 

@@ -10,12 +10,15 @@
 
 #include "QuestObjectiveSpawnPoints.h"
 #include "Ai/World/Rpg/QuestItemDropPolicy.h"
+#include "Ai/World/Rpg/QuestSpellFocusPolicy.h"
 
 #include "DatabaseEnv.h"
 #include "Field.h"
 #include "ObjectMgr.h"
 #include "QueryResult.h"
 #include "QuestDef.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 
 #include <algorithm>
 #include <mutex>
@@ -32,6 +35,9 @@ std::unordered_map<uint64, std::vector<SpawnAnchorPoint>> spawnCache;
 std::once_flag reverseIndexBuilt;
 std::unordered_map<uint32, std::vector<uint32>> itemToCreatureEntries;
 std::unordered_map<uint32, std::vector<uint32>> itemToGameObjectEntries;
+// spell focus id -> the type 8 gameobject entries that provide it, for the objectives whose item
+// is made by a tool at a focus rather than looted (QuestSpellFocusPolicy.h).
+std::unordered_map<uint32, std::vector<uint32>> focusToGameObjectEntries;
 
 void BuildReverseIndexes()
 {
@@ -42,10 +48,14 @@ void BuildReverseIndexes()
                     itemToCreatureEntries[itemId].push_back(entry);
 
     for (auto const& [entry, tmpl] : *sObjectMgr->GetGameObjectTemplates())
+    {
         if (GameObjectQuestItemList const* items = sObjectMgr->GetGameObjectQuestItemList(entry))
             for (uint32 itemId : *items)
                 if (itemId)
                     itemToGameObjectEntries[itemId].push_back(entry);
+        if (tmpl.type == GAMEOBJECT_TYPE_SPELL_FOCUS && tmpl.spellFocus.focusId)
+            focusToGameObjectEntries[tmpl.spellFocus.focusId].push_back(entry);
+    }
 
     // A quest item that only exists INSIDE another item (Tallonkai's Jewel 8050 inside the
     // Gnarlpine Necklace 8049 that Ferocitas drops, measured 2026-09-01: the objective had no
@@ -73,6 +83,40 @@ void BuildReverseIndexes()
                     itemToGameObjectEntries[questItem].push_back(entry);
         }
     }
+}
+
+// The quest's tool whose on-use spell needs a spell focus: the provided source item first, then
+// the ItemDrop entries, the same order SourceItemWithUseSpell walks for use-credited creatures.
+struct QuestSpellFocusTool
+{
+    uint32 itemEntry = 0;
+    uint32 focusId = 0;
+};
+
+QuestSpellFocusTool SpellFocusToolFromItem(uint32 itemEntry)
+{
+    ItemTemplate const* proto = itemEntry ? sObjectMgr->GetItemTemplate(itemEntry) : nullptr;
+    if (!proto)
+        return {};
+    for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
+    {
+        if (proto->Spells[i].SpellId <= 0 || proto->Spells[i].SpellTrigger != ITEM_SPELLTRIGGER_ON_USE)
+            continue;
+        SpellInfo const* spell = sSpellMgr->GetSpellInfo(static_cast<uint32>(proto->Spells[i].SpellId));
+        if (spell && spell->RequiresSpellFocus)
+            return {itemEntry, spell->RequiresSpellFocus};
+    }
+    return {};
+}
+
+QuestSpellFocusTool QuestSpellFocusToolFor(Quest const* quest)
+{
+    if (QuestSpellFocusTool tool = SpellFocusToolFromItem(quest->GetSrcItemId()); tool.focusId)
+        return tool;
+    for (uint8 i = 0; i < QUEST_SOURCE_ITEM_IDS_COUNT; ++i)
+        if (QuestSpellFocusTool tool = SpellFocusToolFromItem(quest->ItemDrop[i]); tool.focusId)
+            return tool;
+    return {};
 }
 }  // namespace
 
@@ -106,6 +150,23 @@ QuestObjectiveSources QuestObjectiveSourceEntriesFor(Quest const* quest, int32 o
             sources.creatureEntries = it->second;
         if (auto it = itemToGameObjectEntries.find(itemId); it != itemToGameObjectEntries.end())
             sources.gameObjectEntries = it->second;
+
+        // An item nothing loots may be MADE by the quest's tool at a spell focus (Learning from
+        // the Crystals, 9581: the pick's spell needs the Impact Site Crystal within 5 yards). The
+        // focus objects become the objective's sources, so the stay anchors on one and the seek
+        // casts the tool beside it. See QuestSpellFocusPolicy.h.
+        if (objectiveIdx < QUEST_ITEMDROP_OBJECTIVE_BASE)
+        {
+            bool const hasLootSources = !sources.creatureEntries.empty() || !sources.gameObjectEntries.empty();
+            QuestSpellFocusTool const tool = hasLootSources ? QuestSpellFocusTool{} : QuestSpellFocusToolFor(quest);
+            if (SpellFocusIsTheItemSource(hasLootSources, tool.focusId))
+            {
+                sources.spellFocusToolItem = tool.itemEntry;
+                sources.spellFocusId = tool.focusId;
+                if (auto it = focusToGameObjectEntries.find(tool.focusId); it != focusToGameObjectEntries.end())
+                    sources.gameObjectEntries = it->second;
+            }
+        }
     }
     return sources;
 }

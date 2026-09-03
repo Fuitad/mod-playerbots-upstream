@@ -24,6 +24,8 @@
 // NewRpgQuestVendor.cpp; this file carries only the call site.
 #include "Ai/World/Rpg/Action/NewRpgQuestVendor.h"
 #include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
+// PLB-LOCAL(quest-spell-focus): an item made by the quest tool at a spell focus (9581).
+#include "Ai/World/Rpg/QuestSpellFocusPolicy.h"
 // PLB-LOCAL(quest-stay-kill-probe): temporary diagnostic, see the header's banner. Playerbots.h is
 // pulled in for AI_VALUE so the stay-end records can sample the grind pipeline's own values.
 #include "Ai/World/Rpg/QuestStayKillProbe.h"
@@ -1047,6 +1049,42 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             // PLB-LOCAL(quest-stay-use-tracker): a returned candidate is proof this place can
             // progress the quest, converged or not (the contention class; see QuestDropPolicy.h).
             QuestStayUseTracker::RecordSighting(bot);
+            // PLB-LOCAL(quest-spell-focus): a spell focus is not operated. The bot walks inside
+            // the focus reach and self-uses the quest tool; the core resolves the focus object
+            // itself (Spell::CheckSpellFocus) and creates the objective item. Measured need:
+            // Learning from the Crystals (9581), a stay of 524 s beside the Impact Site Crystal
+            // with nothing to loot, use or kill, 2026-09-03.
+            if (goTarget.castAtFocus)
+            {
+                GameObject* focusGo = ObjectAccessor::GetGameObject(*bot, goTarget.guid);
+                if (!focusGo)
+                    return true;
+                if (!WithinSpellFocusReach(bot->GetDistance(focusGo), goTarget.focusDist))
+                {
+                    bool const moved =
+                        MoveWorldObjectTo(goTarget.guid, SpellFocusApproachDistance(goTarget.focusDist));
+                    if (ApproachProbeDue(bot))
+                        LOG_DEBUG("playerbots", "[QuestProbe] {} APPROACH quest {} focus {} dist {:.1f} moved {}",
+                                  bot->GetName(), questId, goTarget.entry, bot->GetDistance(focusGo), moved);
+                    // Hold the tick either way, same reasoning as the interaction approach below.
+                    return true;
+                }
+                // The tool's spell has a cast time; a second use while it runs only fails with
+                // SPELL_FAILED_SPELL_IN_PROGRESS, so wait it out instead.
+                if (bot->IsNonMeleeSpellCast(false))
+                    return ForceToWait(1000);
+                Item* tool = bot->GetItemByEntry(goTarget.toolItemEntry);
+                if (!tool)
+                    return true;
+                if (bot->isMoving())
+                    bot->StopMoving();
+                botAI->ImbueItem(tool);
+                QuestStayUseTracker::RecordAttempt(bot);
+                LOG_DEBUG("playerbots", "[QuestProbe] {} QFOCUS quest {} obj {} go {} item {} dist {:.1f}",
+                          bot->GetName(), questId, data.objectiveIdx, goTarget.entry, goTarget.toolItemEntry,
+                          bot->GetDistance(focusGo));
+                return ForceToWait(3000);
+            }
             if (!IsQuestGameObjectWithinInteraction(bot, goTarget.guid))
             {
                 bool const moved = MoveWorldObjectTo(goTarget.guid, INTERACTION_DISTANCE);

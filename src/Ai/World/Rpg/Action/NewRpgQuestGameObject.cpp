@@ -12,6 +12,8 @@
 #include "NewRpgQuestGameObject.h"
 
 #include "Ai/World/Rpg/QuestGameObjectPolicy.h"
+#include "Ai/World/Rpg/QuestSpellFocusPolicy.h"
+#include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 #include "GameObject.h"
 #include "LootMgr.h"
 #include "LootObjectStack.h"
@@ -49,6 +51,10 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
 
     uint32 requiredGoEntry = 0;
     uint32 neededItemId = 0;
+    // An item nothing loots, made by the quest's tool at a spell focus (QuestSpellFocusPolicy.h).
+    // The tool has to be in the bags for the focus to be worth walking to.
+    uint32 focusId = 0;
+    uint32 toolItemEntry = 0;
     if (objectiveIdx >= 0 && objectiveIdx < QUEST_OBJECTIVES_COUNT)
     {
         requiredGoEntry = QuestObjectiveGoEntry(quest->RequiredNpcOrGo[objectiveIdx]);
@@ -61,6 +67,12 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
         neededItemId = quest->RequiredItemId[objectiveIdx - QUEST_OBJECTIVES_COUNT];
         if (!neededItemId)
             return {};
+        QuestObjectiveSources const sources = QuestObjectiveSourceEntriesFor(quest, objectiveIdx);
+        if (sources.spellFocusId && bot->GetItemByEntry(sources.spellFocusToolItem))
+        {
+            focusId = sources.spellFocusId;
+            toolItemEntry = sources.spellFocusToolItem;
+        }
     }
     else
         return {};
@@ -78,15 +90,20 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
 
         bool const isGoober = go->GetGoType() == GAMEOBJECT_TYPE_GOOBER;
         bool const isChest = go->GetGoType() == GAMEOBJECT_TYPE_CHEST;
+        bool const isSpellFocus = focusId && go->GetGoType() == GAMEOBJECT_TYPE_SPELL_FOCUS;
 
         QuestGoCandidateFacts candidate;
-        candidate.interaction = QuestGoInteractionForType(isGoober, isChest);
+        candidate.interaction = QuestGoInteractionForType(isGoober, isChest, isSpellFocus);
         if (candidate.interaction == QuestGoInteraction::Skip)
             continue;
 
-        candidate.usable = go->isSpawned() && go->GetGoState() == GO_STATE_READY &&
-                           !go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE) &&
-                           !go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE) && go->ActivateToQuest(bot);
+        // A focus is never activated to a quest and carries no state of its own: spawned is the
+        // whole of usable, the same test Spell::CheckSpellFocus applies (GameObjectFocusCheck).
+        candidate.usable = candidate.interaction == QuestGoInteraction::CastAtFocus
+                               ? go->isSpawned()
+                               : go->isSpawned() && go->GetGoState() == GO_STATE_READY &&
+                                     !go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE) &&
+                                     !go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE) && go->ActivateToQuest(bot);
 
         // A chest is only a candidate when the loot pipeline itself would open it. Without this
         // agreement the seek and the pipeline can disagree forever: measured live 2026-08-29, a
@@ -107,6 +124,8 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
 
         if (requiredGoEntry)
             candidate.matchesObjective = go->GetEntry() == requiredGoEntry;
+        else if (isSpellFocus)
+            candidate.matchesObjective = go->GetGOInfo()->spellFocus.focusId == focusId;
         else if (isChest)
             candidate.matchesObjective = ChestCanDropQuestItem(go, bot, neededItemId);
 
@@ -134,6 +153,12 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
         target.guid = guid;
         target.entry = go->GetEntry();
         target.needsLoot = candidate.interaction == QuestGoInteraction::Loot;
+        if (candidate.interaction == QuestGoInteraction::CastAtFocus)
+        {
+            target.castAtFocus = true;
+            target.toolItemEntry = toolItemEntry;
+            target.focusDist = go->GetGOInfo()->spellFocus.dist;
+        }
 
         facts.push_back(candidate);
         targets.push_back(target);

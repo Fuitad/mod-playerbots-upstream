@@ -6,7 +6,7 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **96**.
+Local only files: **98**.
 Upstream files changed: **74**.
 Regions: **573**. Covered inline: **546**. Missing markers: **0**.
 
@@ -420,27 +420,27 @@ Content fingerprint: `7a1b7725e85faa59`.
 1. current 27-29; base boundary after line 21: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgAction.cpp`
-Content fingerprint: `4114142d6f1ad28d`.
+Content fingerprint: `9869fc99bd1719f0`.
 19 region(s). Header: current.
-1. current 9-39; base boundary after line 7: covered.
-1. current 45-45; base boundary after line 11: covered.
-1. current 48-55; base boundary after line 12: covered.
-1. current 71-72; base boundary after line 25: covered.
-1. current 79-196; base boundary after line 31: covered.
-1. current 618-620; base boundary after line 450: covered.
-1. current 641-647; base boundary after line 469: covered.
-1. current 666-679; base 487-487: covered.
-1. current 688-691; base 494-494: covered.
-1. current 702-705; base boundary after line 503: covered.
-1. current 709-713; base 506-506: covered.
-1. current 730-765; base boundary after line 520: covered.
-1. current 789-863; base 542-542: covered.
-1. current 873-921; base boundary after line 549: covered.
-1. current 926-954; base boundary after line 552: covered.
-1. current 960-1203; base boundary after line 557: covered.
-1. current 1237-1250; base boundary after line 588: covered.
-1. current 1267-1268; base 603-603: covered.
-1. current 1287-1294; base boundary after line 619: covered.
+1. current 9-41; base boundary after line 7: covered.
+1. current 47-47; base boundary after line 11: covered.
+1. current 50-57; base boundary after line 12: covered.
+1. current 73-74; base boundary after line 25: covered.
+1. current 81-198; base boundary after line 31: covered.
+1. current 620-622; base boundary after line 450: covered.
+1. current 643-649; base boundary after line 469: covered.
+1. current 668-681; base 487-487: covered.
+1. current 690-693; base 494-494: covered.
+1. current 704-707; base boundary after line 503: covered.
+1. current 711-715; base 506-506: covered.
+1. current 732-767; base boundary after line 520: covered.
+1. current 791-865; base 542-542: covered.
+1. current 875-923; base boundary after line 549: covered.
+1. current 928-956; base boundary after line 552: covered.
+1. current 962-1241; base boundary after line 557: covered.
+1. current 1275-1288; base boundary after line 588: covered.
+1. current 1305-1306; base 603-603: covered.
+1. current 1325-1332; base boundary after line 619: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp`
 Content fingerprint: `a0bc677cf0350469`.
@@ -916,7 +916,7 @@ Content fingerprint: `0dcb721b3c5f86dd`.
 Banner: covered.
 
 ### `mod-playerbots.cmake`
-Content fingerprint: `54cf54d1fe09d497`.
+Content fingerprint: `81cf838d221efaa1`.
 Banner: covered.
 
 ### `patches/azerothcore-playerbot-test-harness.patch`
@@ -1000,11 +1000,11 @@ Content fingerprint: `03f5536691067f0e`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestGameObject.cpp`
-Content fingerprint: `b010f31e8ab58ded`.
+Content fingerprint: `6a5c1d44993f45d7`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestGameObject.h`
-Content fingerprint: `ac868a2dd13a868e`.
+Content fingerprint: `1bac20ff238e3413`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestUseTarget.cpp`
@@ -1028,11 +1028,11 @@ Content fingerprint: `a3627f8226b3f30b`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.cpp`
-Content fingerprint: `fc5840543892e793`.
+Content fingerprint: `ddc0c18556fa00a8`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h`
-Content fingerprint: `4e272a8c52026644`.
+Content fingerprint: `deaacc8335ca13a7`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/CampPullPolicy.h`
@@ -1064,7 +1064,7 @@ Content fingerprint: `393a03bcf93aa71f`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestGameObjectPolicy.h`
-Content fingerprint: `326ced60af0e93cc`.
+Content fingerprint: `2277261c259e745f`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestItemDropPolicy.h`
@@ -1085,6 +1085,10 @@ Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestRewardBagPolicy.h`
 Content fingerprint: `69a4a474e2aff0d6`.
+Banner: covered.
+
+### `src/Ai/World/Rpg/QuestSpellFocusPolicy.h`
+Content fingerprint: `354e2dc6159db78f`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestStartItemPolicy.h`
@@ -1209,6 +1213,10 @@ Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestShareRoutingTest.cpp`
 Content fingerprint: `93d092cc30a6fe97`.
+Banner: covered.
+
+### `tests/cpp/PlayerbotQuestSpellFocusPolicyTest.cpp`
+Content fingerprint: `db8e1901c46c4138`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestStartItemPolicyTest.cpp`

@@ -14,6 +14,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotMoveFarStuckPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotGrindTargetPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestSpellFocusPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotLootLockPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotQuestUseTargetPolicyTest.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/tests/cpp/PlayerbotCampPullPolicyTest.cpp"

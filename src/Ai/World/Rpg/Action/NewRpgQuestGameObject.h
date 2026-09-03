@@ -28,6 +28,11 @@ struct QuestGameObjectTarget
     uint32 entry = 0;
     // A chest: queue it for the loot pipeline instead of a direct use.
     bool needsLoot = false;
+    // A spell focus: walk inside focusDist and self-use toolItemEntry, never operate the object.
+    // See QuestSpellFocusPolicy.h.
+    bool castAtFocus = false;
+    uint32 toolItemEntry = 0;
+    uint32 focusDist = 0;
 };
 
 // objectiveIdx follows NewRpgInfo::DoQuest: [0, QUEST_OBJECTIVES_COUNT) are kill/use slots,

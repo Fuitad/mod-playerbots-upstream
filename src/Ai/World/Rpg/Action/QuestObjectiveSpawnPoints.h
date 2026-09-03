@@ -25,6 +25,11 @@ struct QuestObjectiveSources
 {
     std::vector<uint32> creatureEntries;
     std::vector<uint32> gameObjectEntries;
+    // Set only for an item objective nothing loots, whose quest tool's on-use spell needs a spell
+    // focus: the focus objects are then the gameObjectEntries and the bot casts the tool beside
+    // one rather than operating it. See QuestSpellFocusPolicy.h.
+    uint32 spellFocusToolItem = 0;
+    uint32 spellFocusId = 0;
 };
 
 [[nodiscard]] QuestObjectiveSources QuestObjectiveSourceEntriesFor(Quest const* quest, int32 objectiveIdx);
