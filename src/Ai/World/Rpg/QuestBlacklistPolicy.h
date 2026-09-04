@@ -100,6 +100,12 @@
         // the bot can kill him for his head. No seek models that scripted gossip sequence.
         // Pierre called the blacklist on 2026-09-04.
         case 8483:
+        // Kyle's Gone Missing: feed Kyle the Frenzied a Tender Strider Meat (ItemDrop 33009) that
+        // drops from plainstriders. Coyahneblahe stayed 795 seconds on the meat phase on
+        // 2026-09-04, killed 10 creatures, saw 18 targets and gained no credit; the feed step
+        // (use the meat on a friendly creature after the drop lands) is outside every seek's
+        // model. Pierre called the blacklist on 2026-09-04.
+        case 11129:
             return true;
         default:
             return false;

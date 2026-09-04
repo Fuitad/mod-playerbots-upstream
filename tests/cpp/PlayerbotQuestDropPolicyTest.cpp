@@ -279,6 +279,9 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     // sequence to turn Prospector Anvilward hostile, which no seek models.
     EXPECT_TRUE(QuestIsRpgBlacklisted(116));
     EXPECT_TRUE(QuestIsRpgBlacklisted(8483));
+    // Kyle's Gone Missing (Pierre, 2026-09-04): Coyahneblahe stayed 795s on the meat phase with
+    // 10 kills and no credit; feeding the meat to a friendly Kyle is outside every seek.
+    EXPECT_TRUE(QuestIsRpgBlacklisted(11129));
     // The neighbouring ids stay open: the blacklist is a named list, not a range.
     EXPECT_FALSE(QuestIsRpgBlacklisted(115));
     EXPECT_FALSE(QuestIsRpgBlacklisted(117));
@@ -286,6 +289,8 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     EXPECT_FALSE(QuestIsRpgBlacklisted(2460));
     EXPECT_FALSE(QuestIsRpgBlacklisted(8482));
     EXPECT_FALSE(QuestIsRpgBlacklisted(8484));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(11128));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(11130));
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }
