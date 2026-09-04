@@ -273,9 +273,18 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     // jewel-inside-the-necklace mechanic is not in this data: the objective is 7 Gnarlpine Mystics
     // and the necklace quest drop carries no use spell.
     EXPECT_TRUE(QuestIsRpgBlacklisted(2459));
+    // Dry Times and The Dwarven Spy (Pierre, 2026-09-04): the first stalled 1,108s without
+    // buying its vendor-only Cask of Merlot. The second needs a gossip-triggered waypoint
+    // sequence to turn Prospector Anvilward hostile, which no seek models.
+    EXPECT_TRUE(QuestIsRpgBlacklisted(116));
+    EXPECT_TRUE(QuestIsRpgBlacklisted(8483));
     // The neighbouring ids stay open: the blacklist is a named list, not a range.
+    EXPECT_FALSE(QuestIsRpgBlacklisted(115));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(117));
     EXPECT_FALSE(QuestIsRpgBlacklisted(2458));
     EXPECT_FALSE(QuestIsRpgBlacklisted(2460));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(8482));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(8484));
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }

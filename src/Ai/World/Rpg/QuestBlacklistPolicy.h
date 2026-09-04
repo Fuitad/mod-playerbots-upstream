@@ -55,6 +55,7 @@
         // steps end in another zone (9449 in the Exodar, 2983/2984 in Orgrimmar), which the pick
         // rule never reaches, so 11 bots sat at complete with the slot wasted. Pierre called the
         // blacklist on 2026-09-01: "since bots get all the spells, I'm not sure if it's necessary".
+        // clang-format off
         case 63: case 96: case 100: case 220: case 1103:
         case 1516: case 1517: case 1518: case 1519: case 1520: case 1521:
         case 1522: case 1523: case 1524: case 1525: case 1526: case 1527:
@@ -66,6 +67,7 @@
         case 9500: case 9501: case 9502: case 9503: case 9504: case 9508: case 9509:
         case 9547: case 9551: case 9552: case 9553: case 9554: case 9555:
         case 10490: case 10491:
+        // clang-format on
         // Powering our Defenses: credit comes from using the quest's runestone gameobjects in a
         // sequence the stay never completes (five-minute stays at the stone with every use
         // candidate refused; four abandons across two bots on 2026-09-02 alone, once after each
@@ -89,6 +91,15 @@
         // classify at all. Pierre called the blacklist on 2026-09-03 after the data did not match
         // the described mechanic.
         case 2459:
+        // Dry Times: every required item is vendor-only. Tabeth reached the Cask of Merlot
+        // objective beside its source, then stayed 1,108 seconds with no purchase, use, kill,
+        // or matching gameobject before abandoning. Pierre called the blacklist on 2026-09-04.
+        case 116:
+        // The Dwarven Spy: Prospector Anvilward starts friendly. Selecting his gossip option
+        // runs a waypoint sequence whose seventh point changes him to hostile faction 24, then
+        // the bot can kill him for his head. No seek models that scripted gossip sequence.
+        // Pierre called the blacklist on 2026-09-04.
+        case 8483:
             return true;
         default:
             return false;
