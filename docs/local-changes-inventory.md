@@ -444,7 +444,7 @@ Content fingerprint: `98e1951a25625864`.
 1. current 1341-1348; base boundary after line 619: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp`
-Content fingerprint: `a0bc677cf0350469`.
+Content fingerprint: `b62d30d9bc58c62f`.
 38 region(s). Header: current.
 1. current 10-30; base boundary after line 7: covered.
 1. current 47-48; base boundary after line 21: covered.
@@ -480,10 +480,10 @@ Content fingerprint: `a0bc677cf0350469`.
 1. current 1533-1533; base boundary after line 1219: covered.
 1. current 1537-1538; base boundary after line 1222: covered.
 1. current 1544-1545; base boundary after line 1227: covered.
-1. current 1557-1567; base boundary after line 1236: covered.
-1. current 1574-1579; base boundary after line 1241: covered.
-1. current 1591-1591; base boundary after line 1251: covered.
-1. current 1597-1606; base 1257-1257: covered.
+1. current 1557-1561; base boundary after line 1236: covered.
+1. current 1568-1573; base boundary after line 1241: covered.
+1. current 1585-1585; base boundary after line 1251: covered.
+1. current 1591-1600; base 1257-1257: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.h`
 Content fingerprint: `0510058b90b89bca`.
@@ -1057,11 +1057,11 @@ Content fingerprint: `3a3e52d84a12bb95`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDropPolicy.h`
-Content fingerprint: `1723175a3cc7a00d`.
+Content fingerprint: `06c14a24f64a162b`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDropSweep.h`
-Content fingerprint: `393a03bcf93aa71f`.
+Content fingerprint: `21c99d633e142152`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestGameObjectPolicy.h`
@@ -1201,7 +1201,7 @@ Content fingerprint: `5713f92b8f2edb21`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`
-Content fingerprint: `af05c9a877f52557`.
+Content fingerprint: `6a34eb1c320149e7`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp`

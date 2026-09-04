@@ -18,14 +18,12 @@
 
 namespace
 {
-QuestDropFacts Facts(uint8 botLevel, int32 questLevel, bool complete, bool givenUp, bool reachable)
+QuestDropFacts Facts(uint8 botLevel, int32 questLevel, bool complete)
 {
     QuestDropFacts facts;
     facts.botLevel = botLevel;
     facts.questLevel = questLevel;
     facts.complete = complete;
-    facts.givenUp = givenUp;
-    facts.reachable = reachable;
     return facts;
 }
 }  // namespace
@@ -59,62 +57,37 @@ TEST(PlayerbotQuestDropPolicyTest, LowLevelBotsAndScalingQuestsAreNeverGray)
 
 TEST(PlayerbotQuestDropPolicyTest, ACompleteQuestIsNeverDropped)
 {
-    // Ready to turn in, however gray, given up, and unreachable it is.
-    EXPECT_EQ(QuestDropDecision(Facts(80, 10, true, true, false)), QuestDropVerdict::Keep);
-    EXPECT_EQ(QuestDropDecision(Facts(80, 10, true, false, false)), QuestDropVerdict::Keep);
+    // Ready to turn in, however gray: the turn-in still pays.
+    EXPECT_EQ(QuestDropDecision(Facts(80, 10, true)), QuestDropVerdict::Keep);
 }
 
 TEST(PlayerbotQuestDropPolicyTest, AQuestStillDoableAtLevelIsNeverDropped)
 {
-    // Not gray: neither the give-up record nor unreachability alone may drop it.
-    EXPECT_EQ(QuestDropDecision(Facts(30, 28, false, true, true)), QuestDropVerdict::Keep);
-    EXPECT_EQ(QuestDropDecision(Facts(30, 28, false, false, false)), QuestDropVerdict::Keep);
-    EXPECT_EQ(QuestDropDecision(Facts(30, 28, false, true, false)), QuestDropVerdict::Keep);
+    // Level 30 bot, level 28 quest: green, kept.
+    EXPECT_EQ(QuestDropDecision(Facts(30, 28, false)), QuestDropVerdict::Keep);
 }
 
-TEST(PlayerbotQuestDropPolicyTest, AGrayGivenUpQuestIsDropped)
+TEST(PlayerbotQuestDropPolicyTest, AGrayQuestIsDroppedTheMomentItTurnsGray)
 {
-    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, true, true)), QuestDropVerdict::DropGivenUp);
-    // Given up wins as the reason even when the quest is also unreachable.
-    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, true, false)), QuestDropVerdict::DropGivenUp);
-}
-
-TEST(PlayerbotQuestDropPolicyTest, AGrayUnreachableQuestIsDropped)
-{
-    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, false, false)), QuestDropVerdict::DropUnreachable);
-}
-
-TEST(PlayerbotQuestDropPolicyTest, AGrayButWorkableQuestIsKept)
-{
-    // Gray alone is not enough: the bot never gave up and can still reach the objectives.
-    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false, false, true)), QuestDropVerdict::Keep);
+    // Pierre, 2026-09-04: a level 12 bot was still carrying a level 8 quest accepted two days
+    // earlier, and the old rule would have kept it until the bot gave up or lost the POI. Gray is
+    // the whole test now. The boundary is the core's: a level 8 quest goes gray at level 14
+    // (14 - 5 - 14/10 = 8), so at 13 it is kept and at 14 it is dropped.
+    EXPECT_EQ(QuestDropDecision(Facts(13, 8, false)), QuestDropVerdict::Keep);
+    EXPECT_EQ(QuestDropDecision(Facts(14, 8, false)), QuestDropVerdict::DropGray);
+    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false)), QuestDropVerdict::DropGray);
 }
 
 TEST(PlayerbotQuestDropPolicyTest, ABlacklistedQuestIsDroppedWhateverItsState)
 {
-    // The blacklist outranks every keep rule: complete, at level, or gray-but-workable all drop,
-    // and the POI probe is never consulted for it (2026-09-01: 11 bots holding a blacklisted
-    // totem step at complete).
-    QuestDropFacts complete = Facts(30, 28, true, false, true);
+    // The blacklist outranks every keep rule: complete or at level both drop (2026-09-01: 11
+    // bots holding a blacklisted totem step at complete).
+    QuestDropFacts complete = Facts(30, 28, true);
     complete.blacklisted = true;
     EXPECT_EQ(QuestDropDecision(complete), QuestDropVerdict::DropBlacklisted);
-    QuestDropFacts atLevel = Facts(30, 28, false, false, true);
+    QuestDropFacts atLevel = Facts(30, 28, false);
     atLevel.blacklisted = true;
     EXPECT_EQ(QuestDropDecision(atLevel), QuestDropVerdict::DropBlacklisted);
-    EXPECT_FALSE(QuestDropNeedsReachability(atLevel));
-    QuestDropFacts grayWorkable = Facts(30, 15, false, false, true);
-    grayWorkable.blacklisted = true;
-    EXPECT_EQ(QuestDropDecision(grayWorkable), QuestDropVerdict::DropBlacklisted);
-}
-
-TEST(PlayerbotQuestDropPolicyTest, ReachabilityIsOnlyConsultedWhenItCanChangeTheVerdict)
-{
-    // Only an incomplete, gray, not-given-up quest needs the POI computation.
-    EXPECT_TRUE(QuestDropNeedsReachability(Facts(30, 15, false, false, true)));
-    // Complete, given up, or still at level: the verdict is already settled without it.
-    EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 15, true, false, true)));
-    EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 15, false, true, true)));
-    EXPECT_FALSE(QuestDropNeedsReachability(Facts(30, 28, false, false, true)));
 }
 
 TEST(PlayerbotQuestDropPolicyTest, ADeathPutsTheQuestOnCooldownAndTwoCloseDeathsBlameIt)
@@ -148,8 +121,7 @@ TEST(PlayerbotQuestDropPolicyTest, TwoDeathsInOneStayEndIt)
 
 TEST(PlayerbotQuestDropPolicyTest, ReasonNamesFeedTheDropProbeLine)
 {
-    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropGivenUp), "givenup");
-    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropUnreachable), "unreachable");
+    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropGray), "gray");
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropBlacklisted), "blacklisted");
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::Keep), "keep");
 }

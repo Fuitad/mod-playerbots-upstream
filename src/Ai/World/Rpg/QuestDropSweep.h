@@ -26,7 +26,6 @@
 #include "QuestPackets.h"
 #include "WorldSession.h"
 
-#include <unordered_set>
 
 // Walks the quest log and hard-drops every quest QuestDropDecision condemns. The drop goes through
 // a synthesized CMSG_QUESTLOG_REMOVE_QUEST handled by WorldSession::HandleQuestLogRemoveQuest, the
@@ -34,12 +33,7 @@
 // timed-quest and PvP-flag bookkeeping, SetQuestSlot), which is also how OrganizeQuestLog already
 // drops quests. The handler can refuse (an unequippable source item), so the slot is re-read
 // before the drop is counted.
-//
-// reachable(questId) must answer whether GetQuestPOIPosAndObjectiveIdx finds a workable POI for
-// any incomplete objective of the quest; it is only consulted when the verdict depends on it.
-template <typename ReachableFn>
-inline uint32 DropStaleGrayQuests(Player* bot, std::unordered_set<uint32> const& givenUpQuests,
-                                  NewRpgStatistic& statistic, ReachableFn&& reachable)
+inline uint32 DropStaleGrayQuests(Player* bot, NewRpgStatistic& statistic)
 {
     uint32 dropped = 0;
     for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
@@ -57,9 +51,6 @@ inline uint32 DropStaleGrayQuests(Player* bot, std::unordered_set<uint32> const&
         facts.botLevel = bot->GetLevel();
         facts.questLevel = quest->GetQuestLevel();
         facts.complete = bot->GetQuestStatus(questId) == QUEST_STATUS_COMPLETE;
-        facts.givenUp = givenUpQuests.find(questId) != givenUpQuests.end();
-        if (QuestDropNeedsReachability(facts))
-            facts.reachable = reachable(questId);
 
         QuestDropVerdict const verdict = QuestDropDecision(facts);
         if (verdict == QuestDropVerdict::Keep)

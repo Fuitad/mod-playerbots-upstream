@@ -1553,18 +1553,12 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status, NewRpgStatus
         }
         case RPG_DO_QUEST:
         {
-            // PLB-LOCAL BEGIN(quest-hard-drop): before probing availability, hard-drop quests that
-            // are gray for the bot AND either already given up on (lowPriorityQuest) or unworkable
-            // from here (no reachable POI). lowPriorityQuest is in-memory only, so without this
-            // sweep every restart resurrected abandoned quests and the 25-slot log silted up with
-            // outleveled entries. See src/Ai/World/Rpg/QuestDropPolicy.h for the rule.
-            // Upstream: no sweep; a given-up quest stays in the log forever.
-            DropStaleGrayQuests(bot, botAI->lowPriorityQuest, botAI->rpgStatistic,
-                                [this](uint32 staleQuestId)
-                                {
-                                    std::vector<POIInfo> poiInfo;
-                                    return GetQuestPOIPosAndObjectiveIdx(staleQuestId, poiInfo);
-                                });
+            // PLB-LOCAL BEGIN(quest-hard-drop): before probing availability, hard-drop every quest
+            // that is gray for the bot (Pierre, 2026-09-04: once gray, not five levels later; the
+            // earlier rule also wanted the quest given up or unreachable). Without this sweep the
+            // 25-slot log silted up with outleveled entries. See src/Ai/World/Rpg/QuestDropPolicy.h.
+            // Upstream: no sweep; an outleveled quest stays in the log forever.
+            DropStaleGrayQuests(bot, botAI->rpgStatistic);
             // PLB-LOCAL END(quest-hard-drop)
             std::vector<uint32> availableQuests;
             for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)

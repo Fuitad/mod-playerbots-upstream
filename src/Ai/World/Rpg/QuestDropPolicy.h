@@ -24,13 +24,15 @@
 // (other map, beyond 1500y, other zone) are never worked and never removed. Measured live on
 // 2026-08-29: logs silt up toward the cap as bots outlevel content.
 //
-// The rule: drop a quest only when BOTH hold.
-//   (a) It is gray for the bot, no XP, by the core's own quest-gray test
-//       (Player::GetQuestRate: questLevel <= Acore::XP::GetGrayLevel(botLevel)).
-//   (b) The bot has already given up on it (lowPriorityQuest), or it cannot be worked from here
-//       (GetQuestPOIPosAndObjectiveIdx found no reachable POI for any incomplete objective).
-// A quest that is COMPLETE (ready to turn in) is never dropped, and neither is anything the bot
-// could still reasonably do at level.
+// The rule: a quest that is gray for the bot, no XP, by the core's own quest-gray test
+// (Player::GetQuestRate: questLevel <= Acore::XP::GetGrayLevel(botLevel)) is dropped at once.
+// A quest that is COMPLETE (ready to turn in) is never dropped: the turn-in still pays.
+//
+// Until 2026-09-04 the drop also required the bot to have given up on the quest or to have no
+// reachable POI for it, so a gray quest the bot had simply never got round to stayed in the log
+// for another five levels. Pierre, 2026-09-04, on a level 12 bot still carrying a level 8 quest
+// from two days earlier: drop quests once they turn gray, not five levels later. The give-up set
+// and the POI probe no longer enter the verdict.
 //
 // One exception outranks all of that: a quest on the RPG blacklist (QuestBlacklistPolicy.h) is
 // dropped whatever its level or status. The blacklist keeps the pick loop from ever selecting it,
@@ -46,17 +48,11 @@ struct QuestDropFacts
     int32 questLevel = 0;
     // QUEST_STATUS_COMPLETE: ready to turn in.
     bool complete = false;
-    // The quest id is in botAI->lowPriorityQuest: the RPG system already abandoned it once.
-    bool givenUp = false;
-    // GetQuestPOIPosAndObjectiveIdx found at least one workable POI for an incomplete objective.
-    bool reachable = true;
 };
-
 enum class QuestDropVerdict : uint8
 {
     Keep,
-    DropGivenUp,
-    DropUnreachable,
+    DropGray,
     DropBlacklisted,
 };
 
@@ -67,26 +63,14 @@ enum class QuestDropVerdict : uint8
     return questLevel <= static_cast<int32>(Acore::XP::GetGrayLevel(botLevel));
 }
 
-// True while the verdict still depends on facts.reachable, so the caller can skip the POI
-// computation whenever its answer cannot change the outcome.
-[[nodiscard]] inline bool QuestDropNeedsReachability(QuestDropFacts const& facts)
-{
-    return !facts.blacklisted && !facts.complete && !facts.givenUp &&
-           QuestIsGrayFor(facts.botLevel, facts.questLevel);
-}
-
 [[nodiscard]] inline QuestDropVerdict QuestDropDecision(QuestDropFacts const& facts)
 {
     if (facts.blacklisted)
         return QuestDropVerdict::DropBlacklisted;
     if (facts.complete)
         return QuestDropVerdict::Keep;
-    if (!QuestIsGrayFor(facts.botLevel, facts.questLevel))
-        return QuestDropVerdict::Keep;
-    if (facts.givenUp)
-        return QuestDropVerdict::DropGivenUp;
-    if (!facts.reachable)
-        return QuestDropVerdict::DropUnreachable;
+    if (QuestIsGrayFor(facts.botLevel, facts.questLevel))
+        return QuestDropVerdict::DropGray;
     return QuestDropVerdict::Keep;
 }
 
@@ -94,10 +78,8 @@ enum class QuestDropVerdict : uint8
 {
     switch (verdict)
     {
-        case QuestDropVerdict::DropGivenUp:
-            return "givenup";
-        case QuestDropVerdict::DropUnreachable:
-            return "unreachable";
+        case QuestDropVerdict::DropGray:
+            return "gray";
         case QuestDropVerdict::DropBlacklisted:
             return "blacklisted";
         default:
