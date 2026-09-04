@@ -117,6 +117,9 @@ public:
             LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-COOLDOWN quest {} deaths {} blamed {} stay ended",
                       player->GetName(), questId, record.deaths, QuestStayLostToDeaths(record.deaths));
         }
+        // OnPlayerKilledByCreature runs before this later corpse transition and consumes the
+        // engagement for creature deaths. Clear anything left by an environmental death here.
+        _firstEngagement.erase(guidLow);
     }
 
     // The fight's first target, so a death can say whether the killer came out of the same camp.
@@ -143,7 +146,7 @@ public:
 
     void OnPlayerLeaveCombat(Player* player) override
     {
-        if (!player)
+        if (!player || !ShouldClearEngagementOnLeaveCombat(player->IsAlive()))
             return;
         _firstEngagement.erase(player->GetGUID().GetCounter());
     }

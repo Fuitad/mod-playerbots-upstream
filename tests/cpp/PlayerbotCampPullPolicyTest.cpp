@@ -85,3 +85,9 @@ TEST(PlayerbotCampPullPolicyTest, DeathProbeSubscribesToTheWholeFightLifecycle)
     EXPECT_TRUE(hasHook(PLAYERHOOK_ON_PLAYER_KILLED_BY_CREATURE));
     EXPECT_TRUE(hasHook(PLAYERHOOK_ON_PLAYER_JUST_DIED));
 }
+
+TEST(PlayerbotCampPullPolicyTest, ADeathTransitionKeepsTheEngagementForTheKillerHook)
+{
+    EXPECT_TRUE(ShouldClearEngagementOnLeaveCombat(true));
+    EXPECT_FALSE(ShouldClearEngagementOnLeaveCombat(false));
+}

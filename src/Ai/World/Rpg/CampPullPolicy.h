@@ -23,9 +23,9 @@
 #ifndef _PLAYERBOT_CAMPPULLPOLICY_H
 #define _PLAYERBOT_CAMPPULLPOLICY_H
 
-#include "Define.h"
-
 #include <ctime>
+
+#include "Define.h"
 
 // The creature the bot engaged first in the current fight, with where it stood at that moment.
 // Position is captured at engagement rather than read at death because the killer's own aggro
@@ -70,8 +70,7 @@ enum class KillerOrigin : uint8
     // Aggro reach is the killer's own, not a fixed radius: an elite and a critter of the same level
     // do not notice a pull from the same distance, and Creature::GetAggroRange already accounts for
     // the level difference and the server's aggro rate.
-    return killerToFirstTargetDistance <= killerAggroRadius ? KillerOrigin::CampNeighbour
-                                                            : KillerOrigin::Wanderer;
+    return killerToFirstTargetDistance <= killerAggroRadius ? KillerOrigin::CampNeighbour : KillerOrigin::Wanderer;
 }
 
 [[nodiscard]] inline char const* KillerOriginName(KillerOrigin origin)
@@ -103,5 +102,7 @@ enum class KillerOrigin : uint8
 // A fight nobody ended. Without this a bot that leaves combat without the hook firing would carry a
 // stale first target into its next death and report a nonsense distance.
 inline constexpr time_t CAMP_PULL_ENGAGEMENT_MAX_AGE_SECONDS = 10 * 60;
+
+[[nodiscard]] inline bool ShouldClearEngagementOnLeaveCombat(bool playerAlive) { return playerAlive; }
 
 #endif
