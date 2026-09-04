@@ -6,7 +6,7 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **98**.
+Local only files: **99**.
 Upstream files changed: **74**.
 Regions: **573**. Covered inline: **546**. Missing markers: **0**.
 
@@ -1028,7 +1028,7 @@ Content fingerprint: `a3627f8226b3f30b`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.cpp`
-Content fingerprint: `ddc0c18556fa00a8`.
+Content fingerprint: `589799c6cd6a29f8`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h`
@@ -1069,6 +1069,10 @@ Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestItemDropPolicy.h`
 Content fingerprint: `b91ae000c9938530`.
+Banner: covered.
+
+### `src/Ai/World/Rpg/QuestOrdinaryLootSourcePolicy.h`
+Content fingerprint: `ab25c35438ac4057`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestPickPolicy.h`
@@ -1192,7 +1196,7 @@ Content fingerprint: `5713f92b8f2edb21`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`
-Content fingerprint: `ceb48c449183158d`.
+Content fingerprint: `57509fd689a020a1`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp`

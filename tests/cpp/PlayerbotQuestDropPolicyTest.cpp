@@ -12,6 +12,7 @@
 #include "Ai/World/Rpg/QuestDeathCooldown.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Ai/World/Rpg/QuestItemDropPolicy.h"
+#include "Ai/World/Rpg/QuestOrdinaryLootSourcePolicy.h"
 #include "Ai/World/Rpg/QuestPickPolicy.h"
 #include "gtest/gtest.h"
 
@@ -303,4 +304,19 @@ TEST(PlayerbotQuestDropPolicyTest, AMissingToolDropIsWorkedBeforeTheObjectiveTha
     EXPECT_TRUE(IsItemDropObjectiveIndex(13, 4));
     EXPECT_FALSE(IsItemDropObjectiveIndex(14, 4));
     EXPECT_FALSE(IsItemDropObjectiveIndex(9, 4));
+}
+
+TEST(PlayerbotQuestDropPolicyTest, OrdinaryRequiredItemsUseTheirDirectCreatureLootSources)
+{
+    std::unordered_set<uint32> const requiredItems{5469u};
+    QuestCreatureLootSourceIndex sources;
+
+    IndexDirectRequiredCreatureLootSource(sources, requiredItems, {2321u, 5469u, 0});
+    IndexDirectRequiredCreatureLootSource(sources, requiredItems, {2322u, 5469u, 0});
+    IndexDirectRequiredCreatureLootSource(sources, requiredItems, {2321u, 5469u, 0});
+    IndexDirectRequiredCreatureLootSource(sources, requiredItems, {3244u, 5469u, 123});
+    IndexDirectRequiredCreatureLootSource(sources, requiredItems, {2323u, 9999u, 0});
+
+    ASSERT_EQ(sources.size(), 1u);
+    EXPECT_EQ(sources.at(5469u), (std::vector<uint32>{2321u, 2322u}));
 }

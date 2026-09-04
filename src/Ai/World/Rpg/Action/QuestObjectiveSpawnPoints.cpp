@@ -9,9 +9,14 @@
  */
 
 #include "QuestObjectiveSpawnPoints.h"
-#include "Ai/World/Rpg/QuestItemDropPolicy.h"
-#include "Ai/World/Rpg/QuestSpellFocusPolicy.h"
 
+#include <algorithm>
+#include <mutex>
+#include <unordered_map>
+
+#include "Ai/World/Rpg/QuestItemDropPolicy.h"
+#include "Ai/World/Rpg/QuestOrdinaryLootSourcePolicy.h"
+#include "Ai/World/Rpg/QuestSpellFocusPolicy.h"
 #include "DatabaseEnv.h"
 #include "Field.h"
 #include "ObjectMgr.h"
@@ -19,10 +24,6 @@
 #include "QuestDef.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
-
-#include <algorithm>
-#include <mutex>
-#include <unordered_map>
 
 namespace
 {
@@ -56,6 +57,33 @@ void BuildReverseIndexes()
         if (tmpl.type == GAMEOBJECT_TYPE_SPELL_FOCUS && tmpl.spellFocus.focusId)
             focusToGameObjectEntries[tmpl.spellFocus.focusId].push_back(entry);
     }
+
+    // Required items are not always marked as quest loot. Easy Strider Living (2178) needs
+    // ordinary Strider Meat 5469: seven direct creature loot rows, 535 map 1 spawns, and zero
+    // creature_questitem rows. Without these direct rows the stay reaches its DB POI but cannot
+    // identify, anchor on, or count a strider as the objective's source.
+    std::unordered_set<uint32> requiredItems;
+    for (auto const& [questId, quest] : sObjectMgr->GetQuestTemplates())
+        for (uint8 index = 0; index < QUEST_ITEM_OBJECTIVES_COUNT; ++index)
+            if (uint32 const itemId = quest->RequiredItemId[index])
+                requiredItems.insert(itemId);
+    if (QueryResult result = WorldDatabase.Query(
+            "SELECT creature.entry, loot.Item, loot.Reference FROM creature_template creature "
+            "INNER JOIN creature_loot_template loot ON loot.Entry = creature.lootid "
+            "INNER JOIN (SELECT RequiredItemId1 AS Item FROM quest_template WHERE RequiredItemId1 <> 0 "
+            "UNION SELECT RequiredItemId2 FROM quest_template WHERE RequiredItemId2 <> 0 "
+            "UNION SELECT RequiredItemId3 FROM quest_template WHERE RequiredItemId3 <> 0 "
+            "UNION SELECT RequiredItemId4 FROM quest_template WHERE RequiredItemId4 <> 0 "
+            "UNION SELECT RequiredItemId5 FROM quest_template WHERE RequiredItemId5 <> 0 "
+            "UNION SELECT RequiredItemId6 FROM quest_template WHERE RequiredItemId6 <> 0) required "
+            "ON required.Item = loot.Item WHERE loot.Reference = 0"))
+        do
+        {
+            Field* fields = result->Fetch();
+            IndexDirectRequiredCreatureLootSource(
+                itemToCreatureEntries, requiredItems,
+                {fields[0].Get<uint32>(), fields[1].Get<uint32>(), fields[2].Get<int32>()});
+        } while (result->NextRow());
 
     // A quest item that only exists INSIDE another item (Tallonkai's Jewel 8050 inside the
     // Gnarlpine Necklace 8049 that Ferocitas drops, measured 2026-09-01: the objective had no
@@ -202,8 +230,8 @@ std::vector<SpawnAnchorPoint> QuestObjectiveSpawnPointsFor(Quest const* quest, i
 
     if (!gameObjectEntries.empty())
         for (auto const& [spawnId, data] : sObjectMgr->GetAllGOData())
-            if (data.mapid == mapId && std::find(gameObjectEntries.begin(), gameObjectEntries.end(), data.id) !=
-                                           gameObjectEntries.end())
+            if (data.mapid == mapId &&
+                std::find(gameObjectEntries.begin(), gameObjectEntries.end(), data.id) != gameObjectEntries.end())
                 points.push_back({data.posX, data.posY, data.posZ, static_cast<uint32>(spawnId), false});
 
     std::lock_guard<std::mutex> lock(spawnCacheMutex);
