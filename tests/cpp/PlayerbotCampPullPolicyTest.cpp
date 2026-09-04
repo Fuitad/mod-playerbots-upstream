@@ -8,7 +8,9 @@
  * PLB-LOCAL FILE. This file does not exist upstream and never conflicts on a merge.
  */
 
-#include "Ai/World/Rpg/CampPullPolicy.h"
+#include <algorithm>
+
+#include "Ai/World/Rpg/DeathProbe.h"
 #include "gtest/gtest.h"
 
 TEST(PlayerbotCampPullPolicyTest, AKillerInsideItsOwnAggroReachOfTheFirstTargetIsACampPull)
@@ -71,4 +73,15 @@ TEST(PlayerbotCampPullPolicyTest, AnEngagementIsHeldThroughAFightAndReplacedWhen
     // death and report a nonsense distance.
     EXPECT_TRUE(ShouldReplaceEngagement(held, 1000 + CAMP_PULL_ENGAGEMENT_MAX_AGE_SECONDS + 1,
                                         CAMP_PULL_ENGAGEMENT_MAX_AGE_SECONDS));
+}
+
+TEST(PlayerbotCampPullPolicyTest, DeathProbeSubscribesToTheWholeFightLifecycle)
+{
+    std::vector<uint16> const hooks = DeathProbe::EnabledPlayerHooks();
+    auto const hasHook = [&hooks](uint16 hook) { return std::find(hooks.begin(), hooks.end(), hook) != hooks.end(); };
+
+    EXPECT_TRUE(hasHook(PLAYERHOOK_ON_PLAYER_ENTER_COMBAT));
+    EXPECT_TRUE(hasHook(PLAYERHOOK_ON_PLAYER_LEAVE_COMBAT));
+    EXPECT_TRUE(hasHook(PLAYERHOOK_ON_PLAYER_KILLED_BY_CREATURE));
+    EXPECT_TRUE(hasHook(PLAYERHOOK_ON_PLAYER_JUST_DIED));
 }

@@ -17,6 +17,9 @@
 #ifndef _PLAYERBOT_DEATHPROBE_H
 #define _PLAYERBOT_DEATHPROBE_H
 
+#include <unordered_map>
+#include <variant>
+
 #include "Ai/Base/Actions/DeathRecoveryPolicy.h"
 #include "Ai/World/Rpg/CampPullPolicy.h"
 #include "Ai/World/Rpg/QuestDeathCooldown.h"
@@ -32,11 +35,14 @@
 #include "ScriptMgr.h"
 #include "Timer.h"
 
-#include <unordered_map>
-#include <variant>
-
 namespace DeathProbe
 {
+inline std::vector<uint16> EnabledPlayerHooks()
+{
+    return {PLAYERHOOK_ON_PLAYER_ENTER_COMBAT, PLAYERHOOK_ON_PLAYER_LEAVE_COMBAT, PLAYERHOOK_ON_PLAYER_JUST_DIED,
+            PLAYERHOOK_ON_PLAYER_KILLED_BY_CREATURE};
+}
+
 inline uint32 BrokenEquipmentSlots(Player* bot)
 {
     uint32 broken = 0;
@@ -61,10 +67,7 @@ inline uint32 QuestInProgress(PlayerbotAI* botAI)
 class DeathProbeScript : public PlayerScript
 {
 public:
-    DeathProbeScript()
-        : PlayerScript("DeathProbeScript", {PLAYERHOOK_ON_PLAYER_JUST_DIED, PLAYERHOOK_ON_PLAYER_KILLED_BY_CREATURE})
-    {
-    }
+    DeathProbeScript() : PlayerScript("DeathProbeScript", DeathProbe::EnabledPlayerHooks()) {}
 
     void OnPlayerJustDied(Player* player) override
     {

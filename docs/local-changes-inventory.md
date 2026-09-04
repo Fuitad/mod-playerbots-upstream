@@ -1040,7 +1040,7 @@ Content fingerprint: `211d98dc09059ef1`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/DeathProbe.h`
-Content fingerprint: `1ddf049d0c0f2a0f`.
+Content fingerprint: `9767cc135cf32f4e`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/MoveFarStuckPolicy.h`
@@ -1156,7 +1156,7 @@ Content fingerprint: `42775fac01139331`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotCampPullPolicyTest.cpp`
-Content fingerprint: `c24fae697ae8c87a`.
+Content fingerprint: `b807709e43df0f8a`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotEquipEmptySlotPolicyTest.cpp`
