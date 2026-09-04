@@ -8,10 +8,11 @@
  * PLB-LOCAL FILE. This file does not exist upstream and never conflicts on a merge.
  */
 
+#include <algorithm>
+
+#include "Ai/World/Rpg/QuestPickPocketPolicy.h"
 #include "Ai/World/Rpg/QuestUseTargetPolicy.h"
 #include "gtest/gtest.h"
-
-#include <algorithm>
 
 namespace
 {
@@ -77,6 +78,34 @@ TEST(PlayerbotQuestUseTargetPolicyTest, TheProvidedItemOutranksAKnownSpellAndNoT
     EXPECT_EQ(QuestUseModeForFacts(false, false), QuestUseMode::None);
 }
 
+TEST(PlayerbotQuestUseTargetPolicyTest, RequiredPickPocketItemsResolveTheirCreatureSource)
+{
+    std::unordered_set<uint32> const requiredItems{7737u};
+    QuestPickPocketSourceIndex sources;
+
+    IndexRequiredPickPocketSource(sources, requiredItems, {6909u, 7737u, 0});
+    IndexRequiredPickPocketSource(sources, requiredItems, {6909u, 7737u, 0});
+    IndexRequiredPickPocketSource(sources, requiredItems, {6910u, 7737u, 1});
+    IndexRequiredPickPocketSource(sources, requiredItems, {6911u, 9999u, 0});
+
+    ASSERT_EQ(sources.size(), 1u);
+    EXPECT_EQ(sources.at(7737u), (std::vector<uint32>{6909u}));
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, PickPocketEntersStealthBeforeOperatingTheTarget)
+{
+    EXPECT_TRUE(QuestPickPocketAvailable(true, true, true));
+    EXPECT_FALSE(QuestPickPocketAvailable(false, true, true));
+    EXPECT_EQ(NextQuestPickPocketStep(true, true, true, true, false), QuestPickPocketStep::EnterStealth);
+    EXPECT_EQ(NextQuestPickPocketStep(true, true, true, true, true), QuestPickPocketStep::PickPocket);
+    EXPECT_EQ(NextQuestPickPocketStep(false, true, true, true, true), QuestPickPocketStep::Unavailable);
+    EXPECT_EQ(NextQuestPickPocketStep(true, false, true, true, true), QuestPickPocketStep::Unavailable);
+    EXPECT_EQ(NextQuestPickPocketStep(true, true, false, true, true), QuestPickPocketStep::Unavailable);
+    EXPECT_EQ(NextQuestPickPocketStep(true, true, true, false, true), QuestPickPocketStep::Unavailable);
+    EXPECT_FLOAT_EQ(QuestPickPocketEngageDistance(5.0f), 4.0f);
+    EXPECT_STREQ(QuestUseModeName(QuestUseMode::PickPocket), "pickpocket");
+}
+
 TEST(PlayerbotQuestUseTargetPolicyTest, SpellQuestsCarryTheirPerClassSpellFamilies)
 {
     // Rescue the Survivors! is credited by any class's Gift of the Naaru; Thirst Unending by
@@ -94,8 +123,8 @@ TEST(PlayerbotQuestUseTargetPolicyTest, TheNearestLivingMatchingCreatureWins)
 {
     std::vector<QuestUseCandidateFacts> const candidates = {
         Candidate(true, true, 900.0f),
-        Candidate(false, true, 1.0f),   // nearer, but the wrong creature
-        Candidate(true, false, 4.0f),   // nearer and matching, but dead
+        Candidate(false, true, 1.0f),  // nearer, but the wrong creature
+        Candidate(true, false, 4.0f),  // nearer and matching, but dead
         Candidate(true, true, 25.0f),
     };
 
@@ -130,9 +159,9 @@ TEST(PlayerbotQuestUseTargetPolicyTest, ASleepingTargetOutranksANearerAwakeOne)
     // seek kept sending bots to the nearest awake one - 15 wasted whacks measured live before a
     // single credit landed.
     std::vector<QuestUseCandidateFacts> const candidates = {
-        Candidate(true, true, 4.0f),                        // awake, nearest
-        Candidate(true, true, 2500.0f, 0.0f, true),         // sleeping, far
-        Candidate(true, true, 900.0f, 0.0f, true),          // sleeping, nearer
+        Candidate(true, true, 4.0f),                 // awake, nearest
+        Candidate(true, true, 2500.0f, 0.0f, true),  // sleeping, far
+        Candidate(true, true, 900.0f, 0.0f, true),   // sleeping, nearer
     };
 
     EXPECT_EQ(BestQuestUseTargetIndex(candidates, NoAnchorCap), 2u);

@@ -18,19 +18,35 @@
 #ifndef _PLAYERBOT_QUESTUSETARGETPOLICY_H
 #define _PLAYERBOT_QUESTUSETARGETPOLICY_H
 
-#include "Define.h"
-
 #include <array>
 #include <cstddef>
 #include <vector>
 
+#include "Define.h"
+
 // How the objective creature is operated.
 enum class QuestUseMode : uint8
 {
-    None = 0,  // no tool: a genuine kill quest, leave it to the grind strategy
-    Item,      // use the quest's provided source item on the creature
-    Spell,     // cast a known racial/quest spell on the creature
+    None = 0,    // no tool: a genuine kill quest, leave it to the grind strategy
+    Item,        // use the quest's provided source item on the creature
+    Spell,       // cast a known racial/quest spell on the creature
+    PickPocket,  // enter stealth and cast Pick Pocket on a living required-item source
 };
+
+[[nodiscard]] inline char const* QuestUseModeName(QuestUseMode mode)
+{
+    switch (mode)
+    {
+        case QuestUseMode::Item:
+            return "item";
+        case QuestUseMode::Spell:
+            return "spell";
+        case QuestUseMode::PickPocket:
+            return "pickpocket";
+        default:
+            return "none";
+    }
+}
 
 // The quest's provided item is the tool only when it actually has an on-use spell; a readable
 // letter or a plain starter item does not qualify, and without a tool the objective is a kill.
@@ -104,7 +120,7 @@ enum class QuestUseMode : uint8
 // three bots at the POI with owlkin around them, zero candidates, blamed abandons). The tool
 // spell's target-condition entries name the real-world creature, so both are accepted.
 [[nodiscard]] inline std::vector<uint32> QuestUseAcceptedEntries(int32 requiredEntry,
-                                                                std::vector<uint32> const& toolSpellTargetEntries)
+                                                                 std::vector<uint32> const& toolSpellTargetEntries)
 {
     std::vector<uint32> accepted;
     if (requiredEntry > 0)

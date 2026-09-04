@@ -17,6 +17,7 @@
 #define _PLAYERBOT_NEWRPGQUESTUSETARGET_H
 
 #include "ObjectGuid.h"
+#include "QuestPickPocketPolicy.h"
 #include "QuestUseTargetPolicy.h"
 
 class Player;
@@ -29,7 +30,7 @@ struct QuestUseTarget
     ObjectGuid guid;
     uint32 entry = 0;
     QuestUseMode mode = QuestUseMode::None;
-    // Item mode: the tool's item entry. Spell mode: the known spell id to cast.
+    // Item mode: the tool's item entry. Spell and Pick Pocket modes: the known spell id to cast.
     uint32 toolId = 0;
     // The spell the tool casts (the item's on-use spell, or the quest spell itself), for its range.
     uint32 useSpellId = 0;

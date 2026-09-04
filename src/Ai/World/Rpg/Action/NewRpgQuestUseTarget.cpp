@@ -11,6 +11,10 @@
 
 #include "NewRpgQuestUseTarget.h"
 
+#include <algorithm>
+
+#include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
+#include "Ai/World/Rpg/QuestPickPocketPolicy.h"
 #include "Ai/World/Rpg/QuestStayUseTracker.h"
 #include "ConditionMgr.h"
 #include "Item.h"
@@ -22,8 +26,6 @@
 #include "SharedDefines.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
-
-#include <algorithm>
 
 namespace
 {
@@ -137,52 +139,76 @@ uint32 KnownQuestSpell(Player* bot, uint32 questId, uint32 attempt)
 
 bool QuestObjectiveHasUseTool(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx)
 {
-    if (!botAI || !quest || objectiveIdx < 0 || objectiveIdx >= QUEST_OBJECTIVES_COUNT)
-        return false;
-    if (quest->RequiredNpcOrGo[objectiveIdx] <= 0)
+    if (!botAI || !quest || objectiveIdx < 0)
         return false;
 
     Player* bot = botAI->GetBot();
-    return SourceItemWithUseSpell(bot, quest) != nullptr || KnownQuestSpell(bot, quest->GetQuestId(), 0) != 0;
+    if (objectiveIdx < QUEST_OBJECTIVES_COUNT)
+    {
+        if (quest->RequiredNpcOrGo[objectiveIdx] <= 0)
+            return false;
+        return SourceItemWithUseSpell(bot, quest) != nullptr || KnownQuestSpell(bot, quest->GetQuestId(), 0) != 0;
+    }
+    if (objectiveIdx >= QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT)
+        return false;
+
+    QuestObjectiveSources const sources = QuestObjectiveSourceEntriesFor(quest, objectiveIdx);
+    return QuestPickPocketAvailable(!sources.pickPocketCreatureEntries.empty(), bot->getClass() == CLASS_ROGUE,
+                                    bot->HasSpell(QUEST_PICK_POCKET_SPELL));
 }
 
 QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 objectiveIdx,
-                                  GuidVector const& nearbyUnits, float anchorX, float anchorY,
-                                  float anchorRadius, QuestUseSeekDiag* diag)
+                                  GuidVector const& nearbyUnits, float anchorX, float anchorY, float anchorRadius,
+                                  QuestUseSeekDiag* diag)
 {
     if (!botAI || !quest)
         return {};
 
     Player* bot = botAI->GetBot();
-    if (objectiveIdx < 0 || objectiveIdx >= QUEST_OBJECTIVES_COUNT)
-        return {};
-
-    int32 const requiredEntry = quest->RequiredNpcOrGo[objectiveIdx];
-    if (requiredEntry <= 0)
+    if (objectiveIdx < 0)
         return {};
 
     QuestUseMode mode = QuestUseMode::None;
     uint32 toolId = 0;
     uint32 useSpellId = 0;
-    if (Item* item = SourceItemWithUseSpell(bot, quest, &useSpellId))
+    std::vector<uint32> acceptedEntries;
+    if (objectiveIdx < QUEST_OBJECTIVES_COUNT)
     {
-        mode = QuestUseMode::Item;
-        toolId = item->GetEntry();
+        int32 const requiredEntry = quest->RequiredNpcOrGo[objectiveIdx];
+        if (requiredEntry <= 0)
+            return {};
+        if (Item* item = SourceItemWithUseSpell(bot, quest, &useSpellId))
+        {
+            mode = QuestUseMode::Item;
+            toolId = item->GetEntry();
+        }
+        else if (uint32 spellId = KnownQuestSpell(bot, quest->GetQuestId(), QuestStayUseTracker::AttemptsThisStay(bot)))
+        {
+            mode = QuestUseMode::Spell;
+            toolId = spellId;
+            useSpellId = spellId;
+        }
+        else
+            return {};  // no tool: a genuine kill quest, the grind strategy owns it
+
+        acceptedEntries = QuestUseAcceptedEntries(requiredEntry, ToolSpellTargetEntries(useSpellId));
     }
-    else if (uint32 spellId = KnownQuestSpell(bot, quest->GetQuestId(), QuestStayUseTracker::AttemptsThisStay(bot)))
+    else if (objectiveIdx < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT)
     {
-        mode = QuestUseMode::Spell;
-        toolId = spellId;
-        useSpellId = spellId;
+        QuestObjectiveSources const sources = QuestObjectiveSourceEntriesFor(quest, objectiveIdx);
+        if (!QuestPickPocketAvailable(!sources.pickPocketCreatureEntries.empty(), bot->getClass() == CLASS_ROGUE,
+                                      bot->HasSpell(QUEST_PICK_POCKET_SPELL)))
+            return {};
+        mode = QuestUseMode::PickPocket;
+        toolId = QUEST_PICK_POCKET_SPELL;
+        useSpellId = QUEST_PICK_POCKET_SPELL;
+        acceptedEntries = sources.pickPocketCreatureEntries;
     }
     else
-        return {};  // no tool: a genuine kill quest, the grind strategy owns it
+        return {};
 
     if (diag)
         diag->mode = mode;
-
-    std::vector<uint32> const acceptedEntries =
-        QuestUseAcceptedEntries(requiredEntry, ToolSpellTargetEntries(useSpellId));
     if (diag)
         diag->acceptedEntries = acceptedEntries;
 
@@ -200,6 +226,8 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
         QuestUseCandidateFacts candidate;
         candidate.matchesEntry =
             std::find(acceptedEntries.begin(), acceptedEntries.end(), unit->GetEntry()) != acceptedEntries.end();
+        if (mode == QuestUseMode::PickPocket)
+            candidate.matchesEntry = candidate.matchesEntry && bot->IsHostileTo(unit);
         candidate.alive = unit->IsAlive();
         candidate.sleeping = unit->getStandState() == UNIT_STAND_STATE_SLEEP;
         candidate.usedThisStay = QuestStayUseTracker::WasTargetUsedThisStay(bot, guid);
@@ -247,6 +275,12 @@ bool EngageQuestUseTarget(PlayerbotAI* botAI, QuestUseTarget const& target)
     Player* bot = botAI->GetBot();
     Unit* unit = botAI->GetUnit(target.guid);
     if (!unit || !unit->IsAlive())
+        return false;
+
+    if (target.mode == QuestUseMode::PickPocket &&
+        NextQuestPickPocketStep(bot->getClass() == CLASS_ROGUE, bot->HasSpell(QUEST_PICK_POCKET_SPELL), unit->IsAlive(),
+                                bot->IsHostileTo(unit),
+                                botAI->HasAura("stealth", bot)) != QuestPickPocketStep::PickPocket)
         return false;
 
     if (bot->isMoving())

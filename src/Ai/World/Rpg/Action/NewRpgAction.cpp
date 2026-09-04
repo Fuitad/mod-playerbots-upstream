@@ -3,7 +3,7 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 19 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 20 region(s) of this upstream file.
 
 #include "NewRpgAction.h"
 
@@ -716,7 +716,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
     {
         if (MoveFarTo(data.pos))
             return true;
-        // Long-range sampler couldn't land a candidate — nudge the
+        // Long-range sampler couldn't land a candidate. Nudge the
         // bot a short distance so the next tick retries from a
         // different position instead of sitting idle.
         return MoveRandomNear(10.0f);
@@ -1194,9 +1194,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         GuidVector nearbyUnits = context->GetValue<GuidVector>("nearest npcs")->Get();
         QuestUseSeekDiag useDiag;
         QuestUseTarget const useTarget =
-            qTemplate ? FindQuestUseTarget(botAI, qTemplate, data.objectiveIdx, nearbyUnits,
-                                           data.pos.GetPositionX(), data.pos.GetPositionY(),
-                                           sPlayerbotAIConfig.grindDistance, &useDiag)
+            qTemplate ? FindQuestUseTarget(botAI, qTemplate, data.objectiveIdx, nearbyUnits, data.pos.GetPositionX(),
+                                           data.pos.GetPositionY(), sPlayerbotAIConfig.grindDistance, &useDiag)
                       : QuestUseTarget{};
         // PLB-LOCAL(quest-use-sleeper): a tool that only credits a sleeper returns no candidate
         // while every matching creature is awake. That is a wait, not a place that cannot
@@ -1209,10 +1208,28 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             // PLB-LOCAL(quest-stay-use-tracker): same sighting rule as the gameobject seek above.
             QuestStayUseTracker::RecordSighting(bot);
             Unit* useUnit = botAI->GetUnit(useTarget.guid);
+            if (useTarget.mode == QuestUseMode::PickPocket && useUnit)
+            {
+                QuestPickPocketStep const step = NextQuestPickPocketStep(
+                    bot->getClass() == CLASS_ROGUE, bot->HasSpell(QUEST_PICK_POCKET_SPELL), useUnit->IsAlive(),
+                    bot->IsHostileTo(useUnit), botAI->HasAura("stealth", bot));
+                if (step == QuestPickPocketStep::Unavailable)
+                    return true;
+                if (step == QuestPickPocketStep::EnterStealth)
+                {
+                    bool const cast = botAI->CastSpell("stealth", bot);
+                    LOG_DEBUG("playerbots", "[QuestProbe] {} QSTEALTH quest {} obj {} npc {} cast {}", bot->GetName(),
+                              questId, data.objectiveIdx, useTarget.entry, cast);
+                    return cast ? ForceToWait(1000) : true;
+                }
+            }
             // PLB-LOCAL(quest-use-range): the tool is used from its own range, not from arm's
             // length. See QuestUseEngageDistance.
             SpellInfo const* useSpell = useTarget.useSpellId ? sSpellMgr->GetSpellInfo(useTarget.useSpellId) : nullptr;
-            float const engageDistance = QuestUseEngageDistance(useSpell ? useSpell->GetMaxRange(false) : 0.0f);
+            float const spellRange = useSpell ? useSpell->GetMaxRange(false) : 0.0f;
+            float const engageDistance = useTarget.mode == QuestUseMode::PickPocket
+                                             ? QuestPickPocketEngageDistance(spellRange)
+                                             : QuestUseEngageDistance(spellRange);
             if (useUnit && bot->GetDistance(useUnit) > engageDistance)
             {
                 bool const moved = MoveWorldObjectTo(useTarget.guid, engageDistance);
@@ -1232,9 +1249,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 QuestStayUseTracker::RecordAttempt(bot);
                 // PLB-LOCAL(quest-abandon-probe): measurement hook, same family as PICK/REACH/ABANDON.
                 LOG_DEBUG("playerbots", "[QuestProbe] {} QUSE quest {} obj {} npc {} mode {} tool {} asleep {}",
-                          bot->GetName(), questId, data.objectiveIdx, useTarget.entry,
-                          useTarget.mode == QuestUseMode::Item ? "item" : "spell", useTarget.toolId,
-                          useUnit && useUnit->getStandState() == UNIT_STAND_STATE_SLEEP);
+                          bot->GetName(), questId, data.objectiveIdx, useTarget.entry, QuestUseModeName(useTarget.mode),
+                          useTarget.toolId, useUnit && useUnit->getStandState() == UNIT_STAND_STATE_SLEEP);
                 // Let the use land (cast time, credit, respawn state) before the next decision.
                 return ForceToWait(2000);
             }

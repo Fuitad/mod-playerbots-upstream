@@ -16,6 +16,7 @@
 
 #include "Ai/World/Rpg/QuestItemDropPolicy.h"
 #include "Ai/World/Rpg/QuestOrdinaryLootSourcePolicy.h"
+#include "Ai/World/Rpg/QuestPickPocketPolicy.h"
 #include "Ai/World/Rpg/QuestSpellFocusPolicy.h"
 #include "DatabaseEnv.h"
 #include "Field.h"
@@ -36,6 +37,7 @@ std::unordered_map<uint64, std::vector<SpawnAnchorPoint>> spawnCache;
 std::once_flag reverseIndexBuilt;
 std::unordered_map<uint32, std::vector<uint32>> itemToCreatureEntries;
 std::unordered_map<uint32, std::vector<uint32>> itemToGameObjectEntries;
+std::unordered_map<uint32, std::vector<uint32>> itemToPickPocketCreatureEntries;
 // spell focus id -> the type 8 gameobject entries that provide it, for the objectives whose item
 // is made by a tool at a focus rather than looted (QuestSpellFocusPolicy.h).
 std::unordered_map<uint32, std::vector<uint32>> focusToGameObjectEntries;
@@ -83,6 +85,20 @@ void BuildReverseIndexes()
             IndexDirectRequiredCreatureLootSource(
                 itemToCreatureEntries, requiredItems,
                 {fields[0].Get<uint32>(), fields[1].Get<uint32>(), fields[2].Get<int32>()});
+        } while (result->NextRow());
+
+    // Pick Pocket loot is attached to a living creature through its separate loot store. Destiny
+    // Calls (2242) needs Sethir's Journal 7737, a 100 percent quest-required row on Sethir the
+    // Ancient 6909. Neither creature_questitem nor ordinary corpse loot can describe that source.
+    if (QueryResult result =
+            WorldDatabase.Query("SELECT creature.entry, loot.Item, loot.Reference FROM creature_template creature "
+                                "INNER JOIN pickpocketing_loot_template loot ON loot.Entry = creature.pickpocketloot "
+                                "WHERE loot.Item <> 0 AND loot.Reference = 0"))
+        do
+        {
+            Field* fields = result->Fetch();
+            IndexRequiredPickPocketSource(itemToPickPocketCreatureEntries, requiredItems,
+                                          {fields[0].Get<uint32>(), fields[1].Get<uint32>(), fields[2].Get<int32>()});
         } while (result->NextRow());
 
     // A quest item that only exists INSIDE another item (Tallonkai's Jewel 8050 inside the
@@ -178,6 +194,14 @@ QuestObjectiveSources QuestObjectiveSourceEntriesFor(Quest const* quest, int32 o
             sources.creatureEntries = it->second;
         if (auto it = itemToGameObjectEntries.find(itemId); it != itemToGameObjectEntries.end())
             sources.gameObjectEntries = it->second;
+        if (auto it = itemToPickPocketCreatureEntries.find(itemId); it != itemToPickPocketCreatureEntries.end())
+        {
+            sources.pickPocketCreatureEntries = it->second;
+            for (uint32 const entry : it->second)
+                if (std::find(sources.creatureEntries.begin(), sources.creatureEntries.end(), entry) ==
+                    sources.creatureEntries.end())
+                    sources.creatureEntries.push_back(entry);
+        }
 
         // An item nothing loots may be MADE by the quest's tool at a spell focus (Learning from
         // the Crystals, 9581: the pick's spell needs the Impact Site Crystal within 5 yards). The

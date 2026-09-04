@@ -11,10 +11,10 @@
 #ifndef _PLAYERBOT_QUESTOBJECTIVESPAWNPOINTS_H
 #define _PLAYERBOT_QUESTOBJECTIVESPAWNPOINTS_H
 
+#include <vector>
+
 #include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
 #include "Define.h"
-
-#include <vector>
 
 class Quest;
 
@@ -25,6 +25,9 @@ struct QuestObjectiveSources
 {
     std::vector<uint32> creatureEntries;
     std::vector<uint32> gameObjectEntries;
+    // Living creatures whose Pick Pocket loot contains the required item. These are also copied
+    // into creatureEntries for spawn anchoring, but kept distinct so the use path casts Pick Pocket.
+    std::vector<uint32> pickPocketCreatureEntries;
     // Set only for an item objective nothing loots, whose quest tool's on-use spell needs a spell
     // focus: the focus objects are then the gameObjectEntries and the bot casts the tool beside
     // one rather than operating it. See QuestSpellFocusPolicy.h.
