@@ -309,6 +309,22 @@ TEST(RandomBotMaintenancePolicyTest, AClaimedErrandOwnsMovementUntilItEndsOrItsL
     EXPECT_FALSE(ErrandBlocksOtherMove(false, 0, false));
 }
 
+TEST(RandomBotMaintenancePolicyTest, ALoneGreyDoesNotInterruptAForcedTrip)
+{
+    using playerbots::maintenance::VENDOR_BAG_SPACE_URGENT_PERCENT;
+    using playerbots::maintenance::VendorTripWanted;
+
+    // Smashlix, 2026-09-05: one grey looted 300 yards into a 1592 yard economy trip must not turn
+    // the bot around. The same grey with no trip in flight still sends her to the vendor.
+    EXPECT_FALSE(VendorTripWanted(40, true, true));
+    EXPECT_TRUE(VendorTripWanted(40, true, false));
+    // Nothing to sell, nothing to do, trip or not.
+    EXPECT_FALSE(VendorTripWanted(40, false, false));
+    // Bags too full to keep looting override the trip.
+    EXPECT_TRUE(VendorTripWanted(VENDOR_BAG_SPACE_URGENT_PERCENT + 1, false, true));
+    EXPECT_FALSE(VendorTripWanted(VENDOR_BAG_SPACE_URGENT_PERCENT, false, true));
+}
+
 TEST(RandomBotMaintenancePolicyTest, AReadyHearthstoneIsSpentWheneverItShortensTheWalk)
 {
     using playerbots::maintenance::HEARTH_SHORTCUT_MIN_SAVING_YARDS;

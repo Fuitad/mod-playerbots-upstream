@@ -491,10 +491,15 @@ bool playerbots::maintenance::NeedsVendor(PlayerbotAI* botAI)
         return false;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    if (AI_VALUE(uint8, "bag space") > 80)
+    uint8 const bagSpace = AI_VALUE(uint8, "bag space");
+    // A forced travel target is a trip somebody owns (economy errands force theirs); see
+    // VendorTripWanted for why a lone grey must not interrupt it.
+    TravelTarget* const travel = AI_VALUE(TravelTarget*, "travel target");
+    bool const forcedTripInFlight = travel && travel->isForced() && travel->isActive();
+    if (VendorTripWanted(bagSpace, false, forcedTripInFlight))
         return true;
 
-    return VisitBagItems(
+    bool const hasVendorTrash = VisitBagItems(
         botAI->GetBot(),
         [botAI](Item* item)
         {
@@ -502,6 +507,7 @@ bool playerbots::maintenance::NeedsVendor(PlayerbotAI* botAI)
                 botAI->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get();
             return IsVendorTrash(item->GetTemplate()->Quality, usage == ITEM_USAGE_VENDOR);
         });
+    return VendorTripWanted(bagSpace, hasVendorTrash, forcedTripInFlight);
 }
 
 bool playerbots::maintenance::NeedsMount(PlayerbotAI* botAI)

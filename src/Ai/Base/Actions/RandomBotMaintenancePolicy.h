@@ -144,6 +144,27 @@ enum class RepairVisitOutcome : std::uint8_t
     return RepairVisitOutcome::Unaffordable;
 }
 [[nodiscard]] bool IsVendorTrash(std::uint32_t quality, bool vendorUsage);
+
+/*
+ * Whether a vendor trip should start now.
+ *
+ * A single grey in the bags used to be enough, whatever the bot was doing. Smashlix, 2026-09-05,
+ * a level 18 hunter with a forced economy trip to Astranaar 1592 yards away: every 300 yards out
+ * she looted one grey, the vendor trigger walked her back to the Stonetalon Peak vendor, and the
+ * trip never advanced (11 vendor trips and 4 stuck teleports in 33 minutes). While a forced
+ * travel target is held, only bags that are too full to keep looting justify the detour; a lone
+ * grey waits until the trip is over. Pierre: put the vendor trigger fix in this deploy.
+ */
+inline constexpr std::uint32_t VENDOR_BAG_SPACE_URGENT_PERCENT = 80;
+
+[[nodiscard]] inline bool VendorTripWanted(std::uint32_t bagSpacePercent, bool hasVendorTrash,
+                                           bool forcedTripInFlight)
+{
+    if (bagSpacePercent > VENDOR_BAG_SPACE_URGENT_PERCENT)
+        return true;
+    return hasVendorTrash && !forcedTripInFlight;
+}
+
 [[nodiscard]] MountTier RequiredMountTier(std::uint32_t level, MountLevelThresholds const& thresholds);
 [[nodiscard]] std::uint32_t RequiredRidingSkill(MountTier tier);
 [[nodiscard]] std::uint32_t NextRidingSpell(std::uint32_t ridingSkill, MountTier targetTier);
