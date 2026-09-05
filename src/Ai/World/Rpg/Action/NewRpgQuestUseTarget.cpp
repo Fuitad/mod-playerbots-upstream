@@ -14,12 +14,20 @@
 #include <algorithm>
 
 #include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
+#include "Ai/World/Rpg/QuestGossipProvokePolicy.h"
 #include "Ai/World/Rpg/QuestPickPocketPolicy.h"
 #include "Ai/World/Rpg/QuestStayUseTracker.h"
 #include "ConditionMgr.h"
+#include "Creature.h"
+#include "CreatureAI.h"
+#include "SmartScriptMgr.h"
+#include "Timer.h"
+#include <mutex>
+#include <unordered_map>
 #include "Item.h"
 #include "ItemTemplate.h"
 #include "ObjectAccessor.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "Playerbots.h"
 #include "QuestDef.h"
@@ -54,6 +62,41 @@ Item* HeldItemWithUseSpell(Player* bot, uint32 itemEntry, uint32* useSpellId)
         }
 
     return nullptr;
+}
+
+// Gossip provoke mode (QuestGossipProvokePolicy.h): the gossip-select event of a required-item
+// source creature whose SmartAI turns it hostile on conversation. Only a creature that offers
+// gossip at all qualifies; the option comes from its own script.
+std::optional<QuestGossipProvokeOption> GossipProvokeOptionFor(uint32 creatureEntry)
+{
+    CreatureTemplate const* proto = sObjectMgr->GetCreatureTemplate(creatureEntry);
+    if (!proto || !(proto->npcflag & UNIT_NPC_FLAG_GOSSIP))
+        return std::nullopt;
+
+    std::vector<QuestGossipSelectFact> selects;
+    for (SmartScriptHolder const& holder :
+         sSmartScriptMgr->GetScript(static_cast<int32>(creatureEntry), SMART_SCRIPT_TYPE_CREATURE))
+        if (holder.GetEventType() == SMART_EVENT_GOSSIP_SELECT)
+            selects.push_back({holder.event.gossip.sender, holder.event.gossip.action});
+    return FindQuestGossipProvokeOption(selects);
+}
+
+// First source creature of the objective that is a gossip-provoke target, with its option.
+std::optional<std::pair<uint32, QuestGossipProvokeOption>> GossipProvokeSourceFor(
+    QuestObjectiveSources const& sources)
+{
+    for (uint32 const entry : sources.creatureEntries)
+        if (std::optional<QuestGossipProvokeOption> option = GossipProvokeOptionFor(entry))
+            return std::make_pair(entry, *option);
+    return std::nullopt;
+}
+
+std::mutex gossipProvokeMutex;
+std::unordered_map<uint64, uint32> gossipProvokedAtMs;
+
+uint64 GossipProvokeKey(Player* bot, ObjectGuid creature)
+{
+    return (static_cast<uint64>(bot->GetGUID().GetCounter()) << 32) | creature.GetCounter();
 }
 
 Item* SourceItemWithUseSpell(Player* bot, Quest const* quest, uint32* useSpellId = nullptr)
@@ -171,6 +214,8 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
     QuestUseMode mode = QuestUseMode::None;
     uint32 toolId = 0;
     uint32 useSpellId = 0;
+    uint32 gossipMenu = 0;
+    uint32 gossipOption = 0;
     std::vector<uint32> acceptedEntries;
     if (objectiveIdx < QUEST_OBJECTIVES_COUNT)
     {
@@ -196,13 +241,24 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
     else if (objectiveIdx < QUEST_OBJECTIVES_COUNT + QUEST_ITEM_OBJECTIVES_COUNT)
     {
         QuestObjectiveSources const sources = QuestObjectiveSourceEntriesFor(quest, objectiveIdx);
-        if (!QuestPickPocketAvailable(!sources.pickPocketCreatureEntries.empty(), bot->getClass() == CLASS_ROGUE,
-                                      bot->HasSpell(QUEST_PICK_POCKET_SPELL)))
+        if (QuestPickPocketAvailable(!sources.pickPocketCreatureEntries.empty(), bot->getClass() == CLASS_ROGUE,
+                                     bot->HasSpell(QUEST_PICK_POCKET_SPELL)))
+        {
+            mode = QuestUseMode::PickPocket;
+            toolId = QUEST_PICK_POCKET_SPELL;
+            useSpellId = QUEST_PICK_POCKET_SPELL;
+            acceptedEntries = sources.pickPocketCreatureEntries;
+        }
+        // PLB-LOCAL(quest-gossip-provoke): a friendly source that turns hostile on conversation.
+        else if (std::optional<std::pair<uint32, QuestGossipProvokeOption>> provoke = GossipProvokeSourceFor(sources))
+        {
+            mode = QuestUseMode::GossipProvoke;
+            gossipMenu = provoke->second.menu;
+            gossipOption = provoke->second.option;
+            acceptedEntries = {provoke->first};
+        }
+        else
             return {};
-        mode = QuestUseMode::PickPocket;
-        toolId = QUEST_PICK_POCKET_SPELL;
-        useSpellId = QUEST_PICK_POCKET_SPELL;
-        acceptedEntries = sources.pickPocketCreatureEntries;
     }
     else
         return {};
@@ -253,6 +309,8 @@ QuestUseTarget FindQuestUseTarget(PlayerbotAI* botAI, Quest const* quest, int32 
         target.mode = mode;
         target.toolId = toolId;
         target.useSpellId = useSpellId;
+        target.gossipMenu = gossipMenu;
+        target.gossipOption = gossipOption;
 
         facts.push_back(candidate);
         targets.push_back(target);
@@ -286,6 +344,25 @@ bool EngageQuestUseTarget(PlayerbotAI* botAI, QuestUseTarget const& target)
     if (bot->isMoving())
         bot->StopMoving();
 
+    // PLB-LOCAL(quest-gossip-provoke): fire the creature's own gossip-select event, exactly what
+    // the core does once a client has clicked through the menus. SmartAI matches the event on the
+    // menu and option ids, so no menu state has to exist on the bot's side.
+    if (target.mode == QuestUseMode::GossipProvoke)
+    {
+        Creature* creature = unit->ToCreature();
+        if (!creature || !creature->AI())
+            return false;
+        bot->SetTarget(target.guid);
+        bot->SetFacingToObject(creature);
+        creature->AI()->sGossipSelect(bot, target.gossipMenu, target.gossipOption);
+        {
+            std::lock_guard<std::mutex> lock(gossipProvokeMutex);
+            gossipProvokedAtMs[GossipProvokeKey(bot, target.guid)] = getMSTime();
+        }
+        QuestStayUseTracker::RecordUsedTarget(bot, target.guid);
+        return true;
+    }
+
     if (target.mode == QuestUseMode::Item)
     {
         Item* item = bot->GetItemByEntry(target.toolId);
@@ -306,4 +383,15 @@ bool EngageQuestUseTarget(PlayerbotAI* botAI, QuestUseTarget const& target)
     // creature behaves the same way.
     QuestStayUseTracker::RecordUsedTarget(bot, target.guid);
     return true;
+}
+
+std::optional<uint32> QuestGossipProvokedAgoMs(Player* bot, ObjectGuid creature)
+{
+    if (!bot || !creature)
+        return std::nullopt;
+    std::lock_guard<std::mutex> lock(gossipProvokeMutex);
+    auto const it = gossipProvokedAtMs.find(GossipProvokeKey(bot, creature));
+    if (it == gossipProvokedAtMs.end())
+        return std::nullopt;
+    return GetMSTimeDiffToNow(it->second);
 }

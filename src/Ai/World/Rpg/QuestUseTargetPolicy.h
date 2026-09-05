@@ -31,6 +31,7 @@ enum class QuestUseMode : uint8
     Item,        // use the quest's provided source item on the creature
     Spell,       // cast a known racial/quest spell on the creature
     PickPocket,  // enter stealth and cast Pick Pocket on a living required-item source
+    GossipProvoke,  // talk to a friendly required-item source whose script turns it hostile
 };
 
 [[nodiscard]] inline char const* QuestUseModeName(QuestUseMode mode)
@@ -43,6 +44,8 @@ enum class QuestUseMode : uint8
             return "spell";
         case QuestUseMode::PickPocket:
             return "pickpocket";
+        case QuestUseMode::GossipProvoke:
+            return "gossip";
         default:
             return "none";
     }

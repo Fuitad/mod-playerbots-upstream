@@ -16,6 +16,8 @@
 #ifndef _PLAYERBOT_NEWRPGQUESTUSETARGET_H
 #define _PLAYERBOT_NEWRPGQUESTUSETARGET_H
 
+#include <optional>
+
 #include "ObjectGuid.h"
 #include "QuestPickPocketPolicy.h"
 #include "QuestUseTargetPolicy.h"
@@ -34,7 +36,15 @@ struct QuestUseTarget
     uint32 toolId = 0;
     // The spell the tool casts (the item's on-use spell, or the quest spell itself), for its range.
     uint32 useSpellId = 0;
+    // Gossip provoke mode: the SmartAI gossip-select event to fire (QuestGossipProvokePolicy.h).
+    uint32 gossipMenu = 0;
+    uint32 gossipOption = 0;
 };
+
+// Gossip provoke mode: milliseconds since this bot last provoked the creature, or no value when it
+// never did. Remembered per bot and creature for the current process; a creature that evades back
+// to friendly is provoked again once the wait has run out.
+[[nodiscard]] std::optional<uint32> QuestGossipProvokedAgoMs(Player* bot, ObjectGuid creature);
 
 // Filled when a diag pointer is passed: why the seek did or did not produce a target.
 struct QuestUseSeekDiag

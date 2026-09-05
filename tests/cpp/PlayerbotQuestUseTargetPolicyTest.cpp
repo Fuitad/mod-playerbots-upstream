@@ -10,6 +10,7 @@
 
 #include <algorithm>
 
+#include "Ai/World/Rpg/QuestGossipProvokePolicy.h"
 #include "Ai/World/Rpg/QuestPickPocketPolicy.h"
 #include "Ai/World/Rpg/QuestUseTargetPolicy.h"
 #include "gtest/gtest.h"
@@ -310,4 +311,31 @@ TEST(PlayerbotQuestUseTargetPolicyTest, CleansingTheScarCastsAnyPowerWordFortitu
     EXPECT_NE(std::find(spells.begin(), spells.end(), 1243u), spells.end());
     EXPECT_NE(std::find(spells.begin(), spells.end(), 48161u), spells.end());
     EXPECT_TRUE(QuestUseSpellsForQuest(9490).empty());
+}
+
+TEST(PlayerbotQuestUseTargetPolicyTest, AFriendlySourceIsTalkedToThenShadowedUntilItTurnsHostile)
+{
+    // Astor Hadren (6497): his script's gossip-select sits on submenu 125 option 0.
+    std::optional<QuestGossipProvokeOption> const astor = FindQuestGossipProvokeOption({{125, 0}});
+    ASSERT_TRUE(astor.has_value());
+    EXPECT_EQ(astor->menu, 125u);
+    EXPECT_EQ(astor->option, 0u);
+    // A creature with no gossip-select event is not a provoke target, whatever else it does.
+    EXPECT_FALSE(FindQuestGossipProvokeOption({}).has_value());
+
+    // Never talked to, alive and green: talk.
+    EXPECT_EQ(NextQuestGossipProvokeStep(true, false, false, 0), QuestGossipProvokeStep::Provoke);
+    // Astor turns at once: fight, whether or not the bot remembers talking.
+    EXPECT_EQ(NextQuestGossipProvokeStep(true, true, true, 500), QuestGossipProvokeStep::Fight);
+    EXPECT_EQ(NextQuestGossipProvokeStep(true, true, false, 0), QuestGossipProvokeStep::Fight);
+    // Anvilward (8483) walks about 90 s and pauses 17.5 s before he sets faction 24: shadow him.
+    EXPECT_EQ(NextQuestGossipProvokeStep(true, false, true, 90 * 1000), QuestGossipProvokeStep::Shadow);
+    EXPECT_EQ(NextQuestGossipProvokeStep(true, false, true, QUEST_GOSSIP_PROVOKE_WAIT_MS - 1),
+              QuestGossipProvokeStep::Shadow);
+    // Past the wait the script did not take; stop following a green NPC around the road.
+    EXPECT_EQ(NextQuestGossipProvokeStep(true, false, true, QUEST_GOSSIP_PROVOKE_WAIT_MS),
+              QuestGossipProvokeStep::Unavailable);
+    // Dead is dead.
+    EXPECT_EQ(NextQuestGossipProvokeStep(false, true, true, 0), QuestGossipProvokeStep::Unavailable);
+    EXPECT_STREQ(QuestUseModeName(QuestUseMode::GossipProvoke), "gossip");
 }

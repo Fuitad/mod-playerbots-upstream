@@ -43,6 +43,7 @@
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
 #include "GossipDef.h"
+#include "Ai/World/Rpg/QuestGossipProvokePolicy.h"
 // PLB-LOCAL(quest-abandon-probe): GameObject facts for the GOLOOT diagnostic line.
 #include "GameObject.h"
 #include "IVMapMgr.h"
@@ -1223,6 +1224,46 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                     return cast ? ForceToWait(1000) : true;
                 }
             }
+            // PLB-LOCAL BEGIN(quest-gossip-provoke): a friendly source that turns hostile once
+            // talked to. Provoke at talking distance, shadow him while his script runs, and hand
+            // him to the kill path the moment he cons hostile. See QuestGossipProvokePolicy.h.
+            if (useTarget.mode == QuestUseMode::GossipProvoke && useUnit)
+            {
+                std::optional<uint32> const provokedAgo = QuestGossipProvokedAgoMs(bot, useTarget.guid);
+                QuestGossipProvokeStep const step = NextQuestGossipProvokeStep(
+                    useUnit->IsAlive(), bot->IsHostileTo(useUnit), provokedAgo.has_value(), provokedAgo.value_or(0));
+                if (step == QuestGossipProvokeStep::Fight)
+                {
+                    // Hostile now: nothing to use. Fall out of the use seek so the grind and loot
+                    // strategies take him like any other quest creature.
+                }
+                else if (step == QuestGossipProvokeStep::Shadow)
+                {
+                    if (bot->GetDistance(useUnit) > QUEST_GOSSIP_SHADOW_DISTANCE)
+                        (void)MoveWorldObjectTo(useTarget.guid, QUEST_GOSSIP_SHADOW_DISTANCE);
+                    return true;
+                }
+                else if (step == QuestGossipProvokeStep::Unavailable)
+                    return true;
+                else if (bot->GetDistance(useUnit) > QUEST_GOSSIP_TALK_DISTANCE)
+                {
+                    (void)MoveWorldObjectTo(useTarget.guid, QUEST_GOSSIP_TALK_DISTANCE);
+                    return true;
+                }
+                else if (EngageQuestUseTarget(botAI, useTarget))
+                {
+                    QuestStayUseTracker::RecordAttempt(bot);
+                    LOG_DEBUG("playerbots", "[QuestProbe] {} QGOSSIP quest {} obj {} npc {} menu {} option {}",
+                              bot->GetName(), questId, data.objectiveIdx, useTarget.entry, useTarget.gossipMenu,
+                              useTarget.gossipOption);
+                    return ForceToWait(2000);
+                }
+                else
+                    return true;
+            }
+            // PLB-LOCAL END(quest-gossip-provoke)
+            if (useTarget.mode != QuestUseMode::GossipProvoke)
+            {
             // PLB-LOCAL(quest-use-range): the tool is used from its own range, not from arm's
             // length. See QuestUseEngageDistance.
             SpellInfo const* useSpell = useTarget.useSpellId ? sSpellMgr->GetSpellInfo(useTarget.useSpellId) : nullptr;
@@ -1254,6 +1295,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 // Let the use land (cast time, credit, respawn state) before the next decision.
                 return ForceToWait(2000);
             }
+            }  // PLB-LOCAL(quest-gossip-provoke): end of the tool-use branch
         }
     }
     // PLB-LOCAL END(quest-use-target)
