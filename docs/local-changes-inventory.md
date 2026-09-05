@@ -953,11 +953,11 @@ Content fingerprint: `6fcdb6a8aa9b698a`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenanceActions.cpp`
-Content fingerprint: `58ec40d09779b517`.
+Content fingerprint: `eeacb7471125f2eb`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenanceActions.h`
-Content fingerprint: `5304f784cc6fd94b`.
+Content fingerprint: `08b831d399727bd3`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenancePolicy.cpp`
@@ -965,7 +965,7 @@ Content fingerprint: `6565b7d799661f06`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenancePolicy.h`
-Content fingerprint: `1c151c4efb520cf5`.
+Content fingerprint: `f8d32d13432f4229`.
 Banner: covered.
 
 ### `src/Ai/Base/Strategy/RandomBotMaintenanceStrategy.cpp`
@@ -1253,7 +1253,7 @@ Content fingerprint: `1574e57bed9caf63`.
 Banner: covered.
 
 ### `tests/cpp/RandomBotMaintenancePolicyTest.cpp`
-Content fingerprint: `18f342fb575801fb`.
+Content fingerprint: `b2c196f500b53c47`.
 Banner: covered.
 
 ### `tests/cpp/RandomPlayerbotAdmissionTest.cpp`

@@ -165,6 +165,44 @@ inline constexpr std::uint32_t VENDOR_BAG_SPACE_URGENT_PERCENT = 80;
     return hasVendorTrash && !forcedTripInFlight;
 }
 
+/*
+ * The repair floor stipend.
+ *
+ * A bot at zero copper with broken gear has no way back: repairs need coin, coin comes from quest
+ * turn-ins and grey loot, and the same bot that cannot repair is the one that finishes no quests.
+ * Colina, 2026-09-05, level 13 for 14.6 hours, 0c, four broken pieces, five "unaffordable" repair
+ * visits in half an hour. Pierre: implement a floor stipend, and watch how often it triggers so the
+ * bots do not stop earning because they rely on it.
+ *
+ * Deliberately stingy: only a bot with a broken item (not merely worn gear), only when its purse
+ * is under STIPEND_PURSE_CEILING, only the shortfall up to STIPEND_MAX_COPPER, and at most once
+ * per STIPEND_COOLDOWN_MS for that bot. Every grant is logged with the bot's running grant count
+ * so the dashboard can count grants per window and repeat recipients since restart.
+ */
+inline constexpr std::uint32_t STIPEND_PURSE_CEILING = 500;
+inline constexpr std::uint32_t STIPEND_MAX_COPPER = 2000;
+inline constexpr std::uint32_t STIPEND_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+
+struct StipendFacts
+{
+    bool hasBrokenEquipment = false;
+    // STIPEND_COOLDOWN_MS has passed since this bot's last grant, or it never had one.
+    bool cooldownElapsed = false;
+    std::uint32_t purseCopper = 0;
+    std::uint32_t repairCostCopper = 0;
+};
+
+// Copper to grant now; zero means no stipend.
+[[nodiscard]] inline std::uint32_t StipendAmount(StipendFacts const& facts)
+{
+    if (!facts.hasBrokenEquipment || !facts.cooldownElapsed || facts.purseCopper > STIPEND_PURSE_CEILING)
+        return 0;
+    if (facts.repairCostCopper <= facts.purseCopper)
+        return 0;
+    std::uint32_t const shortfall = facts.repairCostCopper - facts.purseCopper;
+    return shortfall < STIPEND_MAX_COPPER ? shortfall : STIPEND_MAX_COPPER;
+}
+
 [[nodiscard]] MountTier RequiredMountTier(std::uint32_t level, MountLevelThresholds const& thresholds);
 [[nodiscard]] std::uint32_t RequiredRidingSkill(MountTier tier);
 [[nodiscard]] std::uint32_t NextRidingSpell(std::uint32_t ridingSkill, MountTier targetTier);

@@ -309,6 +309,46 @@ TEST(RandomBotMaintenancePolicyTest, AClaimedErrandOwnsMovementUntilItEndsOrItsL
     EXPECT_FALSE(ErrandBlocksOtherMove(false, 0, false));
 }
 
+TEST(RandomBotMaintenancePolicyTest, TheFloorStipendCoversOnlyABrokeBotsShortfallOncePerCooldown)
+{
+    using playerbots::maintenance::STIPEND_MAX_COPPER;
+    using playerbots::maintenance::STIPEND_PURSE_CEILING;
+    using playerbots::maintenance::StipendAmount;
+    using playerbots::maintenance::StipendFacts;
+
+    // Colina, 2026-09-05: 0c, four broken pieces, repair 350c. She gets exactly the shortfall.
+    StipendFacts facts;
+    facts.hasBrokenEquipment = true;
+    facts.cooldownElapsed = true;
+    facts.purseCopper = 0;
+    facts.repairCostCopper = 350;
+    EXPECT_EQ(StipendAmount(facts), 350u);
+    // A purse that covers part of it gets only the rest.
+    facts.purseCopper = 100;
+    EXPECT_EQ(StipendAmount(facts), 250u);
+    // A purse that covers the repair gets nothing, however small.
+    facts.purseCopper = 350;
+    EXPECT_EQ(StipendAmount(facts), 0u);
+    // Worn but not broken gear is not a floor case.
+    facts.purseCopper = 0;
+    facts.hasBrokenEquipment = false;
+    EXPECT_EQ(StipendAmount(facts), 0u);
+    facts.hasBrokenEquipment = true;
+    // A bot with silver in its purse is not broke; it earns the rest.
+    facts.purseCopper = STIPEND_PURSE_CEILING + 1;
+    facts.repairCostCopper = STIPEND_PURSE_CEILING + 400;
+    EXPECT_EQ(StipendAmount(facts), 0u);
+    facts.purseCopper = STIPEND_PURSE_CEILING;
+    EXPECT_EQ(StipendAmount(facts), 400u);
+    // The grant is capped: a huge bill is covered in part and the bot repairs item by item.
+    facts.purseCopper = 0;
+    facts.repairCostCopper = STIPEND_MAX_COPPER * 3;
+    EXPECT_EQ(StipendAmount(facts), STIPEND_MAX_COPPER);
+    // One grant per cooldown, so the stipend cannot become an income.
+    facts.cooldownElapsed = false;
+    EXPECT_EQ(StipendAmount(facts), 0u);
+}
+
 TEST(RandomBotMaintenancePolicyTest, ALoneGreyDoesNotInterruptAForcedTrip)
 {
     using playerbots::maintenance::VENDOR_BAG_SPACE_URGENT_PERCENT;

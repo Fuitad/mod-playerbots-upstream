@@ -543,6 +543,25 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
             LOG_DEBUG("playerbots", "[Maintenance] {} repair: sold first at npc {} gray={} vendor={} money {}c",
                       bot->GetName(), targetEntry, soldGray, soldVendor, bot->GetMoney());
         }
+        // The floor stipend, after selling and before repairing, so the grant is spent in this
+        // same visit. See StipendAmount for the ceiling and cooldown.
+        {
+            StipendFacts facts;
+            facts.hasBrokenEquipment = HasBrokenEquipment(botAI);
+            facts.cooldownElapsed = !stipendAt || GetMSTimeDiffToNow(stipendAt) >= STIPEND_COOLDOWN_MS;
+            facts.purseCopper = bot->GetMoney();
+            facts.repairCostCopper = AI_VALUE(uint32, "repair cost");
+            if (uint32 const grant = StipendAmount(facts))
+            {
+                bot->ModifyMoney(static_cast<int32>(grant));
+                stipendAt = getMSTime();
+                ++stipendGrants;
+                LOG_INFO("playerbots",
+                         "[Maintenance] {} stipend: granted {}c, purse was {}c, repair {}c, grant {} for this bot "
+                         "since start",
+                         bot->GetName(), grant, facts.purseCopper, facts.repairCostCopper, stipendGrants);
+            }
+        }
         // The verdict reads the gear, not the repair action's return value, which is true whenever
         // a repairer is in reach (RandomBotMaintenancePolicy.h, RepairVisitVerdict). Weapons go
         // first on their own, and a weapon the purse cannot cover ends the visit before the generic
