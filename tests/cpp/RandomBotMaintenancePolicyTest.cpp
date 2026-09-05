@@ -367,7 +367,6 @@ TEST(RandomBotMaintenancePolicyTest, ALoneGreyDoesNotInterruptAForcedTrip)
 
 TEST(RandomBotMaintenancePolicyTest, AReadyHearthstoneIsSpentWheneverItShortensTheWalk)
 {
-    using playerbots::maintenance::HEARTH_SHORTCUT_MIN_SAVING_YARDS;
     using playerbots::maintenance::HearthShortcutFacts;
     using playerbots::maintenance::HearthShortcutWorthwhile;
 
@@ -378,13 +377,30 @@ TEST(RandomBotMaintenancePolicyTest, AReadyHearthstoneIsSpentWheneverItShortensT
     facts.botOnDestinationMap = true;
     facts.walkYards = 2000.0f;
     facts.homeYards = 400.0f;
-    // A vendor 2000 yards away on foot and 400 from the home inn: hearth.
+    // A vendor 2000 yards away on foot (286 s) and 400 from the home inn (cast 10 + exit 20 +
+    // 57 s): hearth.
     EXPECT_TRUE(HearthShortcutWorthwhile(facts));
 
-    // The saving has to cover the ten second cast and the walk out of the inn.
-    facts.homeYards = facts.walkYards - HEARTH_SHORTCUT_MIN_SAVING_YARDS;
+    // Live 2026-09-05 08:27: a 172 yard walk (25 s) with the inn 18 yards from the goal. The
+    // hearth route is 33 s, slower than walking, and it was cast under the old fixed floor.
+    facts.walkYards = 172.0f;
+    facts.homeYards = 18.0f;
+    EXPECT_FALSE(HearthShortcutWorthwhile(facts));
+
+    // The hearth route has to beat the walk by a full cast time. 300 to 100 yards: walk 43 s,
+    // hearth 44 s, no. 400 to 100 yards: walk 57 s, hearth 44 s, saves 13 s, yes.
+    facts.walkYards = 300.0f;
+    facts.homeYards = 100.0f;
+    EXPECT_FALSE(HearthShortcutWorthwhile(facts));
+    facts.walkYards = 400.0f;
     EXPECT_TRUE(HearthShortcutWorthwhile(facts));
-    facts.homeYards = facts.walkYards - HEARTH_SHORTCUT_MIN_SAVING_YARDS + 1.0f;
+
+    // And it has to cut the trip at least in half, so the stone is kept for the walks it changes.
+    // 800 to 400 yards is exactly half (and 27 s faster): yes. 800 to 401: no.
+    facts.walkYards = 800.0f;
+    facts.homeYards = 400.0f;
+    EXPECT_TRUE(HearthShortcutWorthwhile(facts));
+    facts.homeYards = 401.0f;
     EXPECT_FALSE(HearthShortcutWorthwhile(facts));
 
     // Home further from the goal than the bot already is: walk.

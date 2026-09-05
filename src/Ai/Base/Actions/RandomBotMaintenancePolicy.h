@@ -254,11 +254,34 @@ struct MountSpellEffects
  * the home inn is usually somewhere on the way. Pierre, 2026-09-05: any time the hearthstone is
  * available and could cut travel time, it should be used.
  *
- * The saving must cover the cast (ten seconds, roughly 70 yards of running) with margin for the
- * walk out of the inn, so a destination only slightly closer to home than to the bot is still
- * walked. A destination on the home map while the bot is on another map is always a saving.
+ * The decision is a time comparison, not a fixed yardage. Walking costs walkYards at run speed.
+ * Hearthing costs the cast, the walk out of the inn to open ground, and then homeYards at run
+ * speed. The stone is worth it when the hearth route is faster by at least the cast time again
+ * (so a wash never spends a thirty minute cooldown) AND it cuts the trip at least in half, which
+ * keeps the stone for the walks it changes: a 172 yard walk with the inn 18 yards from the goal
+ * saved 154 yards live on 2026-09-05 and was rightly called nonsense by Pierre. A destination on
+ * the home map while the bot is on another map is always a saving.
  */
-inline constexpr float HEARTH_SHORTCUT_MIN_SAVING_YARDS = 150.0f;
+// Player run speed on foot, yards per second (core: 7.0 base).
+inline constexpr float HEARTH_RUN_SPEED_YARDS_PER_SECOND = 7.0f;
+// The hearthstone cast time.
+inline constexpr float HEARTH_CAST_SECONDS = 10.0f;
+// Leaving the inn: stairs, doors, the innkeeper's room. Measured as a flat cost.
+inline constexpr float HEARTH_INN_EXIT_SECONDS = 20.0f;
+// The hearth route must beat the walk by this many seconds before the stone is spent.
+inline constexpr float HEARTH_MIN_TIME_SAVING_SECONDS = HEARTH_CAST_SECONDS;
+// And it must remove at least this share of the walk.
+inline constexpr float HEARTH_MIN_TRIP_SHARE_CUT = 0.5f;
+
+[[nodiscard]] inline float WalkSeconds(float yards)
+{
+    return yards / HEARTH_RUN_SPEED_YARDS_PER_SECOND;
+}
+
+[[nodiscard]] inline float HearthRouteSeconds(float homeYards)
+{
+    return HEARTH_CAST_SECONDS + HEARTH_INN_EXIT_SECONDS + WalkSeconds(homeYards);
+}
 
 struct HearthShortcutFacts
 {
@@ -284,7 +307,13 @@ struct HearthShortcutFacts
         return false;
     if (!facts.botOnDestinationMap)
         return true;
-    return facts.walkYards - facts.homeYards >= HEARTH_SHORTCUT_MIN_SAVING_YARDS;
+    if (facts.homeYards >= facts.walkYards)
+        return false;
+    float const walk = WalkSeconds(facts.walkYards);
+    float const hearth = HearthRouteSeconds(facts.homeYards);
+    if (walk - hearth < HEARTH_MIN_TIME_SAVING_SECONDS)
+        return false;
+    return (facts.walkYards - facts.homeYards) >= HEARTH_MIN_TRIP_SHARE_CUT * facts.walkYards;
 }
 }  // namespace playerbots::maintenance
 

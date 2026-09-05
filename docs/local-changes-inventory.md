@@ -965,7 +965,7 @@ Content fingerprint: `6565b7d799661f06`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenancePolicy.h`
-Content fingerprint: `f8d32d13432f4229`.
+Content fingerprint: `e02f626e5a0d0b73`.
 Banner: covered.
 
 ### `src/Ai/Base/Strategy/RandomBotMaintenanceStrategy.cpp`
@@ -1253,7 +1253,7 @@ Content fingerprint: `1574e57bed9caf63`.
 Banner: covered.
 
 ### `tests/cpp/RandomBotMaintenancePolicyTest.cpp`
-Content fingerprint: `b2c196f500b53c47`.
+Content fingerprint: `7c1e8d4294239a30`.
 Banner: covered.
 
 ### `tests/cpp/RandomPlayerbotAdmissionTest.cpp`
