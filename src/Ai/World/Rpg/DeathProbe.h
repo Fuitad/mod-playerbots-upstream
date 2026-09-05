@@ -22,6 +22,7 @@
 
 #include "Ai/Base/Actions/DeathRecoveryPolicy.h"
 #include "Ai/World/Rpg/CampPullPolicy.h"
+#include "Ai/World/Rpg/FightLedgers.h"
 #include "Ai/World/Rpg/QuestDeathCooldown.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
 #include "Creature.h"
@@ -117,6 +118,17 @@ public:
             LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-COOLDOWN quest {} deaths {} blamed {} stay ended",
                       player->GetName(), questId, record.deaths, QuestStayLostToDeaths(record.deaths));
         }
+        // PLB-LOCAL(fight-report): what the last fight looked like. See FightReportPolicy.h.
+        {
+            FightLedger const fight = FightLedgers::Snapshot(guidLow);
+            LOG_DEBUG("playerbots",
+                      "[DeathProbe] {} FIGHT secs {} hits {} dealt {} taken {} actions ok {} fail {} topfail {} "
+                      "verdict {}",
+                      player->GetName(), fight.startMs ? GetMSTimeDiffToNow(fight.startMs) / 1000 : 0, fight.hits,
+                      fight.dealt, fight.taken, fight.actionsOk, fight.actionsFailed, TopFightFailure(fight),
+                      FightVerdictName(ClassifyFight(fight)));
+            FightLedgers::Close(guidLow);
+        }
         // OnPlayerKilledByCreature runs before this later corpse transition and consumes the
         // engagement for creature deaths. Clear anything left by an environmental death here.
         _firstEngagement.erase(guidLow);
@@ -130,6 +142,9 @@ public:
     {
         if (!player || !enemy || !GET_PLAYERBOT_AI(player) || !sRandomPlayerbotMgr.IsRandomBot(player))
             return;
+
+        // PLB-LOCAL(fight-report): the ledger opens with the fight and closes with it.
+        FightLedgers::Open(player->GetGUID().GetCounter(), getMSTime());
 
         time_t const now = time(nullptr);
         FirstEngagement& held = _firstEngagement[player->GetGUID().GetCounter()];
@@ -149,6 +164,8 @@ public:
         if (!player || !ShouldClearEngagementOnLeaveCombat(player->IsAlive()))
             return;
         _firstEngagement.erase(player->GetGUID().GetCounter());
+        // PLB-LOCAL(fight-report): a fight the bot survived needs no report.
+        FightLedgers::Close(player->GetGUID().GetCounter());
     }
 
     void OnPlayerKilledByCreature(Creature* killer, Player* killed) override
@@ -189,6 +206,28 @@ public:
 private:
     std::unordered_map<uint32, int32> _pendingKillerLevelGap;
     std::unordered_map<ObjectGuid::LowType, FirstEngagement> _firstEngagement;
+};
+
+// PLB-LOCAL(fight-report): damage dealt and taken by random bots, into the open fight ledger.
+// Registered next to DeathProbeScript; the ledger is opened by the player combat hooks above.
+class FightDamageProbeScript : public UnitScript
+{
+public:
+    FightDamageProbeScript() : UnitScript("FightDamageProbeScript", true, {UNITHOOK_ON_DAMAGE}) {}
+
+    void OnDamage(Unit* attacker, Unit* victim, uint32& damage) override
+    {
+        if (attacker && attacker->IsPlayer() && IsTrackedBot(attacker->ToPlayer()))
+            FightLedgers::Dealt(attacker->GetGUID().GetCounter(), damage);
+        if (victim && victim->IsPlayer() && IsTrackedBot(victim->ToPlayer()))
+            FightLedgers::Taken(victim->GetGUID().GetCounter(), damage);
+    }
+
+private:
+    static bool IsTrackedBot(Player* player)
+    {
+        return player && GET_PLAYERBOT_AI(player) && sRandomPlayerbotMgr.IsRandomBot(player);
+    }
 };
 
 #endif

@@ -10,6 +10,7 @@
 #include "Action.h"
 // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
 #include "Bot/Extension/PlayerbotExtension.h"
+#include "Ai/World/Rpg/FightLedgers.h"
 #include "Event.h"
 #include "PerfMonitor.h"
 #include "Playerbots.h"
@@ -614,6 +615,11 @@ bool Engine::ListenAndExecute(Action* action, Event event)
     // PLB-LOCAL(a072e78abf6c): refactor: extract custom playerbot implementations
     std::string const actionName = action->getName();
     GetPlayerbotExtensionRegistry().OnActionExecuted(botAI, actionName, actionExecuted, GetTimeMS().count());
+    // PLB-LOCAL(fight-report): combat-time action results feed the death fight report
+    // (Ai/World/Rpg/FightReportPolicy.h). The ledger only exists while a fight is open, so an
+    // out-of-combat action is a cheap miss.
+    if (Player* bot = botAI->GetBot(); bot && bot->IsInCombat())
+        FightLedgers::Action(bot->GetGUID().GetCounter(), actionName, actionExecuted);
     return actionExecuted;
 }
 

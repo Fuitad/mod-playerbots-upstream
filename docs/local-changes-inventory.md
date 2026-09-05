@@ -6,7 +6,7 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **101**.
+Local only files: **103**.
 Upstream files changed: **74**.
 Regions: **574**. Covered inline: **547**. Missing markers: **0**.
 
@@ -517,10 +517,10 @@ Content fingerprint: `676b0d3a127856a1`.
 1. current 82-90; base boundary after line 57: covered.
 
 ### `src/Bot/Engine/Engine.cpp`
-Content fingerprint: `3e0f27ca2c22f16e`.
+Content fingerprint: `fad3c9cc833e2b1c`.
 2 region(s). Header: current.
-1. current 12-12; base boundary after line 8: covered.
-1. current 615-616; base boundary after line 609: covered.
+1. current 12-13; base boundary after line 8: covered.
+1. current 616-622; base boundary after line 609: covered.
 
 ### `src/Bot/Engine/ExternalEventHelper.cpp`
 Content fingerprint: `2775c851e8e759b0`.
@@ -850,7 +850,7 @@ Content fingerprint: `97e2fc1833c42cd1`.
 1. current 417-418; base boundary after line 411: covered.
 
 ### `src/Script/Playerbots.cpp`
-Content fingerprint: `221b8b5d1db1b216`.
+Content fingerprint: `700bb11c045c72ac`.
 9 region(s). Header: current.
 1. current 12-12; base boundary after line 8: covered.
 1. current 19-19; base boundary after line 13: covered.
@@ -860,7 +860,7 @@ Content fingerprint: `221b8b5d1db1b216`.
 1. current 101-109; base 69-80: covered.
 1. current 183-190; base boundary after line 153: covered.
 1. current 408-408; base boundary after line 369: covered.
-1. current 565-567; base boundary after line 524: covered.
+1. current 565-569; base boundary after line 524: covered.
 
 ### `src/Script/WorldThr/PlayerbotOperations.h`
 Content fingerprint: `5b4178f774dea3e2`.
@@ -1041,7 +1041,15 @@ Content fingerprint: `a68bd0649de65f00`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/DeathProbe.h`
-Content fingerprint: `e84f0e218f99b99d`.
+Content fingerprint: `5edc2762c62be07f`.
+Banner: covered.
+
+### `src/Ai/World/Rpg/FightLedgers.h`
+Content fingerprint: `7aad516de476f145`.
+Banner: covered.
+
+### `src/Ai/World/Rpg/FightReportPolicy.h`
+Content fingerprint: `27507abbb25b1d25`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/MoveFarStuckPolicy.h`
@@ -1201,7 +1209,7 @@ Content fingerprint: `149f25ac0c44929d`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotMoveFarStuckPolicyTest.cpp`
-Content fingerprint: `5713f92b8f2edb21`.
+Content fingerprint: `02899829db3224a8`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`

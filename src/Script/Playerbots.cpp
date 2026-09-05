@@ -565,6 +565,8 @@ void AddPlayerbotsScripts()
     new QuestStayKillProbeScript();
     // PLB-LOCAL(death-probe): temporary diagnostic registration, removed with the probe.
     new DeathProbeScript();
+    // PLB-LOCAL(fight-report): damage ledger behind the death fight report.
+    new FightDamageProbeScript();
     new PlayerbotsMiscScript();
     new PlayerbotsServerScript();
     new PlayerbotsWorldScript();

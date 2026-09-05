@@ -10,6 +10,7 @@
 
 #include "Ai/Base/Actions/CombatMovementPolicy.h"
 #include "Ai/Base/Trigger/CombatStuckPolicy.h"
+#include "Ai/World/Rpg/FightReportPolicy.h"
 #include "Ai/World/Rpg/MoveFarStuckPolicy.h"
 #include "gtest/gtest.h"
 
@@ -131,4 +132,48 @@ TEST(PlayerbotMoveFarStuckPolicyTest, TheThresholdsAreConfigurable)
     MoveFarStuckFacts strict = Sample(3.0f, 120 * 1000);
     strict.resetRadius = 1.0f;
     EXPECT_EQ(MoveFarStuckVerdict::Resample, EvaluateMoveFarStuck(strict));
+}
+
+TEST(PlayerbotFightReportPolicyTest, ADeathIsClassifiedByWhetherTheBotEverFoughtBack)
+{
+    // Washezeka, 2026-09-05: 155 seconds in combat, every action failing, no hit landed.
+    FightLedger noContact;
+    noContact.startMs = 1000;
+    for (int i = 0; i < 10; ++i)
+    {
+        NoteFightAction(noContact, "reach melee", false);
+        NoteFightAction(noContact, "melee", false);
+    }
+    NoteFightAction(noContact, "melee", false);
+    NoteFightDamageTaken(noContact, 400);
+    EXPECT_EQ(ClassifyFight(noContact), FightVerdict::NoContact);
+    EXPECT_EQ(TopFightFailure(noContact), "melee");
+    EXPECT_EQ(noContact.actionsFailed, 21u);
+    EXPECT_EQ(noContact.actionsOk, 0u);
+
+    // A fight that was answered but lost three to one is the bot being outdamaged.
+    FightLedger outdamaged;
+    outdamaged.startMs = 1000;
+    NoteFightDamageDealt(outdamaged, 50);
+    NoteFightDamageDealt(outdamaged, 50);
+    NoteFightDamageTaken(outdamaged, 300);
+    NoteFightAction(outdamaged, "melee", true);
+    EXPECT_EQ(outdamaged.hits, 2u);
+    EXPECT_EQ(ClassifyFight(outdamaged), FightVerdict::Outdamaged);
+    EXPECT_EQ(TopFightFailure(outdamaged), "none");
+
+    // Dealt 200, took 250: a fight it could have won.
+    FightLedger lost;
+    lost.startMs = 1000;
+    NoteFightDamageDealt(lost, 200);
+    NoteFightDamageTaken(lost, 250);
+    EXPECT_EQ(ClassifyFight(lost), FightVerdict::LostExchange);
+
+    // Nothing is counted against a closed ledger: damage outside a fight is not a fight.
+    FightLedger closed;
+    NoteFightDamageDealt(closed, 100);
+    NoteFightAction(closed, "melee", true);
+    EXPECT_EQ(closed.hits, 0u);
+    EXPECT_EQ(closed.actionsOk, 0u);
+    EXPECT_STREQ(FightVerdictName(FightVerdict::NoContact), "nocontact");
 }
