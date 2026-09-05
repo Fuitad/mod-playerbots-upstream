@@ -301,6 +301,26 @@ struct HearthShortcutFacts
     float homeYards = 0.0f;
 };
 
+/*
+ * A cast the caller reports as sent is not a cast that landed. Live on 2026-09-05 09:00 two
+ * druids in a form that blocks item use had the "hearthstone" action succeed every ten seconds
+ * for a quarter of an hour, 143 log lines between them, with the stone never on cooldown. The
+ * cooldown is the only proof; until it appears, attempts are spaced a minute apart and capped,
+ * after which the bot walks for the length of the stone's own cooldown.
+ */
+inline constexpr std::uint32_t HEARTH_RETRY_MS = 60 * 1000;
+inline constexpr std::uint32_t HEARTH_MAX_ATTEMPTS = 3;
+inline constexpr std::uint32_t HEARTH_GIVE_UP_MS = 30 * 60 * 1000;
+
+[[nodiscard]] inline bool HearthAttemptAllowed(std::uint32_t attemptsWithoutCooldown, std::uint32_t sinceLastAttemptMs)
+{
+    if (attemptsWithoutCooldown == 0)
+        return true;
+    if (attemptsWithoutCooldown >= HEARTH_MAX_ATTEMPTS)
+        return sinceLastAttemptMs >= HEARTH_GIVE_UP_MS;
+    return sinceLastAttemptMs >= HEARTH_RETRY_MS;
+}
+
 [[nodiscard]] inline bool HearthShortcutWorthwhile(HearthShortcutFacts const& facts)
 {
     if (!facts.hearthReady || !facts.freeToCast || !facts.destinationOnHomeMap)

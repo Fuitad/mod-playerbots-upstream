@@ -464,6 +464,19 @@ bool playerbots::maintenance::HearthstoneReady(Player* bot)
     return !bot->HasSpellCooldown(HEARTHSTONE_SPELL_ID);
 }
 
+namespace
+{
+// Hearth shortcut attempts per bot not yet proven by the stone's cooldown
+// (RandomBotMaintenancePolicy.h, HearthAttemptAllowed). Cleared the moment the cooldown shows.
+struct HearthAttempts
+{
+    uint32 count = 0;
+    uint32 lastMs = 0;
+};
+std::mutex hearthAttemptMutex;
+std::unordered_map<ObjectGuid::LowType, HearthAttempts> hearthAttempts;
+}  // namespace
+
 bool playerbots::maintenance::HearthShortcutFor(Player* bot, WorldPosition const& destination)
 {
     if (!bot || destination == WorldPosition())
@@ -471,6 +484,13 @@ bool playerbots::maintenance::HearthShortcutFor(Player* bot, WorldPosition const
 
     HearthShortcutFacts facts;
     facts.hearthReady = HearthstoneReady(bot);
+    if (!facts.hearthReady)
+    {
+        // The cooldown is the proof a cast landed; the attempt record has done its job.
+        std::lock_guard<std::mutex> lock(hearthAttemptMutex);
+        hearthAttempts.erase(bot->GetGUID().GetCounter());
+        return false;
+    }
     facts.freeToCast = bot->IsAlive() && !bot->IsInCombat() && !bot->IsInFlight() && !bot->IsNonMeleeSpellCast(false);
     facts.destinationOnHomeMap = destination.GetMapId() == bot->m_homebindMapId;
     facts.botOnDestinationMap = destination.GetMapId() == bot->GetMapId();
@@ -479,9 +499,31 @@ bool playerbots::maintenance::HearthShortcutFor(Player* bot, WorldPosition const
     if (!HearthShortcutWorthwhile(facts))
         return false;
 
+    uint32 attempt = 0;
+    {
+        std::lock_guard<std::mutex> lock(hearthAttemptMutex);
+        HearthAttempts& record = hearthAttempts[bot->GetGUID().GetCounter()];
+        uint32 const sinceLast = record.lastMs ? GetMSTimeDiffToNow(record.lastMs) : 0;
+        if (!HearthAttemptAllowed(record.count, sinceLast))
+            return false;
+        if (record.count >= HEARTH_MAX_ATTEMPTS)
+            record.count = 0;
+        record.lastMs = getMSTime();
+        attempt = ++record.count;
+    }
+
+    // A druid in cat or bear form cannot use an item; the cast is sent and silently refused.
+    // Live 2026-09-05 09:00: two druids, 143 refused casts between them. Drop the form first.
+    if (bot->GetShapeshiftForm() != FORM_NONE)
+        bot->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT);
+
     LOG_INFO("playerbots",
-             "[Maintenance] {} hearthing to cut travel: destination {:.0f} yd away on foot, {:.0f} yd from home",
-             bot->GetName(), facts.botOnDestinationMap ? facts.walkYards : -1.0f, facts.homeYards);
+             "[Maintenance] {} hearthing to cut travel: destination {:.0f} yd away on foot, {:.0f} yd from home, "
+             "attempt {}",
+             bot->GetName(), facts.botOnDestinationMap ? facts.walkYards : -1.0f, facts.homeYards, attempt);
+    if (attempt >= HEARTH_MAX_ATTEMPTS)
+        LOG_WARN("playerbots", "[Maintenance] {} hearth never landed after {} attempts; walking for {} min",
+                 bot->GetName(), attempt, HEARTH_GIVE_UP_MS / 60000);
     return true;
 }
 

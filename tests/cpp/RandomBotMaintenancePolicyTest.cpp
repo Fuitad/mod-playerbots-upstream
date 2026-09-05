@@ -365,6 +365,26 @@ TEST(RandomBotMaintenancePolicyTest, ALoneGreyDoesNotInterruptAForcedTrip)
     EXPECT_FALSE(VendorTripWanted(VENDOR_BAG_SPACE_URGENT_PERCENT, false, true));
 }
 
+TEST(RandomBotMaintenancePolicyTest, AHearthThatNeverLandsIsRetriedAMinuteApartThreeTimesThenDropped)
+{
+    using playerbots::maintenance::HEARTH_GIVE_UP_MS;
+    using playerbots::maintenance::HEARTH_MAX_ATTEMPTS;
+    using playerbots::maintenance::HEARTH_RETRY_MS;
+    using playerbots::maintenance::HearthAttemptAllowed;
+
+    // Coyahneblahe, 2026-09-05 09:00: the action reported success every ten seconds and the
+    // stone never went on cooldown. The first attempt is free.
+    EXPECT_TRUE(HearthAttemptAllowed(0, 0));
+    // Ten seconds later, with no cooldown showing, no.
+    EXPECT_FALSE(HearthAttemptAllowed(1, 10 * 1000));
+    EXPECT_TRUE(HearthAttemptAllowed(1, HEARTH_RETRY_MS));
+    EXPECT_TRUE(HearthAttemptAllowed(HEARTH_MAX_ATTEMPTS - 1, HEARTH_RETRY_MS));
+    // After the cap, a minute is not enough; the stone's own cooldown length is.
+    EXPECT_FALSE(HearthAttemptAllowed(HEARTH_MAX_ATTEMPTS, HEARTH_RETRY_MS));
+    EXPECT_FALSE(HearthAttemptAllowed(HEARTH_MAX_ATTEMPTS, HEARTH_GIVE_UP_MS - 1));
+    EXPECT_TRUE(HearthAttemptAllowed(HEARTH_MAX_ATTEMPTS, HEARTH_GIVE_UP_MS));
+}
+
 TEST(RandomBotMaintenancePolicyTest, AReadyHearthstoneIsSpentWheneverItShortensTheWalk)
 {
     using playerbots::maintenance::HearthShortcutFacts;
