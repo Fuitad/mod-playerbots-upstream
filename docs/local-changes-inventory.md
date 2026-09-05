@@ -444,46 +444,46 @@ Content fingerprint: `98e1951a25625864`.
 1. current 1341-1348; base boundary after line 619: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp`
-Content fingerprint: `b62d30d9bc58c62f`.
+Content fingerprint: `2d249bb4df93fa9a`.
 38 region(s). Header: current.
-1. current 10-30; base boundary after line 7: covered.
-1. current 47-48; base boundary after line 21: covered.
-1. current 71-124; base boundary after line 43: covered.
-1. current 278-283; base boundary after line 194: covered.
-1. current 325-329; base boundary after line 235: covered.
-1. current 646-649; base boundary after line 550: covered.
-1. current 871-929; base boundary after line 770: covered.
-1. current 946-952; base boundary after line 786: covered.
-1. current 1017-1020; base boundary after line 849: covered.
-1. current 1025-1031; base 853-860: covered.
-1. current 1035-1037; base 862-862: covered.
-1. current 1046-1051; base 870-871: covered.
-1. current 1086-1112; base boundary after line 904: covered.
-1. current 1133-1135; base boundary after line 922: covered.
-1. current 1139-1160; base 925-927: covered.
-1. current 1162-1174; base 929-931: covered.
-1. current 1182-1183; base 937-937: covered.
-1. current 1193-1193; base 945-945: covered.
-1. current 1208-1208; base boundary after line 958: covered.
-1. current 1236-1248; base boundary after line 985: covered.
-1. current 1343-1347; base boundary after line 1078: covered.
-1. current 1356-1365; base 1085-1085: covered.
-1. current 1405-1407; base boundary after line 1122: covered.
-1. current 1410-1410; base 1125-1125: covered.
-1. current 1420-1420; base 1135-1135: covered.
-1. current 1438-1442; base boundary after line 1150: covered.
-1. current 1453-1468; base 1160-1160: covered.
-1. current 1480-1480; base boundary after line 1169: covered.
-1. current 1483-1483; base 1172-1175: covered.
-1. current 1485-1486; base 1177-1177: covered.
-1. current 1520-1520; base 1208-1208: covered.
-1. current 1533-1533; base boundary after line 1219: covered.
-1. current 1537-1538; base boundary after line 1222: covered.
-1. current 1544-1545; base boundary after line 1227: covered.
-1. current 1557-1561; base boundary after line 1236: covered.
-1. current 1568-1573; base boundary after line 1241: covered.
-1. current 1585-1585; base boundary after line 1251: covered.
-1. current 1591-1600; base 1257-1257: covered.
+1. current 10-31; base boundary after line 7: covered.
+1. current 48-49; base boundary after line 21: covered.
+1. current 72-130; base boundary after line 43: covered.
+1. current 284-289; base boundary after line 194: covered.
+1. current 331-335; base boundary after line 235: covered.
+1. current 652-655; base boundary after line 550: covered.
+1. current 877-935; base boundary after line 770: covered.
+1. current 952-958; base boundary after line 786: covered.
+1. current 1023-1026; base boundary after line 849: covered.
+1. current 1031-1037; base 853-860: covered.
+1. current 1041-1043; base 862-862: covered.
+1. current 1052-1057; base 870-871: covered.
+1. current 1092-1118; base boundary after line 904: covered.
+1. current 1139-1141; base boundary after line 922: covered.
+1. current 1145-1166; base 925-927: covered.
+1. current 1168-1180; base 929-931: covered.
+1. current 1188-1189; base 937-937: covered.
+1. current 1199-1199; base 945-945: covered.
+1. current 1214-1214; base boundary after line 958: covered.
+1. current 1242-1254; base boundary after line 985: covered.
+1. current 1349-1353; base boundary after line 1078: covered.
+1. current 1362-1371; base 1085-1085: covered.
+1. current 1411-1413; base boundary after line 1122: covered.
+1. current 1416-1416; base 1125-1125: covered.
+1. current 1426-1426; base 1135-1135: covered.
+1. current 1444-1448; base boundary after line 1150: covered.
+1. current 1459-1474; base 1160-1160: covered.
+1. current 1486-1486; base boundary after line 1169: covered.
+1. current 1489-1489; base 1172-1175: covered.
+1. current 1491-1492; base 1177-1177: covered.
+1. current 1526-1526; base 1208-1208: covered.
+1. current 1539-1539; base boundary after line 1219: covered.
+1. current 1543-1544; base boundary after line 1222: covered.
+1. current 1550-1551; base boundary after line 1227: covered.
+1. current 1563-1567; base boundary after line 1236: covered.
+1. current 1574-1579; base boundary after line 1241: covered.
+1. current 1591-1591; base boundary after line 1251: covered.
+1. current 1597-1606; base 1257-1257: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.h`
 Content fingerprint: `0510058b90b89bca`.
@@ -953,11 +953,11 @@ Content fingerprint: `6fcdb6a8aa9b698a`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenanceActions.cpp`
-Content fingerprint: `adccf57ef8d6d88a`.
+Content fingerprint: `8616d65775a4de81`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenanceActions.h`
-Content fingerprint: `07a663b5588098fb`.
+Content fingerprint: `5304f784cc6fd94b`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenancePolicy.cpp`
@@ -965,7 +965,7 @@ Content fingerprint: `6565b7d799661f06`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/RandomBotMaintenancePolicy.h`
-Content fingerprint: `f45964971a8c54f6`.
+Content fingerprint: `e46e6ee7825411c5`.
 Banner: covered.
 
 ### `src/Ai/Base/Strategy/RandomBotMaintenanceStrategy.cpp`
@@ -1253,7 +1253,7 @@ Content fingerprint: `1574e57bed9caf63`.
 Banner: covered.
 
 ### `tests/cpp/RandomBotMaintenancePolicyTest.cpp`
-Content fingerprint: `e2a2be890cf544f3`.
+Content fingerprint: `52a853814b03589b`.
 Banner: covered.
 
 ### `tests/cpp/RandomPlayerbotAdmissionTest.cpp`

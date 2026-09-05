@@ -464,6 +464,27 @@ bool playerbots::maintenance::HearthstoneReady(Player* bot)
     return !bot->HasSpellCooldown(HEARTHSTONE_SPELL_ID);
 }
 
+bool playerbots::maintenance::HearthShortcutFor(Player* bot, WorldPosition const& destination)
+{
+    if (!bot || destination == WorldPosition())
+        return false;
+
+    HearthShortcutFacts facts;
+    facts.hearthReady = HearthstoneReady(bot);
+    facts.freeToCast = bot->IsAlive() && !bot->IsInCombat() && !bot->IsInFlight() && !bot->IsNonMeleeSpellCast(false);
+    facts.destinationOnHomeMap = destination.GetMapId() == bot->m_homebindMapId;
+    facts.botOnDestinationMap = destination.GetMapId() == bot->GetMapId();
+    facts.walkYards = bot->GetDistance(destination);
+    facts.homeYards = destination.GetExactDist(bot->m_homebindX, bot->m_homebindY, bot->m_homebindZ);
+    if (!HearthShortcutWorthwhile(facts))
+        return false;
+
+    LOG_INFO("playerbots",
+             "[Maintenance] {} hearthing to cut travel: destination {:.0f} yd away on foot, {:.0f} yd from home",
+             bot->GetName(), facts.botOnDestinationMap ? facts.walkYards : -1.0f, facts.homeYards);
+    return true;
+}
+
 bool playerbots::maintenance::NeedsVendor(PlayerbotAI* botAI)
 {
     if (!IsEligible(botAI))

@@ -308,4 +308,52 @@ TEST(RandomBotMaintenancePolicyTest, AClaimedErrandOwnsMovementUntilItEndsOrItsL
     // No errand, no yielding.
     EXPECT_FALSE(ErrandBlocksOtherMove(false, 0, false));
 }
+
+TEST(RandomBotMaintenancePolicyTest, AReadyHearthstoneIsSpentWheneverItShortensTheWalk)
+{
+    using playerbots::maintenance::HEARTH_SHORTCUT_MIN_SAVING_YARDS;
+    using playerbots::maintenance::HearthShortcutFacts;
+    using playerbots::maintenance::HearthShortcutWorthwhile;
+
+    HearthShortcutFacts facts;
+    facts.hearthReady = true;
+    facts.freeToCast = true;
+    facts.destinationOnHomeMap = true;
+    facts.botOnDestinationMap = true;
+    facts.walkYards = 2000.0f;
+    facts.homeYards = 400.0f;
+    // A vendor 2000 yards away on foot and 400 from the home inn: hearth.
+    EXPECT_TRUE(HearthShortcutWorthwhile(facts));
+
+    // The saving has to cover the ten second cast and the walk out of the inn.
+    facts.homeYards = facts.walkYards - HEARTH_SHORTCUT_MIN_SAVING_YARDS;
+    EXPECT_TRUE(HearthShortcutWorthwhile(facts));
+    facts.homeYards = facts.walkYards - HEARTH_SHORTCUT_MIN_SAVING_YARDS + 1.0f;
+    EXPECT_FALSE(HearthShortcutWorthwhile(facts));
+
+    // Home further from the goal than the bot already is: walk.
+    facts.homeYards = 3000.0f;
+    EXPECT_FALSE(HearthShortcutWorthwhile(facts));
+
+    // The bot is on another continent and the goal is on the home map: the stone is the way there,
+    // whatever the meaningless cross-map distance says.
+    facts.botOnDestinationMap = false;
+    facts.walkYards = 0.0f;
+    EXPECT_TRUE(HearthShortcutWorthwhile(facts));
+
+    // The goal is not on the home map: the stone cannot help.
+    facts.destinationOnHomeMap = false;
+    EXPECT_FALSE(HearthShortcutWorthwhile(facts));
+
+    // Stone on cooldown, or a cast that combat or a taxi would break: walk.
+    facts.destinationOnHomeMap = true;
+    facts.botOnDestinationMap = true;
+    facts.walkYards = 2000.0f;
+    facts.homeYards = 400.0f;
+    facts.hearthReady = false;
+    EXPECT_FALSE(HearthShortcutWorthwhile(facts));
+    facts.hearthReady = true;
+    facts.freeToCast = false;
+    EXPECT_FALSE(HearthShortcutWorthwhile(facts));
+}
 }  // namespace

@@ -184,6 +184,49 @@ struct MountSpellEffects
 // could swing once. Urgent needs (broken gear, bags too full to loot) still go immediately;
 // everything else keeps until the quest status ends.
 [[nodiscard]] bool DeferRoutineMaintenanceDuringQuest(bool doingQuest, bool urgent);
+
+/*
+ * Spend the hearthstone whenever it shortens a far walk.
+ *
+ * Until 2026-09-05 the only thing that ever cast a hearthstone was the repair errand, and only
+ * once the bot had broken gear and no repairer within walking range: zero casts in a full day of
+ * logs, while about 78 of 200 bots at any instant were walking to a vendor, an auctioneer or a
+ * quest across the map. Every bot carries the stone and rebinds at the inns it wanders past, so
+ * the home inn is usually somewhere on the way. Pierre, 2026-09-05: any time the hearthstone is
+ * available and could cut travel time, it should be used.
+ *
+ * The saving must cover the cast (ten seconds, roughly 70 yards of running) with margin for the
+ * walk out of the inn, so a destination only slightly closer to home than to the bot is still
+ * walked. A destination on the home map while the bot is on another map is always a saving.
+ */
+inline constexpr float HEARTH_SHORTCUT_MIN_SAVING_YARDS = 150.0f;
+
+struct HearthShortcutFacts
+{
+    // HearthstoneReady: the bot holds the stone and it is off cooldown.
+    bool hearthReady = false;
+    // Nothing that a ten second cast would break: alive, out of combat, not already casting, not on
+    // a taxi.
+    bool freeToCast = false;
+    // The destination lies on the home inn's map. Off that map the stone cannot help.
+    bool destinationOnHomeMap = false;
+    // The bot itself stands on the destination's map. When false, walkYards is meaningless and the
+    // hearth is the only way there.
+    bool botOnDestinationMap = false;
+    // Bot to destination, as the crow flies.
+    float walkYards = 0.0f;
+    // Home inn to destination, as the crow flies.
+    float homeYards = 0.0f;
+};
+
+[[nodiscard]] inline bool HearthShortcutWorthwhile(HearthShortcutFacts const& facts)
+{
+    if (!facts.hearthReady || !facts.freeToCast || !facts.destinationOnHomeMap)
+        return false;
+    if (!facts.botOnDestinationMap)
+        return true;
+    return facts.walkYards - facts.homeYards >= HEARTH_SHORTCUT_MIN_SAVING_YARDS;
+}
 }  // namespace playerbots::maintenance
 
 #endif

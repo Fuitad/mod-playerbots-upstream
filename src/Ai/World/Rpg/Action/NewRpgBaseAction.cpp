@@ -22,6 +22,7 @@
 #include "Ai/World/Rpg/QuestStayAnchorPolicy.h"
 // PLB-LOCAL(maintenance-errand): movement yields to a claimed repair or vendor trip.
 #include "Ai/Base/Actions/MaintenanceErrand.h"
+#include "Ai/Base/Actions/RandomBotMaintenanceActions.h"
 #include "Bag.h"
 #include "Item.h"
 #include "ItemUsageValue.h"
@@ -73,6 +74,11 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     // it ends or its lease lapses; every other destination yields. See MaintenanceErrandPolicy.h.
     if (playerbots::maintenance::ErrandBlocksMove(bot, dest))
         return false;
+
+    // PLB-LOCAL(hearth-shortcut): a ready hearthstone that shortens the walk is cast instead of
+    // walking; the next tick plans the rest of the way from the inn. See HearthShortcutWorthwhile.
+    if (playerbots::maintenance::HearthShortcutFor(bot, dest))
+        return botAI->DoSpecificAction("hearthstone", Event("move far"), true);
 
     // PLB-LOCAL(movefar-stuck) BEGIN: rescue a bot that no single destination can rescue.
     // The stuck tracker further down is keyed on `dest` and is cleared by the

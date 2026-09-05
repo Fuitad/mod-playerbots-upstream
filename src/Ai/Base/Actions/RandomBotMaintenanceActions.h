@@ -31,6 +31,9 @@ namespace playerbots::maintenance
 [[nodiscard]] bool DoingQuestNow(PlayerbotAI* botAI);
 [[nodiscard]] bool CriticallyFullBags(PlayerbotAI* botAI);
 [[nodiscard]] bool HearthstoneReady(Player* bot);
+// Whether hearthing now would shorten the walk to `destination` (HearthShortcutWorthwhile over the
+// bot's live state). The caller casts through the "hearthstone" action and re-plans from the inn.
+[[nodiscard]] bool HearthShortcutFor(Player* bot, WorldPosition const& destination);
 // The first item in the bags that starts a quest the bot should take right now.
 // Decision in QuestStartItemPolicy.h; null when nothing qualifies.
 [[nodiscard]] Item* FindUsableQuestStartItem(PlayerbotAI* botAI);
