@@ -24,9 +24,12 @@
 // (other map, beyond 1500y, other zone) are never worked and never removed. Measured live on
 // 2026-08-29: logs silt up toward the cap as bots outlevel content.
 //
-// The rule: a quest that is gray for the bot, no XP, by the core's own quest-gray test
-// (Player::GetQuestRate: questLevel <= Acore::XP::GetGrayLevel(botLevel)) is dropped at once.
-// A quest that is COMPLETE (ready to turn in) is never dropped: the turn-in still pays.
+// The rule: a quest is dropped once the bot has outleveled it by QUEST_DROP_LEVEL_MARGIN levels
+// (Pierre, 2026-09-05: "go with level +4"), or once it is gray by the core's own test
+// (Player::GetQuestRate: questLevel <= Acore::XP::GetGrayLevel(botLevel)), whichever comes first.
+// Below level 40 the margin fires first: a level 8 quest goes at bot level 12, where the core's
+// gray point is 14. A quest that is COMPLETE (ready to turn in) is never dropped: the turn-in
+// still pays.
 //
 // Until 2026-09-04 the drop also required the bot to have given up on the quest or to have no
 // reachable POI for it, so a gray quest the bot had simply never got round to stayed in the log
@@ -52,7 +55,7 @@ struct QuestDropFacts
 enum class QuestDropVerdict : uint8
 {
     Keep,
-    DropGray,
+    DropOutleveled,
     DropBlacklisted,
 };
 
@@ -63,14 +66,27 @@ enum class QuestDropVerdict : uint8
     return questLevel <= static_cast<int32>(Acore::XP::GetGrayLevel(botLevel));
 }
 
+// How far past a quest's level a bot may be before the quest is dropped. Pierre, 2026-09-05, on
+// 23 level 9 to 13 bots still carrying the level 8 Break a Few Eggs: four levels, one short of
+// the core's gray point at low levels. A scaling quest (level <= 0) never outlevels.
+inline constexpr int32 QUEST_DROP_LEVEL_MARGIN = 4;
+
+[[nodiscard]] inline bool QuestIsOutleveledFor(uint8 botLevel, int32 questLevel)
+{
+    if (questLevel <= 0)
+        return false;
+    return static_cast<int32>(botLevel) - questLevel >= QUEST_DROP_LEVEL_MARGIN ||
+           QuestIsGrayFor(botLevel, questLevel);
+}
+
 [[nodiscard]] inline QuestDropVerdict QuestDropDecision(QuestDropFacts const& facts)
 {
     if (facts.blacklisted)
         return QuestDropVerdict::DropBlacklisted;
     if (facts.complete)
         return QuestDropVerdict::Keep;
-    if (QuestIsGrayFor(facts.botLevel, facts.questLevel))
-        return QuestDropVerdict::DropGray;
+    if (QuestIsOutleveledFor(facts.botLevel, facts.questLevel))
+        return QuestDropVerdict::DropOutleveled;
     return QuestDropVerdict::Keep;
 }
 
@@ -78,8 +94,8 @@ enum class QuestDropVerdict : uint8
 {
     switch (verdict)
     {
-        case QuestDropVerdict::DropGray:
-            return "gray";
+        case QuestDropVerdict::DropOutleveled:
+            return "outleveled";
         case QuestDropVerdict::DropBlacklisted:
             return "blacklisted";
         default:

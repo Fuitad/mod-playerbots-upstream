@@ -67,15 +67,21 @@ TEST(PlayerbotQuestDropPolicyTest, AQuestStillDoableAtLevelIsNeverDropped)
     EXPECT_EQ(QuestDropDecision(Facts(30, 28, false)), QuestDropVerdict::Keep);
 }
 
-TEST(PlayerbotQuestDropPolicyTest, AGrayQuestIsDroppedTheMomentItTurnsGray)
+TEST(PlayerbotQuestDropPolicyTest, AQuestIsDroppedFourLevelsPastItsLevel)
 {
-    // Pierre, 2026-09-04: a level 12 bot was still carrying a level 8 quest accepted two days
-    // earlier, and the old rule would have kept it until the bot gave up or lost the POI. Gray is
-    // the whole test now. The boundary is the core's: a level 8 quest goes gray at level 14
-    // (14 - 5 - 14/10 = 8), so at 13 it is kept and at 14 it is dropped.
-    EXPECT_EQ(QuestDropDecision(Facts(13, 8, false)), QuestDropVerdict::Keep);
-    EXPECT_EQ(QuestDropDecision(Facts(14, 8, false)), QuestDropVerdict::DropGray);
-    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false)), QuestDropVerdict::DropGray);
+    // Pierre, 2026-09-05: 23 bots at levels 9 to 13 still carried the level 8 Break a Few Eggs
+    // because the core's gray point for it is 14. The margin is four levels: a level 8 quest is
+    // kept at 11 and dropped at 12, two levels before it would be gray.
+    EXPECT_FALSE(QuestIsOutleveledFor(11, 8));
+    EXPECT_TRUE(QuestIsOutleveledFor(12, 8));
+    EXPECT_EQ(QuestDropDecision(Facts(11, 8, false)), QuestDropVerdict::Keep);
+    EXPECT_EQ(QuestDropDecision(Facts(12, 8, false)), QuestDropVerdict::DropOutleveled);
+    // Gray still drops on its own where the core's gray point comes first: at 80 a level 71
+    // quest is gray (80 - 9) although only nine levels below, and 9 >= 4 anyway; the two rules
+    // agree everywhere the margin is the smaller distance.
+    EXPECT_EQ(QuestDropDecision(Facts(30, 15, false)), QuestDropVerdict::DropOutleveled);
+    // A scaling quest never outlevels.
+    EXPECT_FALSE(QuestIsOutleveledFor(80, 0));
 }
 
 TEST(PlayerbotQuestDropPolicyTest, ABlacklistedQuestIsDroppedWhateverItsState)
@@ -121,7 +127,7 @@ TEST(PlayerbotQuestDropPolicyTest, TwoDeathsInOneStayEndIt)
 
 TEST(PlayerbotQuestDropPolicyTest, ReasonNamesFeedTheDropProbeLine)
 {
-    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropGray), "gray");
+    EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropOutleveled), "outleveled");
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::DropBlacklisted), "blacklisted");
     EXPECT_STREQ(QuestDropReasonName(QuestDropVerdict::Keep), "keep");
 }
