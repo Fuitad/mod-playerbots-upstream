@@ -106,6 +106,11 @@
         // (use the meat on a friendly creature after the drop lands) is outside every seek's
         // model. Pierre called the blacklist on 2026-09-04.
         case 11129:
+        // The Family and the Fishing Pole: fish up a Darkshore Grouper (item 12238) for Heldan
+        // Galesong. A fishing objective nothing in the quest seeks models; 16 carriers at levels
+        // 13 to 17 and 0 rewards on 2026-09-05. Pierre: blacklist 1141, it is similar to a
+        // Draenei quest, not necessary.
+        case 1141:
             return true;
         default:
             return false;
