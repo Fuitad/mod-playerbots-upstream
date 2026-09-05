@@ -30,6 +30,10 @@ struct FightLedger
 {
     // getMSTime() when the bot entered combat; zero when no fight is open.
     uint32 startMs = 0;
+    // Health percent when the fight opened. The first live lines on 2026-09-05 13:21 showed fights
+    // of 5 to 15 seconds with 60 to 200 damage dealt: a bot that starts a fight at a third of its
+    // health loses it before its actions matter.
+    uint32 startHealthPct = 0;
     // Landed hits and their damage, and damage taken, since the fight opened.
     uint32 hits = 0;
     uint32 dealt = 0;

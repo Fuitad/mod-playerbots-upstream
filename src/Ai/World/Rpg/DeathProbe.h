@@ -122,11 +122,11 @@ public:
         {
             FightLedger const fight = FightLedgers::Snapshot(guidLow);
             LOG_DEBUG("playerbots",
-                      "[DeathProbe] {} FIGHT secs {} hits {} dealt {} taken {} actions ok {} fail {} topfail {} "
-                      "verdict {}",
-                      player->GetName(), fight.startMs ? GetMSTimeDiffToNow(fight.startMs) / 1000 : 0, fight.hits,
-                      fight.dealt, fight.taken, fight.actionsOk, fight.actionsFailed, TopFightFailure(fight),
-                      FightVerdictName(ClassifyFight(fight)));
+                      "[DeathProbe] {} FIGHT secs {} hp {}% hits {} dealt {} taken {} actions ok {} fail {} "
+                      "topfail {} verdict {}",
+                      player->GetName(), fight.startMs ? GetMSTimeDiffToNow(fight.startMs) / 1000 : 0,
+                      fight.startHealthPct, fight.hits, fight.dealt, fight.taken, fight.actionsOk,
+                      fight.actionsFailed, TopFightFailure(fight), FightVerdictName(ClassifyFight(fight)));
             FightLedgers::Close(guidLow);
         }
         // OnPlayerKilledByCreature runs before this later corpse transition and consumes the
@@ -144,7 +144,7 @@ public:
             return;
 
         // PLB-LOCAL(fight-report): the ledger opens with the fight and closes with it.
-        FightLedgers::Open(player->GetGUID().GetCounter(), getMSTime());
+        FightLedgers::Open(player->GetGUID().GetCounter(), getMSTime(), static_cast<uint32>(player->GetHealthPct()));
 
         time_t const now = time(nullptr);
         FirstEngagement& held = _firstEngagement[player->GetGUID().GetCounter()];
