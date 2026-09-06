@@ -32,20 +32,29 @@ struct RecentDeathRecord
     uint32_t deathsInWindow = 0;
     uint32_t lastDeathMs = 0;
     int32_t lastKillerLevelGap = 0;
+    // No creature killed the bot: a fall, drowning, fatigue, lava. The corpse then lies where the
+    // world itself kills, so a body revive dies again on the spot. Teldrassil, 2026-09-06 09:05
+    // to 09:35: Zereelja and Aisibhirs fell off the tree edge after a path failure, the vertical
+    // cap set the ghost back onto the corpse mid-air or in the sea, and each died again at once
+    // (Tohsjhannih four times the afternoon before).
+    bool lastDeathEnvironmental = false;
 };
 
-inline bool RecoverAtHomebindAfterDeath(uint32_t deathsInWindow, int32_t killerLevelGap)
+inline bool RecoverAtHomebindAfterDeath(uint32_t deathsInWindow, int32_t killerLevelGap,
+                                        bool environmental = false)
 {
-    return deathsInWindow >= 2 || killerLevelGap >= OUTMATCHED_KILLER_LEVEL_GAP;
+    return environmental || deathsInWindow >= 2 || killerLevelGap >= OUTMATCHED_KILLER_LEVEL_GAP;
 }
 
-inline RecentDeathRecord NoteRecentDeath(RecentDeathRecord previous, uint32_t nowMs, int32_t killerLevelGap)
+inline RecentDeathRecord NoteRecentDeath(RecentDeathRecord previous, uint32_t nowMs, int32_t killerLevelGap,
+                                         bool environmental = false)
 {
     RecentDeathRecord record;
     bool const inWindow = previous.deathsInWindow > 0 && nowMs - previous.lastDeathMs <= RECENT_DEATH_WINDOW_MS;
     record.deathsInWindow = inWindow ? previous.deathsInWindow + 1 : 1;
     record.lastDeathMs = nowMs;
     record.lastKillerLevelGap = killerLevelGap;
+    record.lastDeathEnvironmental = environmental;
     return record;
 }
 
@@ -99,9 +108,10 @@ inline std::unordered_map<uint32_t, RecentDeathRecord>& Registry()
     return registry;
 }
 
-inline RecentDeathRecord Note(uint32_t botGuidLow, uint32_t nowMs, int32_t killerLevelGap)
+inline RecentDeathRecord Note(uint32_t botGuidLow, uint32_t nowMs, int32_t killerLevelGap,
+                              bool environmental = false)
 {
-    RecentDeathRecord const record = NoteRecentDeath(Registry()[botGuidLow], nowMs, killerLevelGap);
+    RecentDeathRecord const record = NoteRecentDeath(Registry()[botGuidLow], nowMs, killerLevelGap, environmental);
     Registry()[botGuidLow] = record;
     return record;
 }

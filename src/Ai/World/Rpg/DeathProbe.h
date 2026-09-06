@@ -93,11 +93,15 @@ public:
         // arrives through OnPlayerKilledByCreature just before this hook; an environmental death
         // leaves it at zero.
         uint32 const guidLow = player->GetGUID().GetCounter();
-        int32 const killerGap = _pendingKillerLevelGap.count(guidLow) ? _pendingKillerLevelGap[guidLow] : 0;
+        // PLB-LOCAL(environmental-death): no creature hook fired, so the world itself killed the bot;
+        // the corpse lies where it will happen again. See RecentDeathRecord::lastDeathEnvironmental.
+        bool const environmental = !_pendingKillerLevelGap.count(guidLow);
+        int32 const killerGap = environmental ? 0 : _pendingKillerLevelGap[guidLow];
         _pendingKillerLevelGap.erase(guidLow);
-        RecentDeathRecord const chain = RecentDeaths::Note(guidLow, getMSTime(), killerGap);
-        LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-CHAIN deaths {} killerGap {} homebind {}", player->GetName(),
-                  chain.deathsInWindow, killerGap, RecoverAtHomebindAfterDeath(chain.deathsInWindow, killerGap));
+        RecentDeathRecord const chain = RecentDeaths::Note(guidLow, getMSTime(), killerGap, environmental);
+        LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-CHAIN deaths {} killerGap {} environmental {} homebind {}",
+                  player->GetName(), chain.deathsInWindow, killerGap, environmental,
+                  RecoverAtHomebindAfterDeath(chain.deathsInWindow, killerGap, environmental));
         // The quest death cooldown is recorded here, at the death, not from the quest stay tick:
         // after the revive the bot re-reaches the anchor and the stay's death count starts over,
         // so the stay never saw its own death (0 ABANDON-DEATH lines all night on 2026-09-01).

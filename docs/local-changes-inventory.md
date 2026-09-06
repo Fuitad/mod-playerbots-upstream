@@ -227,7 +227,7 @@ Content fingerprint: `1c548a08dbfed352`.
 1. current 25-27; base boundary after line 19: covered.
 
 ### `src/Ai/Base/Actions/ReviveFromCorpseAction.cpp`
-Content fingerprint: `4ef0beebc320389b`.
+Content fingerprint: `b68b1d12bf214224`.
 36 region(s). Header: current.
 1. current 11-11; base boundary after line 7: covered.
 1. current 13-20; base boundary after line 8: covered.
@@ -244,27 +244,27 @@ Content fingerprint: `4ef0beebc320389b`.
 1. current 191-191; base boundary after line 63: covered.
 1. current 201-218; base 72-72: covered.
 1. current 229-229; base 81-81: covered.
-1. current 246-260; base boundary after line 95: covered.
-1. current 268-271; base 101-104: covered.
-1. current 287-332; base boundary after line 118: covered.
-1. current 335-337; base 120-120: covered.
-1. current 347-351; base 129-135: covered.
-1. current 356-365; base boundary after line 138: covered.
-1. current 370-393; base boundary after line 142: covered.
-1. current 411-417; base boundary after line 157: covered.
-1. current 433-434; base 171-171: covered.
-1. current 449-450; base 184-185: covered.
-1. current 452-559; base boundary after line 186: covered.
-1. current 565-577; base boundary after line 189: covered.
-1. current 587-590; base boundary after line 196: covered.
-1. current 634-638; base 238-242: covered.
-1. current 709-711; base boundary after line 308: covered.
-1. current 722-722; base boundary after line 316: covered.
-1. current 733-741; base 326-326: covered.
-1. current 746-746; base 329-329: covered.
-1. current boundary after line 748; base 332-332: manual. deletion-only region; inspect the base lines during a merge.
-1. current 751-764; base 334-336: covered.
-1. current boundary after line 779; base 351-351: manual. deletion-only region; inspect the base lines during a merge.
+1. current 246-262; base boundary after line 95: covered.
+1. current 270-273; base 101-104: covered.
+1. current 289-334; base boundary after line 118: covered.
+1. current 337-339; base 120-120: covered.
+1. current 349-353; base 129-135: covered.
+1. current 358-367; base boundary after line 138: covered.
+1. current 372-395; base boundary after line 142: covered.
+1. current 413-419; base boundary after line 157: covered.
+1. current 435-436; base 171-171: covered.
+1. current 451-452; base 184-185: covered.
+1. current 454-561; base boundary after line 186: covered.
+1. current 567-579; base boundary after line 189: covered.
+1. current 589-592; base boundary after line 196: covered.
+1. current 636-640; base 238-242: covered.
+1. current 711-713; base boundary after line 308: covered.
+1. current 724-724; base boundary after line 316: covered.
+1. current 735-743; base 326-326: covered.
+1. current 748-748; base 329-329: covered.
+1. current boundary after line 750; base 332-332: manual. deletion-only region; inspect the base lines during a merge.
+1. current 753-766; base 334-336: covered.
+1. current boundary after line 781; base 351-351: manual. deletion-only region; inspect the base lines during a merge.
 
 ### `src/Ai/Base/Actions/ReviveFromCorpseAction.h`
 Content fingerprint: `015e849d62268d26`.
@@ -935,7 +935,7 @@ Content fingerprint: `816c2c7f56115125`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/DeathRecoveryPolicy.h`
-Content fingerprint: `3a1678e9a391cec6`.
+Content fingerprint: `3baa1889c884a38c`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/LootStorePolicy.h`
@@ -1043,7 +1043,7 @@ Content fingerprint: `a68bd0649de65f00`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/DeathProbe.h`
-Content fingerprint: `2bb4999403b2716c`.
+Content fingerprint: `a6d84d59295294c6`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/FightLedgers.h`
@@ -1259,7 +1259,7 @@ Content fingerprint: `309bcf2eee53d896`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotRecoveryPolicyTest.cpp`
-Content fingerprint: `34675eee6557a119`.
+Content fingerprint: `3f87a22f6fa50632`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotSoulShardPolicyTest.cpp`

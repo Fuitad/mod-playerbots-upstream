@@ -383,6 +383,16 @@ TEST(PlayerbotRecoveryPolicyTest, ASecondDeathOrAnOutmatchedKillerSendsTheBotHom
     // Audacious, 2026-09-02 01:40: level 9, killed four times by a level 17 Greater Fleshripper.
     EXPECT_TRUE(RecoverAtHomebindAfterDeath(1, 8));
     EXPECT_TRUE(RecoverAtHomebindAfterDeath(2, 0));
+    // An environmental death (fall, drowning) goes home at once: the corpse lies where the
+    // world kills. Teldrassil tree edge, 2026-09-06: two bots died twice each on their corpse.
+    EXPECT_TRUE(RecoverAtHomebindAfterDeath(1, 0, true));
+    EXPECT_FALSE(RecoverAtHomebindAfterDeath(1, 0, false));
+    RecentDeathRecord const fall = NoteRecentDeath(RecentDeathRecord{}, 5000, 0, true);
+    EXPECT_TRUE(fall.lastDeathEnvironmental);
+    EXPECT_EQ(fall.deathsInWindow, 1u);
+    RecentDeathRecord const fight = NoteRecentDeath(fall, 6000, 2, false);
+    EXPECT_FALSE(fight.lastDeathEnvironmental);
+    EXPECT_EQ(fight.deathsInWindow, 2u);
 
     // Deaths ten minutes apart are separate chains; closer ones count up.
     RecentDeathRecord first = NoteRecentDeath(RecentDeathRecord{}, 1000, 0);

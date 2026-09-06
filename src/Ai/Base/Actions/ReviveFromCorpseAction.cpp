@@ -248,10 +248,12 @@ bool FindCorpseAction::Execute(Event /*event*/)
         if (sRandomPlayerbotMgr.IsRandomBot(bot))
         {
             RecentDeathRecord const chain = RecentDeaths::Current(bot->GetGUID().GetCounter(), getMSTime());
-            if (RecoverAtHomebindAfterDeath(chain.deathsInWindow, chain.lastKillerLevelGap))
+            if (RecoverAtHomebindAfterDeath(chain.deathsInWindow, chain.lastKillerLevelGap,
+                                            chain.lastDeathEnvironmental))
             {
-                LOG_DEBUG("playerbots", "[DeathProbe] {} HOMEBIND-AFTER-DEATH deaths {} killerGap {}", bot->GetName(),
-                          chain.deathsInWindow, chain.lastKillerLevelGap);
+                LOG_DEBUG("playerbots", "[DeathProbe] {} HOMEBIND-AFTER-DEATH deaths {} killerGap {} environmental {}",
+                          bot->GetName(), chain.deathsInWindow, chain.lastKillerLevelGap,
+                          chain.lastDeathEnvironmental);
                 bool const recovered = RecoverAtHomebind();
                 context->GetValue<uint32>("death count")
                     ->Set(playerbots::recovery::DeathCountAfterForcedRecovery(dCount, recovered));
