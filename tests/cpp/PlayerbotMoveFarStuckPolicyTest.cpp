@@ -10,6 +10,7 @@
 
 #include "Ai/Base/Actions/CombatMovementPolicy.h"
 #include "Ai/Base/Trigger/CombatStuckPolicy.h"
+#include "Ai/Base/Value/NearbyUnitSightPolicy.h"
 #include "Ai/World/Rpg/FightReportPolicy.h"
 #include "Ai/World/Rpg/FlightDestinationPolicy.h"
 #include "Ai/World/Rpg/MoveFarStuckPolicy.h"
@@ -133,6 +134,19 @@ TEST(PlayerbotMoveFarStuckPolicyTest, TheThresholdsAreConfigurable)
     MoveFarStuckFacts strict = Sample(3.0f, 120 * 1000);
     strict.resetRadius = 1.0f;
     EXPECT_EQ(MoveFarStuckVerdict::Resample, EvaluateMoveFarStuck(strict));
+}
+
+TEST(PlayerbotNearbyUnitSightPolicyTest, AUnitWithinTalkingDistanceIsSeenWithoutLineOfSight)
+{
+    // Uncertain at Landraelanis, 2026-09-06: 2 yards away, no trace through Silvermoon's platform.
+    EXPECT_TRUE(NearbyUnitSeen(2.0f, false, false));
+    EXPECT_TRUE(NearbyUnitSeen(NEARBY_UNIT_SEEN_WITHOUT_LOS_YARDS, false, false));
+    // A mob behind a wall at twenty yards is still not a target.
+    EXPECT_FALSE(NearbyUnitSeen(20.0f, false, false));
+    EXPECT_FALSE(NearbyUnitSeen(NEARBY_UNIT_SEEN_WITHOUT_LOS_YARDS + 0.5f, false, false));
+    // Line of sight or an ignore flag still admit anything in range.
+    EXPECT_TRUE(NearbyUnitSeen(60.0f, true, false));
+    EXPECT_TRUE(NearbyUnitSeen(60.0f, false, true));
 }
 
 TEST(PlayerbotFlightDestinationPolicyTest, ARandomFlightNeverEndsOnAnotherMap)

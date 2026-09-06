@@ -6,9 +6,9 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **104**.
-Upstream files changed: **74**.
-Regions: **576**. Covered inline: **549**. Missing markers: **0**.
+Local only files: **105**.
+Upstream files changed: **75**.
+Regions: **578**. Covered inline: **551**. Missing markers: **0**.
 
 ## Upstream files
 
@@ -349,6 +349,12 @@ Content fingerprint: `c57eb41eb0fb6da7`.
 1. current 257-257; base boundary after line 237: covered.
 1. current 261-262; base boundary after line 238: covered.
 1. current 319-323; base 294-294: covered.
+
+### `src/Ai/Base/Value/NearestUnitsValue.cpp`
+Content fingerprint: `fce4c11373426351`.
+2 region(s). Header: current.
+1. current 11-11; base boundary after line 7: covered.
+1. current 23-26; base 18-18: covered.
 
 ### `src/Ai/Base/Value/PossibleRpgTargetsValue.cpp`
 Content fingerprint: `c490a1a903f9e1ca`.
@@ -998,6 +1004,10 @@ Banner: covered.
 Content fingerprint: `5a33de7eb0f69510`.
 Banner: covered.
 
+### `src/Ai/Base/Value/NearbyUnitSightPolicy.h`
+Content fingerprint: `b9923a17c730df8c`.
+Banner: covered.
+
 ### `src/Ai/Class/Warlock/SoulShardPolicy.h`
 Content fingerprint: `03f5536691067f0e`.
 Banner: covered.
@@ -1215,7 +1225,7 @@ Content fingerprint: `149f25ac0c44929d`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotMoveFarStuckPolicyTest.cpp`
-Content fingerprint: `efff65d3985be308`.
+Content fingerprint: `8e539e5e8aec1cde`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`
