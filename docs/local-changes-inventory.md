@@ -351,10 +351,10 @@ Content fingerprint: `c57eb41eb0fb6da7`.
 1. current 319-323; base 294-294: covered.
 
 ### `src/Ai/Base/Value/NearestUnitsValue.cpp`
-Content fingerprint: `fce4c11373426351`.
+Content fingerprint: `ff9b43b0e5416c55`.
 2 region(s). Header: current.
-1. current 11-11; base boundary after line 7: covered.
-1. current 23-26; base 18-18: covered.
+1. current 10-10; base boundary after line 7: covered.
+1. current 22-25; base 18-18: covered.
 
 ### `src/Ai/Base/Value/PossibleRpgTargetsValue.cpp`
 Content fingerprint: `c490a1a903f9e1ca`.
