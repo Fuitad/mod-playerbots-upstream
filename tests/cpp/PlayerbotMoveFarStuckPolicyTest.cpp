@@ -11,6 +11,7 @@
 #include "Ai/Base/Actions/CombatMovementPolicy.h"
 #include "Ai/Base/Trigger/CombatStuckPolicy.h"
 #include "Ai/World/Rpg/FightReportPolicy.h"
+#include "Ai/World/Rpg/FlightDestinationPolicy.h"
 #include "Ai/World/Rpg/MoveFarStuckPolicy.h"
 #include "gtest/gtest.h"
 
@@ -132,6 +133,15 @@ TEST(PlayerbotMoveFarStuckPolicyTest, TheThresholdsAreConfigurable)
     MoveFarStuckFacts strict = Sample(3.0f, 120 * 1000);
     strict.resetRadius = 1.0f;
     EXPECT_EQ(MoveFarStuckVerdict::Resample, EvaluateMoveFarStuck(strict));
+}
+
+TEST(PlayerbotFlightDestinationPolicyTest, ARandomFlightNeverEndsOnAnotherMap)
+{
+    // Dazedcitizen, 2026-09-05: Stormwind (map 0) to Zul'Aman (node 205, map 530) put her down at
+    // Thorium Point in Searing Gorge at level 14.
+    EXPECT_FALSE(FlightDestinationOnBotMap(0, 530));
+    EXPECT_TRUE(FlightDestinationOnBotMap(0, 0));
+    EXPECT_TRUE(FlightDestinationOnBotMap(530, 530));
 }
 
 TEST(PlayerbotFightReportPolicyTest, ADeathIsClassifiedByWhetherTheBotEverFoughtBack)

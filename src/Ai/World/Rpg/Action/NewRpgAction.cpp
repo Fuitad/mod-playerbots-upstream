@@ -1010,6 +1010,16 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 // five minutes below him. Walk to the creature instead; the mesh knows the stairs.
                 if (data.pos.GetExactDist2d(spawn.x, spawn.y) < 1.0f)
                 {
+                    // PLB-LOCAL(quest-sweep-cap): a walker far down its path is waited for, not
+                    // chased across the map. See SweepClimbWorthwhile.
+                    if (!SweepClimbWorthwhile(bot->GetDistance(live)))
+                    {
+                        LOG_DEBUG("playerbots",
+                                  "[QuestProbe] {} SWEEP-WAIT quest {} obj {} creature {} dist {:.0f} beyond {:.0f}",
+                                  bot->GetName(), questId, data.objectiveIdx, live->GetEntry(),
+                                  bot->GetDistance(live), QUEST_SWEEP_CLIMB_MAX_YARDS);
+                        return MoveRandomNear(8.0f);
+                    }
                     LOG_DEBUG("playerbots",
                               "[QuestProbe] {} SWEEP-CLIMB quest {} obj {} to creature {} dist {:.1f} dz {:.1f}",
                               bot->GetName(), questId, data.objectiveIdx, live->GetEntry(), bot->GetDistance(live),

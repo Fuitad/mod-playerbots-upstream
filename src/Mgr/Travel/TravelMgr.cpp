@@ -6,9 +6,12 @@
 // PLB-LOCAL(working-tree): Uncommitted local change.
 // Upstream: No corresponding block at the merge base. (base 8d9f6aa6bc6d).
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 7 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 9 region(s) of this upstream file.
 
 #include "TravelMgr.h"
+// PLB-LOCAL(working-tree): Uncommitted local change.
+// Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
+#include "Ai/World/Rpg/FlightDestinationPolicy.h"
 #include "AreaDefines.h"
 #include "CellImpl.h"
 #include "ChatHelper.h"
@@ -4485,6 +4488,15 @@ std::vector<std::vector<uint32>> TravelMgr::GetOptimalFlightDestinations(Player*
         if (!usableNodes.empty())
         {
             uint32 pickedNode = usableNodes[urand(0, usableNodes.size() - 1)];
+            // PLB-LOCAL(flight-destination-map): a node on another map is never a destination; the
+            // flight would put the bot down at the last node on its own map, in whatever zone that
+            // is. See FlightDestinationPolicy.h.
+            TaxiNodesEntry const* pickedEntry = sTaxiNodesStore.LookupEntry(pickedNode);
+            if (!pickedEntry || !FlightDestinationOnBotMap(bot->GetMapId(), pickedEntry->map_id))
+            {
+                candidateZones.erase(candidateZones.begin() + zoneIndex);
+                continue;
+            }
             std::vector<uint32> path = sTravelNodeMap.FindTaxiPath(fromNode, pickedNode);
             if (!path.empty())
             {

@@ -339,3 +339,13 @@ TEST(PlayerbotQuestUseTargetPolicyTest, AFriendlySourceIsTalkedToThenShadowedUnt
     EXPECT_EQ(NextQuestGossipProvokeStep(false, true, true, 0), QuestGossipProvokeStep::Unavailable);
     EXPECT_STREQ(QuestUseModeName(QuestUseMode::GossipProvoke), "gossip");
 }
+
+TEST(PlayerbotQuestUseTargetPolicyTest, ASweepWaitsForAWalkerInsteadOfChasingItAcrossTheMap)
+{
+    // Valderotaux, 2026-09-05: Astor 1880 to 2113 yards down his road; the chase ended in Silverpine.
+    EXPECT_FALSE(SweepClimbWorthwhile(1880.0f));
+    EXPECT_FALSE(SweepClimbWorthwhile(QUEST_SWEEP_CLIMB_MAX_YARDS + 1.0f));
+    // Benedict upstairs at 11.6 yards, the case the climb was written for, still climbs.
+    EXPECT_TRUE(SweepClimbWorthwhile(11.6f));
+    EXPECT_TRUE(SweepClimbWorthwhile(QUEST_SWEEP_CLIMB_MAX_YARDS));
+}

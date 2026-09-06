@@ -84,10 +84,11 @@ public:
             player->GetMaxPower(powerType) ? player->GetPower(powerType) * 100 / player->GetMaxPower(powerType) : 0;
         LOG_DEBUG("playerbots",
                   "[DeathProbe] {} DIED lvl {} class {} zone {} area {} rpg {} quest {} broken {} money {}c power {}% "
-                  "t {}",
+                  "t {} at {:.0f},{:.0f},{:.0f} map {}",
                   player->GetName(), player->GetLevel(), player->getClass(), player->GetZoneId(), player->GetAreaId(),
                   static_cast<uint32>(botAI->rpgInfo.GetStatus()), questId, DeathProbe::BrokenEquipmentSlots(player),
-                  player->GetMoney(), powerPct, getMSTime());
+                  player->GetMoney(), powerPct, getMSTime(), player->GetPositionX(), player->GetPositionY(),
+                  player->GetPositionZ(), player->GetMapId());
         // The chain record the corpse walk consults (DeathRecoveryPolicy.h). The killer's level gap
         // arrives through OnPlayerKilledByCreature just before this hook; an environmental death
         // leaves it at zero.

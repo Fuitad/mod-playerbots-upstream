@@ -61,6 +61,17 @@ inline constexpr float QUEST_GOSSIP_TALK_DISTANCE = 5.0f;
 // How close the bot stays while shadowing a provoked walker.
 inline constexpr float QUEST_GOSSIP_SHADOW_DISTANCE = 8.0f;
 
+// How far from the anchor the sweep may chase a live objective creature. Astor Hadren walks a
+// 2 km road on a repeating path; Valderotaux chased him 1.9 km into Silverpine on 2026-09-05 and
+// died on the way, twice. A walker on a repeating path comes back to its spawn, so past this
+// distance the bot waits at the anchor instead of following.
+inline constexpr float QUEST_SWEEP_CLIMB_MAX_YARDS = 150.0f;
+
+[[nodiscard]] inline bool SweepClimbWorthwhile(float distanceToCreature)
+{
+    return distanceToCreature <= QUEST_SWEEP_CLIMB_MAX_YARDS;
+}
+
 enum class QuestGossipProvokeStep : uint8
 {
     Unavailable = 0,  // dead, or provoked and the wait ran out: nothing to do with this creature
