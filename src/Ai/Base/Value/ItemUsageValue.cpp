@@ -3,7 +3,7 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 7 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 9 region(s) of this upstream file.
 
 #include "ItemUsageValue.h"
 // PLB-LOCAL(working-tree): Uncommitted local change.
@@ -133,7 +133,9 @@ ItemUsage ItemUsageValue::Calculate()
     // Check if loot source is an item
     bool isLootFromItem = lootGuid.IsItem();
 
-    // If the loot is from an item in the bot’s bags, ignore syncQuestWithPlayer
+    // PLB-LOCAL(working-tree): Uncommitted local change.
+    // Upstream: // If the loot is from an item in the bot's bags, ignore syncQuestWithPlayer (base 2f7d9f774987).
+    // If the loot is from an item in the bot's bags, ignore syncQuestWithPlayer
     if (isLootFromItem && botNeedsItemForQuest)
         return ITEM_USAGE_QUEST;
 
@@ -250,7 +252,13 @@ ItemUsage ItemUsageValue::QueryItemUsageForEquip(ItemTemplate const* itemProto, 
         // Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
         canUseItemClass = false;
     }
+    // PLB-LOCAL(equip-empty-slot): RandomItemMgr's armor subclass rule describes body armor only.
+    // Applying it to jewelry rejects every ring as the wrong armor type before an empty finger slot
+    // can use it. Core BotCanUseItem above remains the authority for non-body armor legality.
     if (itemProto->Class == ITEM_CLASS_ARMOR &&
+        // PLB-LOCAL(working-tree): Uncommitted local change.
+        // Upstream: No corresponding block at the merge base. (base 2f7d9f774987).
+        BodyArmorClassRestrictionApplies(static_cast<InventoryType>(itemProto->InventoryType)) &&
         !sRandomItemMgr.CanEquipArmor(itemProto, bot->getClass(), bot->GetLevel()))
     // PLB-LOCAL(working-tree): Uncommitted local change.
     // Upstream: No corresponding block at the merge base. (base 2f7d9f774987).

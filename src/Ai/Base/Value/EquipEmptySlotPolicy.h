@@ -22,15 +22,37 @@
  * slot is filled whenever the bot is allowed to use the item at all.
  *
  * "Allowed to use" is not the same as "scores zero", and conflating them is how this fix could
- * cause harm: RandomItemMgr::CanEquipWeapon and CanEquipArmor also clear shouldEquip, and they mean
- * the bot's class cannot wear the item. Plate on a mage scores zero AND is unusable; a tabard
- * scores zero and is perfectly usable. Only the second may fill a slot.
+ * cause harm: RandomItemMgr::CanEquipWeapon and CanEquipArmor also clear shouldEquip for weapons
+ * and body armor, and they mean the bot's class cannot wear the item. Plate on a mage scores zero
+ * AND is unusable; a tabard scores zero and is perfectly usable. Only the second may fill a slot.
+ * Jewelry is ITEM_CLASS_ARMOR too, but has no cloth, leather, mail or plate restriction. Its core
+ * usability check is authoritative, so the body armor subclass rule must not reject it first.
  */
 
 #ifndef _PLAYERBOT_EQUIPEMPTYSLOTPOLICY_H
 #define _PLAYERBOT_EQUIPEMPTYSLOTPOLICY_H
 
 #include "Define.h"
+#include "ItemTemplate.h"
+
+[[nodiscard]] constexpr bool BodyArmorClassRestrictionApplies(InventoryType inventoryType)
+{
+    switch (inventoryType)
+    {
+        case INVTYPE_HEAD:
+        case INVTYPE_SHOULDERS:
+        case INVTYPE_CHEST:
+        case INVTYPE_ROBE:
+        case INVTYPE_WAIST:
+        case INVTYPE_LEGS:
+        case INVTYPE_FEET:
+        case INVTYPE_WRISTS:
+        case INVTYPE_HANDS:
+            return true;
+        default:
+            return false;
+    }
+}
 
 [[nodiscard]] inline bool ShouldFillEmptyEquipSlot(bool botCanUseItemClass, bool scoreSaysEquip)
 {

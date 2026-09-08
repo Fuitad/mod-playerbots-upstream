@@ -8,7 +8,7 @@ Manual exceptions are accounted for, not automatically modified or proof of merg
 
 Local only files: **105**.
 Upstream files changed: **75**.
-Regions: **578**. Covered inline: **551**. Missing markers: **0**.
+Regions: **580**. Covered inline: **553**. Missing markers: **0**.
 
 ## Upstream files
 
@@ -340,15 +340,17 @@ Content fingerprint: `f8aeb9c0a0742252`.
 1. current 229-230; base boundary after line 146: covered.
 
 ### `src/Ai/Base/Value/ItemUsageValue.cpp`
-Content fingerprint: `c57eb41eb0fb6da7`.
-7 region(s). Header: current.
+Content fingerprint: `194ae687f4516180`.
+9 region(s). Header: current.
 1. current 11-12; base boundary after line 7: covered.
-1. current 240-243; base boundary after line 233: covered.
-1. current 247-247; base boundary after line 234: covered.
-1. current 251-252; base boundary after line 235: covered.
-1. current 257-257; base boundary after line 237: covered.
-1. current 261-262; base boundary after line 238: covered.
-1. current 319-323; base 294-294: covered.
+1. current 138-138; base 131-131: covered.
+1. current 242-245; base boundary after line 233: covered.
+1. current 249-249; base boundary after line 234: covered.
+1. current 253-257; base boundary after line 235: covered.
+1. current 261-261; base boundary after line 236: covered.
+1. current 265-265; base boundary after line 237: covered.
+1. current 269-270; base boundary after line 238: covered.
+1. current 327-331; base 294-294: covered.
 
 ### `src/Ai/Base/Value/NearestUnitsValue.cpp`
 Content fingerprint: `ff9b43b0e5416c55`.
@@ -997,7 +999,7 @@ Content fingerprint: `34a4c3ad0eb343aa`.
 Banner: covered.
 
 ### `src/Ai/Base/Value/EquipEmptySlotPolicy.h`
-Content fingerprint: `544166a0c5ec5907`.
+Content fingerprint: `1394af2eef040bae`.
 Banner: covered.
 
 ### `src/Ai/Base/Value/GrindTargetPolicy.h`
@@ -1197,7 +1199,7 @@ Content fingerprint: `0863930e3bac11d8`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotEquipEmptySlotPolicyTest.cpp`
-Content fingerprint: `9f70958fee781b65`.
+Content fingerprint: `8e2b4e6e8a446ff5`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotExtensionRegistryTests.cpp`

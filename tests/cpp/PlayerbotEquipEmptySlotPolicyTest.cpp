@@ -34,3 +34,18 @@ TEST(PlayerbotEquipEmptySlotPolicyTest, AWellScoredItemIsStillEquippedWhateverEl
     EXPECT_TRUE(ShouldFillEmptyEquipSlot(/*botCanUseItemClass*/ true, /*scoreSaysEquip*/ true));
     EXPECT_TRUE(ShouldFillEmptyEquipSlot(/*botCanUseItemClass*/ false, /*scoreSaysEquip*/ true));
 }
+
+TEST(PlayerbotEquipEmptySlotPolicyTest, ArmorSubclassRestrictionsApplyOnlyToBodyArmor)
+{
+    for (InventoryType inventoryType : {INVTYPE_HEAD, INVTYPE_SHOULDERS, INVTYPE_CHEST, INVTYPE_ROBE, INVTYPE_WAIST,
+                                        INVTYPE_LEGS, INVTYPE_FEET, INVTYPE_WRISTS, INVTYPE_HANDS})
+    {
+        EXPECT_TRUE(BodyArmorClassRestrictionApplies(inventoryType));
+    }
+
+    for (InventoryType inventoryType :
+         {INVTYPE_BODY, INVTYPE_NECK, INVTYPE_FINGER, INVTYPE_TRINKET, INVTYPE_CLOAK, INVTYPE_HOLDABLE})
+    {
+        EXPECT_FALSE(BodyArmorClassRestrictionApplies(inventoryType));
+    }
+}
