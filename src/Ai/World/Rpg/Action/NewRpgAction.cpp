@@ -3,7 +3,7 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 20 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 21 region(s) of this upstream file.
 
 #include "NewRpgAction.h"
 
@@ -715,7 +715,18 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
     if (QuestPoiNeedsApproach({bot->GetDistance(data.pos), data.lastReachPOI != 0, 10.0f,
                                sPlayerbotAIConfig.grindDistance}))
     {
-        if (MoveFarTo(data.pos))
+        bool const moved = MoveFarTo(data.pos);
+        // PLB-LOCAL(quest-stay-recovery-restart): a walk back that ended in the stuck-recovery
+        // teleport restarts the stay, so the bot gets its five minutes AT the anchor and the
+        // abandon verdict never samples caches computed where it was stuck. See
+        // QuestStayRestartsAfterRecovery for the Valli measurement (2026-09-08).
+        if (QuestStayRestartsAfterRecovery(data.lastReachPOI != 0, bot->IsBeingTeleported()))
+        {
+            LOG_DEBUG("playerbots", "[QuestProbe] {} RESTAY quest {} obj {} after recovery teleport, stayed {}s",
+                      bot->GetName(), questId, data.objectiveIdx, GetMSTimeDiffToNow(data.lastReachPOI) / 1000);
+            data.lastReachPOI = 0;
+        }
+        if (moved)
             return true;
         // Long-range sampler couldn't land a candidate. Nudge the
         // bot a short distance so the next tick retries from a
@@ -742,6 +753,9 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         MarkStayDeathBaseline(bot, botAI);
         return true;
     }
+    // PLB-LOCAL(quest-stay-use-tracker): one tick of the stay past the latch; printed by the stay-end
+    // lines so a stay that never reached the seeks (combat, looting, a failed walk back) reads as such.
+    QuestStayUseTracker::RecordTick(bot);
     // PLB-LOCAL BEGIN(quest-stay-death-rotate): a stay that has cost the bot two deaths ends now,
     // with the same low-priority mark a fruitless stay earns, instead of sending the bot back into
     // the fight for a third time. Upstream: nothing here; the stay ran its five minutes regardless.
@@ -883,21 +897,23 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                                                  : 0u);
             // PLB-LOCAL(quest-use-target): the diags were sampled above, before the verdict, so a
             // quest that died without a QUSE/GOLOOT line explains itself in the line below.
-            LOG_DEBUG("playerbots",
-                      "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
-                      "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}/{} gocand {}/{}/{}/{}",
-                      bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
-                      GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel(),
-                      QuestStayKillProbe::KillsSinceStayStart(bot),
-                      AI_VALUE(GuidVector, "possible targets").size(),
-                      AI_VALUE(Unit*, "grind target") ? 1 : 0,
-                      [this] {
-                          Unit* sel = AI_VALUE(Unit*, "current target");
-                          return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
-                      }(),
-                      static_cast<uint32>(useDiag.mode), useDiag.nearbyUnits, useDiag.matchingEntry,
-                      useDiag.aliveMatching, useDiag.inRange, goDiag.nearbyGos, goDiag.matching,
-                      goDiag.usableMatching, goDiag.inRange);
+            LOG_DEBUG(
+                "playerbots",
+                "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
+                "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}/{} gocand {}/{}/{}/{} "
+                "ticks {}",
+                bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
+                GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel(),
+                QuestStayKillProbe::KillsSinceStayStart(bot), AI_VALUE(GuidVector, "possible targets").size(),
+                AI_VALUE(Unit*, "grind target") ? 1 : 0,
+                [this]
+                {
+                    Unit* sel = AI_VALUE(Unit*, "current target");
+                    return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
+                }(),
+                static_cast<uint32>(useDiag.mode), useDiag.nearbyUnits, useDiag.matchingEntry, useDiag.aliveMatching,
+                useDiag.inRange, goDiag.nearbyGos, goDiag.matching, goDiag.usableMatching, goDiag.inRange,
+                QuestStayUseTracker::TicksThisStay(bot));
             // PLB-LOCAL(quest-abandon-probe): one SOURCE line per source creature spawn near the
             // anchor, with the facts the grind candidate filter gates on (alive, distance, z gap,
             // line of sight, attackers). Measured 2026-09-01: Damama stood 21y from an alive
@@ -931,10 +947,12 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         if (stayVerdict == QuestStayEndVerdict::RotateWithoutBlame)
         {
             LOG_DEBUG("playerbots",
-                      "[QuestProbe] {} STAYUSE quest {} obj {} stayed {}s attempts {} relkills {} sight {} lvl {}",
+                      "[QuestProbe] {} STAYUSE quest {} obj {} stayed {}s attempts {} relkills {} sight {} lvl {} "
+                      "ticks {}",
                       bot->GetName(), questId, currentObjective, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
                       QuestStayUseTracker::AttemptsThisStay(bot), relevantKills,
-                      QuestStayUseTracker::SightingsThisStay(bot), bot->GetLevel());
+                      QuestStayUseTracker::SightingsThisStay(bot), bot->GetLevel(),
+                      QuestStayUseTracker::TicksThisStay(bot));
             data.lastReachPOI = 0;
             data.pos = WorldPosition();
             data.objectiveIdx = 0;
@@ -945,16 +963,19 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         // ended with objective progression instead of an abandon, with the same kill delta the
         // abandon record carries. Comparing kills between the two groups separates "the bot never
         // fights during a stay" from "it fights but the wrong things or the drops never come".
-        LOG_DEBUG("playerbots",
-                  "[QuestProbe] {} STAYOK quest {} obj {} stayed {}s kills {} lvl {} targets {} grind {} curtgt {}",
-                  bot->GetName(), questId, currentObjective, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
-                  QuestStayKillProbe::KillsSinceStayStart(bot), bot->GetLevel(),
-                  AI_VALUE(GuidVector, "possible targets").size(),
-                  AI_VALUE(Unit*, "grind target") ? 1 : 0,
-                  [this] {
-                      Unit* sel = AI_VALUE(Unit*, "current target");
-                      return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
-                  }());
+        LOG_DEBUG(
+            "playerbots",
+            "[QuestProbe] {} STAYOK quest {} obj {} stayed {}s kills {} lvl {} targets {} grind {} curtgt {} "
+            "ticks {}",
+            bot->GetName(), questId, currentObjective, GetMSTimeDiffToNow(data.lastReachPOI) / 1000,
+            QuestStayKillProbe::KillsSinceStayStart(bot), bot->GetLevel(),
+            AI_VALUE(GuidVector, "possible targets").size(), AI_VALUE(Unit*, "grind target") ? 1 : 0,
+            [this]
+            {
+                Unit* sel = AI_VALUE(Unit*, "current target");
+                return !sel ? 0 : (sel->IsAlive() ? 1 : 2);
+            }(),
+            QuestStayUseTracker::TicksThisStay(bot));
         // clear and select another poi later
         data.lastReachPOI = 0;
         data.pos = WorldPosition();

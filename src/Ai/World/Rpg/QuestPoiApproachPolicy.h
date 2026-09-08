@@ -49,4 +49,27 @@ struct QuestPoiApproachFacts
     return facts.distanceYards > facts.returnRadius;
 }
 
+// Whether the stay timer restarts because the walk back ended in a stuck-recovery teleport.
+//
+// The walk back above can fail for as long as the bot is stuck: MoveFarTo counts 90 seconds
+// without progress and then teleports the bot onto the anchor. The stay clock kept running the
+// whole time, so the first tick after the teleport can already be past the five minute mark, and
+// the abandon verdict on that tick samples the "nearest" value caches, which still hold what was
+// computed where the bot was stuck, up to a second earlier and hundreds of yards away.
+//
+// Measured live 2026-09-08 09:2x, Valli on Deepmoss Spider Eggs (1069): reached the egg spawn at
+// (863, 210), drifted fighting spiders, was found stuck at (830, 880, z 159), 670 yards away and
+// 130 up, teleported back to the anchor and abandoned on the next tick at "stayed 805s" with
+// usecand 0/0/0/0 and gocand 0/0/0/0, while every one of the 24 egg chests was spawned (no
+// gameobject_respawn row) and two sit within 60 yards of that anchor.
+//
+// A recovery teleport is the only teleport the walk back issues, so a pending teleport on a
+// reached stay means the bot is about to stand on the anchor again with a stay it never got to
+// spend there. Restarting the clock gives it the five minutes at the anchor the POI was chosen for
+// and lets REACH re-arm the stay trackers, which is also what refreshes the diagnostics.
+[[nodiscard]] inline bool QuestStayRestartsAfterRecovery(bool reached, bool recoveryTeleportPending)
+{
+    return reached && recoveryTeleportPending;
+}
+
 #endif

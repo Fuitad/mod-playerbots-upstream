@@ -30,6 +30,10 @@ inline std::unordered_map<ObjectGuid::LowType, uint32> attemptsThisStay;
 // Stay ticks on which a seek returned a usable objective candidate, converged or not. Feeds the
 // candidateSightings parameter of QuestStayEndDecision (the contention class).
 inline std::unordered_map<ObjectGuid::LowType, uint32> sightingsThisStay;
+// DoIncompleteQuest passes through the stay (past the REACH latch) during this stay. A stay whose
+// ticks stay near zero was spent in combat, looting or a failed walk back, never in the seeks;
+// the ABANDON, STAYUSE and STAYOK lines print it so the two cases can be told apart.
+inline std::unordered_map<ObjectGuid::LowType, uint32> ticksThisStay;
 // Creatures the bot has already used its tool on during this stay, per bot. Credit scripts that
 // fire No Repeat per creature (Cleansing the Scar's Eversong Rangers) never credit a second cast
 // on the same one, so the seek has to move on to a fresh creature.
@@ -40,7 +44,14 @@ inline void MarkStayStart(Player* bot)
     std::lock_guard<std::mutex> lock(trackerMutex);
     attemptsThisStay[bot->GetGUID().GetCounter()] = 0;
     sightingsThisStay[bot->GetGUID().GetCounter()] = 0;
+    ticksThisStay[bot->GetGUID().GetCounter()] = 0;
     usedTargetsThisStay[bot->GetGUID().GetCounter()].clear();
+}
+
+inline void RecordTick(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    ++ticksThisStay[bot->GetGUID().GetCounter()];
 }
 
 inline void RecordAttempt(Player* bot)
@@ -80,6 +91,13 @@ inline void RecordUsedTarget(Player* bot, ObjectGuid target)
     std::lock_guard<std::mutex> lock(trackerMutex);
     auto it = sightingsThisStay.find(bot->GetGUID().GetCounter());
     return it != sightingsThisStay.end() ? it->second : 0;
+}
+
+[[nodiscard]] inline uint32 TicksThisStay(Player* bot)
+{
+    std::lock_guard<std::mutex> lock(trackerMutex);
+    auto it = ticksThisStay.find(bot->GetGUID().GetCounter());
+    return it != ticksThisStay.end() ? it->second : 0;
 }
 }  // namespace QuestStayUseTracker
 

@@ -71,3 +71,20 @@ TEST(PlayerbotQuestPoiApproachPolicyTest, AConfiguredReturnRadiusIsHonoured)
     loose.returnRadius = 500.0f;
     EXPECT_FALSE(QuestPoiNeedsApproach(loose));
 }
+
+TEST(PlayerbotQuestPoiApproachPolicyTest, AStuckRecoveryTeleportRestartsAReachedStay)
+{
+    // Valli, 2026-09-08: 805 s on the clock, of which the last stretch was spent stuck 670 yards
+    // from the anchor. The teleport put her back on the egg spawn and the abandon fired on the next
+    // tick from value caches computed where she had been stuck.
+    EXPECT_TRUE(QuestStayRestartsAfterRecovery(true, true));
+}
+
+TEST(PlayerbotQuestPoiApproachPolicyTest, OnlyAReachedStayWithAPendingTeleportRestarts)
+{
+    // Before the first arrival there is no stay to restart: REACH will stamp it on landing.
+    EXPECT_FALSE(QuestStayRestartsAfterRecovery(false, true));
+    // An ordinary walk back, teleport or not pending, leaves the clock alone.
+    EXPECT_FALSE(QuestStayRestartsAfterRecovery(true, false));
+    EXPECT_FALSE(QuestStayRestartsAfterRecovery(false, false));
+}

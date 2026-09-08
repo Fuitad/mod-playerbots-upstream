@@ -8,7 +8,7 @@ Manual exceptions are accounted for, not automatically modified or proof of merg
 
 Local only files: **105**.
 Upstream files changed: **75**.
-Regions: **580**. Covered inline: **553**. Missing markers: **0**.
+Regions: **581**. Covered inline: **554**. Missing markers: **0**.
 
 ## Upstream files
 
@@ -428,8 +428,8 @@ Content fingerprint: `7a1b7725e85faa59`.
 1. current 27-29; base boundary after line 21: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgAction.cpp`
-Content fingerprint: `d79f2a3912686fb7`.
-20 region(s). Header: current.
+Content fingerprint: `cbc4551aada02174`.
+21 region(s). Header: current.
 1. current 9-41; base boundary after line 7: covered.
 1. current 46-48; base boundary after line 11: covered.
 1. current 51-58; base boundary after line 12: covered.
@@ -441,15 +441,16 @@ Content fingerprint: `d79f2a3912686fb7`.
 1. current 691-694; base 494-494: covered.
 1. current 705-708; base boundary after line 503: covered.
 1. current 712-716; base 506-506: covered.
-1. current 720-720; base 510-510: covered.
-1. current 733-768; base boundary after line 520: covered.
-1. current 792-866; base 542-542: covered.
-1. current 876-924; base boundary after line 549: covered.
-1. current 929-957; base boundary after line 552: covered.
-1. current 963-1309; base boundary after line 557: covered.
-1. current 1343-1356; base boundary after line 588: covered.
-1. current 1373-1374; base 603-603: covered.
-1. current 1393-1400; base boundary after line 619: covered.
+1. current 718-729; base 508-508: covered.
+1. current 731-731; base 510-510: covered.
+1. current 744-782; base boundary after line 520: covered.
+1. current 806-880; base 542-542: covered.
+1. current 890-940; base boundary after line 549: covered.
+1. current 945-978; base boundary after line 552: covered.
+1. current 984-1330; base boundary after line 557: covered.
+1. current 1364-1377; base boundary after line 588: covered.
+1. current 1394-1395; base 603-603: covered.
+1. current 1414-1421; base boundary after line 619: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp`
 Content fingerprint: `2d249bb4df93fa9a`.
@@ -1115,7 +1116,7 @@ Content fingerprint: `2a0263908237949a`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestPoiApproachPolicy.h`
-Content fingerprint: `c07d2f7e2d54c3cf`.
+Content fingerprint: `30cf4d19e2b67778`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestPoiPointPolicy.h`
@@ -1143,7 +1144,7 @@ Content fingerprint: `9171b4d25ae8ee65`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestStayUseTracker.h`
-Content fingerprint: `3eed214e33794869`.
+Content fingerprint: `cbea87bf341db1fe`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestUseTargetPolicy.h`
@@ -1239,7 +1240,7 @@ Content fingerprint: `b975a4793b870a41`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestPoiApproachPolicyTest.cpp`
-Content fingerprint: `87f7f3987a769a9a`.
+Content fingerprint: `cc5688b83970dd00`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestPoiPointPolicyTest.cpp`
