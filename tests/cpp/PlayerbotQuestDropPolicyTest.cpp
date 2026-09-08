@@ -262,6 +262,9 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     EXPECT_TRUE(QuestIsRpgBlacklisted(11129));
     // The Family and the Fishing Pole: a fishing objective, Pierre's call on 2026-09-05.
     EXPECT_TRUE(QuestIsRpgBlacklisted(1141));
+    // Investigate the Blue Recluse: a scripted tavern event spawns the coffer, Pierre's call on
+    // 2026-09-08.
+    EXPECT_TRUE(QuestIsRpgBlacklisted(1920));
     // The neighbouring ids stay open: the blacklist is a named list, not a range.
     EXPECT_FALSE(QuestIsRpgBlacklisted(115));
     EXPECT_FALSE(QuestIsRpgBlacklisted(117));
@@ -271,6 +274,8 @@ TEST(PlayerbotQuestDropPolicyTest, BlacklistedQuestsAreNeverWorthDoing)
     EXPECT_FALSE(QuestIsRpgBlacklisted(8484));
     EXPECT_FALSE(QuestIsRpgBlacklisted(11128));
     EXPECT_FALSE(QuestIsRpgBlacklisted(11130));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(1919));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(1921));
     EXPECT_FALSE(QuestIsRpgBlacklisted(9303));
     EXPECT_FALSE(QuestIsRpgBlacklisted(0));
 }

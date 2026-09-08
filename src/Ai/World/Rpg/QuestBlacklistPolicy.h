@@ -111,6 +111,12 @@
         // 13 to 17 and 0 rewards on 2026-09-05. Pierre: blacklist 1141, it is similar to a
         // Draenei quest, not necessary.
         case 1141:
+        // Investigate the Blue Recluse: the Filled Containment Coffer (gameobject 103574) that
+        // holds the required item only exists after the tavern's scripted elemental fight, so
+        // the stay finds nothing to loot. Sharpwitted, 2026-09-08 10:5x: 508 seconds, 0 kills,
+        // 0 targets, one nearby gameobject that was not the coffer, 18 stay ticks. Pierre called
+        // the blacklist on 2026-09-08: too complicated for bots.
+        case 1920:
             return true;
         default:
             return false;
