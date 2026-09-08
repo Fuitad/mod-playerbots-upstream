@@ -310,3 +310,9 @@ TEST(PlayerbotQuestDropPolicyTest, OrdinaryRequiredItemsUseTheirDirectCreatureLo
     ASSERT_EQ(sources.size(), 1u);
     EXPECT_EQ(sources.at(5469u), (std::vector<uint32>{2321u, 2322u}));
 }
+
+TEST(PlayerbotQuestDropPolicyTest, WarsongReportsNpcChaseIsBlacklisted)
+{
+    EXPECT_TRUE(QuestIsRpgBlacklisted(6543));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(6544));
+}

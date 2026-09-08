@@ -1076,7 +1076,7 @@ Content fingerprint: `4ad9a908df7305c6`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestBlacklistPolicy.h`
-Content fingerprint: `d4d9827a12fb3508`.
+Content fingerprint: `6a2d360824b46162`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDeathCooldown.h`
@@ -1232,7 +1232,7 @@ Content fingerprint: `8e539e5e8aec1cde`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`
-Content fingerprint: `748b970e90ff5c57`.
+Content fingerprint: `02fd2605e20aa76c`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp`

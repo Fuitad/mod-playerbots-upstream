@@ -117,6 +117,10 @@
         // 0 targets, one nearby gameobject that was not the coffer, 18 stay ticks. Pierre called
         // the blacklist on 2026-09-08: too complicated for bots.
         case 1920:
+        // The Warsong Reports: open a bundle and exchange reports with three scattered NPCs.
+        // Isouda, 2026-09-08: 301 seconds, 137 stay ticks, no matched objective candidates.
+        // Pierre called the blacklist: chasing the NPCs is not worth it for random bots.
+        case 6543:
             return true;
         default:
             return false;
