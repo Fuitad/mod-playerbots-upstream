@@ -6,7 +6,7 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **105**.
+Local only files: **106**.
 Upstream files changed: **75**.
 Regions: **581**. Covered inline: **554**. Missing markers: **0**.
 
@@ -1056,7 +1056,11 @@ Content fingerprint: `a68bd0649de65f00`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/DeathProbe.h`
-Content fingerprint: `a6d84d59295294c6`.
+Content fingerprint: `d08d62727ee2c4ed`.
+Banner: covered.
+
+### `src/Ai/World/Rpg/DeathProbeState.h`
+Content fingerprint: `b1b9e48f3d64e59f`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/FightLedgers.h`
@@ -1196,7 +1200,7 @@ Content fingerprint: `42775fac01139331`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotCampPullPolicyTest.cpp`
-Content fingerprint: `0863930e3bac11d8`.
+Content fingerprint: `fb727aa027c649c5`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotEquipEmptySlotPolicyTest.cpp`

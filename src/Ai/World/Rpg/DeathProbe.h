@@ -17,11 +17,11 @@
 #ifndef _PLAYERBOT_DEATHPROBE_H
 #define _PLAYERBOT_DEATHPROBE_H
 
-#include <unordered_map>
 #include <variant>
 
 #include "Ai/Base/Actions/DeathRecoveryPolicy.h"
 #include "Ai/World/Rpg/CampPullPolicy.h"
+#include "Ai/World/Rpg/DeathProbeState.h"
 #include "Ai/World/Rpg/FightLedgers.h"
 #include "Ai/World/Rpg/QuestDeathCooldown.h"
 #include "Ai/World/Rpg/QuestDropPolicy.h"
@@ -95,9 +95,9 @@ public:
         uint32 const guidLow = player->GetGUID().GetCounter();
         // PLB-LOCAL(environmental-death): no creature hook fired, so the world itself killed the bot;
         // the corpse lies where it will happen again. See RecentDeathRecord::lastDeathEnvironmental.
-        bool const environmental = !_pendingKillerLevelGap.count(guidLow);
-        int32 const killerGap = environmental ? 0 : _pendingKillerLevelGap[guidLow];
-        _pendingKillerLevelGap.erase(guidLow);
+        auto const pendingKillerGap = _state.TakeKillerGap(guidLow);
+        bool const environmental = !pendingKillerGap;
+        int32 const killerGap = pendingKillerGap.value_or(0);
         RecentDeathRecord const chain = RecentDeaths::Note(guidLow, getMSTime(), killerGap, environmental);
         LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-CHAIN deaths {} killerGap {} environmental {} homebind {}",
                   player->GetName(), chain.deathsInWindow, killerGap, environmental,
@@ -130,13 +130,13 @@ public:
                       "[DeathProbe] {} FIGHT secs {} hp {}% hits {} dealt {} taken {} actions ok {} fail {} "
                       "topfail {} verdict {}",
                       player->GetName(), fight.startMs ? GetMSTimeDiffToNow(fight.startMs) / 1000 : 0,
-                      fight.startHealthPct, fight.hits, fight.dealt, fight.taken, fight.actionsOk,
-                      fight.actionsFailed, TopFightFailure(fight), FightVerdictName(ClassifyFight(fight)));
+                      fight.startHealthPct, fight.hits, fight.dealt, fight.taken, fight.actionsOk, fight.actionsFailed,
+                      TopFightFailure(fight), FightVerdictName(ClassifyFight(fight)));
             FightLedgers::Close(guidLow);
         }
         // OnPlayerKilledByCreature runs before this later corpse transition and consumes the
         // engagement for creature deaths. Clear anything left by an environmental death here.
-        _firstEngagement.erase(guidLow);
+        _state.ClearEngagement(guidLow);
     }
 
     // The fight's first target, so a death can say whether the killer came out of the same camp.
@@ -151,24 +151,22 @@ public:
         // PLB-LOCAL(fight-report): the ledger opens with the fight and closes with it.
         FightLedgers::Open(player->GetGUID().GetCounter(), getMSTime(), static_cast<uint32>(player->GetHealthPct()));
 
-        time_t const now = time(nullptr);
-        FirstEngagement& held = _firstEngagement[player->GetGUID().GetCounter()];
-        if (!ShouldReplaceEngagement(held, now, CAMP_PULL_ENGAGEMENT_MAX_AGE_SECONDS))
-            return;
-
-        held.entry = enemy->GetEntry();
-        held.guidLow = enemy->GetGUID().GetCounter();
-        held.x = enemy->GetPositionX();
-        held.y = enemy->GetPositionY();
-        held.z = enemy->GetPositionZ();
-        held.since = now;
+        FirstEngagement const incoming{
+            .entry = enemy->GetEntry(),
+            .x = enemy->GetPositionX(),
+            .y = enemy->GetPositionY(),
+            .z = enemy->GetPositionZ(),
+            .guidLow = enemy->GetGUID().GetCounter(),
+            .since = time(nullptr),
+        };
+        _state.NoteEngagement(player->GetGUID().GetCounter(), incoming);
     }
 
     void OnPlayerLeaveCombat(Player* player) override
     {
         if (!player || !ShouldClearEngagementOnLeaveCombat(player->IsAlive()))
             return;
-        _firstEngagement.erase(player->GetGUID().GetCounter());
+        _state.ClearEngagement(player->GetGUID().GetCounter());
         // PLB-LOCAL(fight-report): a fight the bot survived needs no report.
         FightLedgers::Close(player->GetGUID().GetCounter());
     }
@@ -177,21 +175,21 @@ public:
     {
         if (!killer || !killed || !GET_PLAYERBOT_AI(killed) || !sRandomPlayerbotMgr.IsRandomBot(killed))
             return;
-        _pendingKillerLevelGap[killed->GetGUID().GetCounter()] =
-            static_cast<int32>(killer->GetLevel()) - static_cast<int32>(killed->GetLevel());
+        _state.NoteKillerGap(killed->GetGUID().GetCounter(),
+                             static_cast<int32>(killer->GetLevel()) - static_cast<int32>(killed->GetLevel()));
 
         // Where the killer came from, relative to the fight the bot chose to start. The untouched
         // share alone cannot separate a camp pull from a wanderer, and only the camp pull is
         // answerable by ranking grind candidates differently. See CampPullPolicy.h.
-        auto const engagement = _firstEngagement.find(killed->GetGUID().GetCounter());
-        bool const haveFirst = engagement != _firstEngagement.end() && engagement->second.since != 0;
+        auto const engagement = _state.TakeEngagement(killed->GetGUID().GetCounter());
+        bool const haveFirst = engagement && engagement->since != 0;
         float distance = -1.0f;
         float aggroRange = 0.0f;
         bool killerIsFirst = false;
         if (haveFirst)
         {
-            killerIsFirst = killer->GetGUID().GetCounter() == engagement->second.guidLow;
-            distance = killer->GetDistance(engagement->second.x, engagement->second.y, engagement->second.z);
+            killerIsFirst = killer->GetGUID().GetCounter() == engagement->guidLow;
+            distance = killer->GetDistance(engagement->x, engagement->y, engagement->z);
             aggroRange = killer->GetAggroRange(killed);
         }
         KillerOrigin const origin = ClassifyKiller(haveFirst, killerIsFirst, distance, aggroRange);
@@ -203,14 +201,11 @@ public:
                   killed->GetName(), killer->GetName(), killer->GetEntry(), killer->GetLevel(),
                   killer->GetCreatureTemplate() ? killer->GetCreatureTemplate()->rank : 0, killed->GetLevel(),
                   static_cast<uint32>(killer->GetHealthPct()), KillerOriginName(origin),
-                  haveFirst ? engagement->second.entry : 0, distance, aggroRange);
-
-        _firstEngagement.erase(killed->GetGUID().GetCounter());
+                  haveFirst ? engagement->entry : 0, distance, aggroRange);
     }
 
 private:
-    std::unordered_map<uint32, int32> _pendingKillerLevelGap;
-    std::unordered_map<ObjectGuid::LowType, FirstEngagement> _firstEngagement;
+    DeathProbeState _state;
 };
 
 // PLB-LOCAL(fight-report): damage dealt and taken by random bots, into the open fight ledger.

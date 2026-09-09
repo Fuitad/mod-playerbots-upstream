@@ -9,6 +9,9 @@
  */
 
 #include <algorithm>
+#include <array>
+#include <atomic>
+#include <thread>
 
 #include "Ai/World/Rpg/DeathProbe.h"
 #include "gtest/gtest.h"
@@ -90,4 +93,73 @@ TEST(PlayerbotCampPullPolicyTest, ADeathTransitionKeepsTheEngagementForTheKiller
 {
     EXPECT_TRUE(ShouldClearEngagementOnLeaveCombat(true));
     EXPECT_FALSE(ShouldClearEngagementOnLeaveCombat(false));
+}
+
+TEST(PlayerbotDeathProbeStateTest, PendingKillerGapDistinguishesZeroFromEnvironmentalDeath)
+{
+    DeathProbeState state;
+    EXPECT_FALSE(state.TakeKillerGap(1u));
+    state.NoteKillerGap(1u, 0);
+    auto const zero = state.TakeKillerGap(1u);
+    ASSERT_TRUE(zero);
+    EXPECT_EQ(*zero, 0);
+    EXPECT_FALSE(state.TakeKillerGap(1u));
+    state.NoteKillerGap(2u, -3);
+    EXPECT_EQ(state.TakeKillerGap(2u), -3);
+}
+
+TEST(PlayerbotDeathProbeStateTest, EngagementIsCopiedHeldUntilStaleAndConsumedOnce)
+{
+    DeathProbeState state;
+    FirstEngagement first;
+    first.entry = 123u;
+    first.guidLow = 456u;
+    first.since = 1000;
+    state.NoteEngagement(1u, first);
+    FirstEngagement later = first;
+    later.entry = 999u;
+    later.since = 1030;
+    state.NoteEngagement(1u, later);
+    auto const held = state.TakeEngagement(1u);
+    ASSERT_TRUE(held);
+    EXPECT_EQ(held->entry, 123u);
+    EXPECT_EQ(held->guidLow, 456u);
+    EXPECT_FALSE(state.TakeEngagement(1u));
+    state.NoteEngagement(1u, first);
+    later.since = first.since + CAMP_PULL_ENGAGEMENT_MAX_AGE_SECONDS + 1;
+    state.NoteEngagement(1u, later);
+    EXPECT_EQ(state.TakeEngagement(1u)->entry, 999u);
+    state.NoteEngagement(1u, first);
+    state.ClearEngagement(1u);
+    EXPECT_FALSE(state.TakeEngagement(1u));
+    EXPECT_EQ(held->entry, 123u);
+}
+
+TEST(PlayerbotDeathProbeStateTest, ConcurrentMapWorkersKeepIndependentRecordsIntact)
+{
+    DeathProbeState state;
+    std::atomic<uint32> errors{0u};
+    std::array<std::thread, 4> workers;
+    for (uint32 worker = 0u; worker < workers.size(); ++worker)
+        workers[worker] = std::thread(
+            [&, worker]
+            {
+                for (uint32 iteration = 0u; iteration < 2000u; ++iteration)
+                {
+                    uint32 const bot = worker * 2000u + iteration;
+                    FirstEngagement first;
+                    first.entry = bot + 1u;
+                    first.since = 1000;
+                    state.NoteKillerGap(bot, static_cast<int32>(worker));
+                    state.NoteEngagement(bot, first);
+                    auto const gap = state.TakeKillerGap(bot);
+                    auto const engagement = state.TakeEngagement(bot);
+                    if (!gap || *gap != static_cast<int32>(worker) || !engagement || engagement->entry != bot + 1u)
+                        ++errors;
+                    state.ClearEngagement(bot);
+                }
+            });
+    for (auto& worker : workers)
+        worker.join();
+    EXPECT_EQ(errors.load(), 0u);
 }
