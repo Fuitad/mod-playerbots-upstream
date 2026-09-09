@@ -121,6 +121,8 @@
         // Isouda, 2026-09-08: 301 seconds, 137 stay ticks, no matched objective candidates.
         // Pierre called the blacklist: chasing the NPCs is not worth it for random bots.
         case 6543:
+        // Plundering the Plunderers: Pierre requested this blacklist on 2026-09-09.
+        case 2381:
             return true;
         default:
             return false;

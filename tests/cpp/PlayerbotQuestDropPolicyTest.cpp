@@ -316,3 +316,12 @@ TEST(PlayerbotQuestDropPolicyTest, WarsongReportsNpcChaseIsBlacklisted)
     EXPECT_TRUE(QuestIsRpgBlacklisted(6543));
     EXPECT_FALSE(QuestIsRpgBlacklisted(6544));
 }
+
+TEST(PlayerbotQuestDropPolicyTest, PlunderingThePlunderersIsBlacklisted)
+{
+    EXPECT_TRUE(QuestIsRpgBlacklisted(2381));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(2380));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(2382));
+    EXPECT_TRUE(QuestIsRpgBlacklisted(1920));
+    EXPECT_TRUE(QuestIsRpgBlacklisted(6543));
+}
