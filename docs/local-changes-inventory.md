@@ -428,7 +428,7 @@ Content fingerprint: `7a1b7725e85faa59`.
 1. current 27-29; base boundary after line 21: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgAction.cpp`
-Content fingerprint: `cbc4551aada02174`.
+Content fingerprint: `3fb9d154158940e6`.
 21 region(s). Header: current.
 1. current 9-41; base boundary after line 7: covered.
 1. current 46-48; base boundary after line 11: covered.
@@ -444,13 +444,13 @@ Content fingerprint: `cbc4551aada02174`.
 1. current 718-729; base 508-508: covered.
 1. current 731-731; base 510-510: covered.
 1. current 744-782; base boundary after line 520: covered.
-1. current 806-880; base 542-542: covered.
-1. current 890-940; base boundary after line 549: covered.
-1. current 945-978; base boundary after line 552: covered.
-1. current 984-1330; base boundary after line 557: covered.
-1. current 1364-1377; base boundary after line 588: covered.
-1. current 1394-1395; base 603-603: covered.
-1. current 1414-1421; base boundary after line 619: covered.
+1. current 806-881; base 542-542: covered.
+1. current 891-941; base boundary after line 549: covered.
+1. current 946-979; base boundary after line 552: covered.
+1. current 985-1331; base boundary after line 557: covered.
+1. current 1365-1378; base boundary after line 588: covered.
+1. current 1395-1396; base 603-603: covered.
+1. current 1415-1422; base boundary after line 619: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp`
 Content fingerprint: `2d249bb4df93fa9a`.
@@ -1088,7 +1088,7 @@ Content fingerprint: `3a3e52d84a12bb95`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDropPolicy.h`
-Content fingerprint: `a6a32db87a70f15d`.
+Content fingerprint: `b41d651faa8965d6`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDropSweep.h`
@@ -1236,7 +1236,7 @@ Content fingerprint: `8e539e5e8aec1cde`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`
-Content fingerprint: `3f877600e101d1ce`.
+Content fingerprint: `9ea130b79d8790fc`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp`

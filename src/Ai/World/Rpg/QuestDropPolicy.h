@@ -75,8 +75,7 @@ inline constexpr int32 QUEST_DROP_LEVEL_MARGIN = 4;
 {
     if (questLevel <= 0)
         return false;
-    return static_cast<int32>(botLevel) - questLevel >= QUEST_DROP_LEVEL_MARGIN ||
-           QuestIsGrayFor(botLevel, questLevel);
+    return static_cast<int32>(botLevel) - questLevel >= QUEST_DROP_LEVEL_MARGIN || QuestIsGrayFor(botLevel, questLevel);
 }
 
 [[nodiscard]] inline QuestDropVerdict QuestDropDecision(QuestDropFacts const& facts)
@@ -143,13 +142,24 @@ enum class QuestStayEndVerdict : uint8
 // (gameobject or use-target), whether or not the approach converged before it was contested
 // away. A sighted candidate proves the place can progress the quest; losing the race for it is
 // the contention class (Pierre, 2026-08-30), not grounds for the process-lifetime abandon mark.
+// The fewest stay ticks (DoIncompleteQuest passes past the REACH latch) on which an untried stay
+// may be blamed on the place. A stay that ran fewer was spent in combat, looting or a failed walk
+// back and never reached the seeks; its zero candidates describe where the bot was, not the POI.
+// Wishfulman, 2026-09-11 11:00, Inoculation (9303): REACH at 6 yards, then 315 seconds of loot
+// runs and four kills elsewhere, ABANDON with usecand 5/0/0/0 and ticks 2, while the owlkin the
+// crystal targets stand 22 yards from the anchor. The five minute stays that were judged on the
+// seeks today ran 84 to 137 ticks.
+inline constexpr uint32 QUEST_STAY_JUDGED_TICKS = 20;
+
 [[nodiscard]] inline QuestStayEndVerdict QuestStayEndDecision(bool hasProgression, uint32 interactionAttempts,
-                                                              uint32 relevantKills = 0,
-                                                              uint32 candidateSightings = 0)
+                                                              uint32 relevantKills = 0, uint32 candidateSightings = 0,
+                                                              uint32 stayTicks = QUEST_STAY_JUDGED_TICKS)
 {
     if (hasProgression)
         return QuestStayEndVerdict::Progressed;
     if (interactionAttempts > 0 || relevantKills > 0 || candidateSightings > 0)
+        return QuestStayEndVerdict::RotateWithoutBlame;
+    if (stayTicks < QUEST_STAY_JUDGED_TICKS)
         return QuestStayEndVerdict::RotateWithoutBlame;
     return QuestStayEndVerdict::Abandon;
 }

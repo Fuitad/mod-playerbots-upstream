@@ -326,6 +326,21 @@ TEST(PlayerbotQuestDropPolicyTest, PlunderingThePlunderersIsBlacklisted)
     EXPECT_TRUE(QuestIsRpgBlacklisted(6543));
 }
 
+TEST(PlayerbotQuestDropPolicyTest, AStayThatNeverReachedTheSeeksIsNotBlamedOnThePlace)
+{
+    // Wishfulman, 2026-09-11: 315 seconds at Inoculation's anchor, two stay ticks, no candidates,
+    // owlkin 22 yards away. Two ticks describe the bot's loot runs, not the POI.
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 0, 2), QuestStayEndVerdict::RotateWithoutBlame);
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 0, QUEST_STAY_JUDGED_TICKS - 1),
+              QuestStayEndVerdict::RotateWithoutBlame);
+    // A stay that ran the seeks and found nothing is still the place's fault.
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 0, QUEST_STAY_JUDGED_TICKS), QuestStayEndVerdict::Abandon);
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 0, 105), QuestStayEndVerdict::Abandon);
+    // Progress and sightings keep their verdicts regardless of ticks.
+    EXPECT_EQ(QuestStayEndDecision(true, 0, 0, 0, 2), QuestStayEndVerdict::Progressed);
+    EXPECT_EQ(QuestStayEndDecision(false, 0, 0, 3, 2), QuestStayEndVerdict::RotateWithoutBlame);
+}
+
 TEST(PlayerbotQuestDropPolicyTest, PlaguedLandsIsBlacklisted)
 {
     EXPECT_TRUE(QuestIsRpgBlacklisted(2118));

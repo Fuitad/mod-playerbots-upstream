@@ -876,7 +876,8 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         QuestStayEndVerdict const stayVerdict = QuestStayEndDecision(
             hasProgression, QuestStayUseTracker::AttemptsThisStay(bot), relevantKills,
             QuestStayUseTracker::SightingsThisStay(bot) + useDiag.aliveMatching + goDiag.usableMatching +
-                respawnPending);
+                respawnPending,
+            QuestStayUseTracker::TicksThisStay(bot));
         if (stayVerdict == QuestStayEndVerdict::Abandon)
         // PLB-LOCAL END(quest-stay-use-tracker)
         {
