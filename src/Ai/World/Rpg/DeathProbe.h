@@ -102,6 +102,18 @@ public:
         LOG_DEBUG("playerbots", "[DeathProbe] {} DEATH-CHAIN deaths {} killerGap {} environmental {} homebind {}",
                   player->GetName(), chain.deathsInWindow, killerGap, environmental,
                   RecoverAtHomebindAfterDeath(chain.deathsInWindow, killerGap, environmental));
+        // PLB-LOCAL(drowning-alarm): a bot the world killed in water, or outside any zone, drowned or
+        // swam to exhaustion; nothing sends a bot there on purpose. Eight bots died that way in open
+        // ocean on map 530 on the morning of 2026-09-11 (a gathering leg to a node on the other isle
+        // group). Pierre: any bot drowning should raise an alarm. Error level so it reaches the
+        // console log, not only the debug file.
+        if (environmental && (player->IsInWater() || player->GetZoneId() == 0))
+        {
+            LOG_ERROR("playerbots", "[DeathProbe] {} DROWNED lvl {} rpg {} quest {} at {:.0f},{:.0f},{:.0f} map {} zone {}",
+                      player->GetName(), player->GetLevel(), static_cast<uint32>(botAI->rpgInfo.GetStatus()), questId,
+                      player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetMapId(),
+                      player->GetZoneId());
+        }
         // The quest death cooldown is recorded here, at the death, not from the quest stay tick:
         // after the revive the bot re-reaches the anchor and the stay's death count starts over,
         // so the stay never saw its own death (0 ABANDON-DEATH lines all night on 2026-09-01).

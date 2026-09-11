@@ -944,7 +944,7 @@ Content fingerprint: `816c2c7f56115125`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/DeathRecoveryPolicy.h`
-Content fingerprint: `3ea4ce5d22b2f17a`.
+Content fingerprint: `59140a819b7aa94b`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/LootStorePolicy.h`
@@ -1056,7 +1056,7 @@ Content fingerprint: `a68bd0649de65f00`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/DeathProbe.h`
-Content fingerprint: `d08d62727ee2c4ed`.
+Content fingerprint: `7b76869939f908dc`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/DeathProbeState.h`
