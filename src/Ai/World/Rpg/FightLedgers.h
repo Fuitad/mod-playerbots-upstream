@@ -36,7 +36,7 @@ inline std::unordered_map<uint32, FightLedger>& Map()
 }
 
 // Open a fight for the bot unless one is already open: combat is re-entered mid-fight often.
-inline void Open(uint32 botLow, uint32 nowMs, uint32 healthPct)
+inline void Open(uint32 botLow, uint32 nowMs, uint32 healthPct, uint32 powerPct = 0)
 {
     std::lock_guard<std::mutex> lock(Mutex());
     FightLedger& ledger = Map()[botLow];
@@ -45,6 +45,7 @@ inline void Open(uint32 botLow, uint32 nowMs, uint32 healthPct)
         ledger = FightLedger{};
         ledger.startMs = nowMs ? nowMs : 1u;
         ledger.startHealthPct = healthPct;
+        ledger.startPowerPct = powerPct;
     }
 }
 

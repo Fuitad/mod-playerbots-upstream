@@ -1056,7 +1056,7 @@ Content fingerprint: `a68bd0649de65f00`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/DeathProbe.h`
-Content fingerprint: `7b76869939f908dc`.
+Content fingerprint: `bfa2ca4507dbf6c9`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/DeathProbeState.h`
@@ -1064,11 +1064,11 @@ Content fingerprint: `b1b9e48f3d64e59f`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/FightLedgers.h`
-Content fingerprint: `63bd19ba99532300`.
+Content fingerprint: `c6311490c18ba7e5`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/FightReportPolicy.h`
-Content fingerprint: `a4d86ea0544b83aa`.
+Content fingerprint: `4cfb238c4b9025dc`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/FlightDestinationPolicy.h`

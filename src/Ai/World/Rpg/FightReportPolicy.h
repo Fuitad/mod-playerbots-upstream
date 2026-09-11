@@ -34,6 +34,11 @@ struct FightLedger
     // of 5 to 15 seconds with 60 to 200 damage dealt: a bot that starts a fight at a third of its
     // health loses it before its actions matter.
     uint32 startHealthPct = 0;
+    // Power percent (mana, rage, energy) when the fight opened. The DIED line's power is read
+    // after the core zeroes it on death and says nothing; 2026-09-11 11:00, mages and priests died
+    // three times as often as hunters and warriors in even-level fights, and only 58 of 167 mana
+    // users held any drink, so whether a caster walks into its fights empty is the open question.
+    uint32 startPowerPct = 0;
     // Landed hits and their damage, and damage taken, since the fight opened.
     uint32 hits = 0;
     uint32 dealt = 0;
