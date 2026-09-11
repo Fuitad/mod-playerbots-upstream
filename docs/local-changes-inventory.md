@@ -944,7 +944,7 @@ Content fingerprint: `816c2c7f56115125`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/DeathRecoveryPolicy.h`
-Content fingerprint: `3baa1889c884a38c`.
+Content fingerprint: `3ea4ce5d22b2f17a`.
 Banner: covered.
 
 ### `src/Ai/Base/Actions/LootStorePolicy.h`
@@ -1200,7 +1200,7 @@ Content fingerprint: `42775fac01139331`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotCampPullPolicyTest.cpp`
-Content fingerprint: `fb727aa027c649c5`.
+Content fingerprint: `66926d82dfa3c9cf`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotEquipEmptySlotPolicyTest.cpp`

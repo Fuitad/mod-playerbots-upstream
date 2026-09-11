@@ -20,6 +20,7 @@
 #define _PLAYERBOT_DEATHRECOVERYPOLICY_H
 
 #include <cstdint>
+#include <mutex>
 #include <unordered_map>
 
 // Deaths closer together than this count as one chain.
@@ -40,8 +41,7 @@ struct RecentDeathRecord
     bool lastDeathEnvironmental = false;
 };
 
-inline bool RecoverAtHomebindAfterDeath(uint32_t deathsInWindow, int32_t killerLevelGap,
-                                        bool environmental = false)
+inline bool RecoverAtHomebindAfterDeath(uint32_t deathsInWindow, int32_t killerLevelGap, bool environmental = false)
 {
     return environmental || deathsInWindow >= 2 || killerLevelGap >= OUTMATCHED_KILLER_LEVEL_GAP;
 }
@@ -84,43 +84,60 @@ inline bool RecoverAtHomebindAfterVerticalCap(uint32_t capsOnThisCorpse)
     return capsOnThisCorpse > VERTICAL_CAPS_PER_CORPSE;
 }
 
+// Both registries are process wide and written from combat hooks that run on different map update
+// workers: DeathProbe::OnPlayerJustDied notes the death, ReviveFromCorpseAction reads the chain and
+// notes the cap. The same shape crashed the worldserver on 2026-09-09 14:23:49 when DeathProbe's
+// engagement map was erased from two workers at once (fixed in 4b8c9fd8); these two maps sit one
+// call later in the same hook. One mutex covers both, every operation is a lookup and a copy, and
+// nothing else runs while it is held. The maps are reachable only through the functions below.
+namespace DeathRegistries
+{
+inline std::mutex& Mutex()
+{
+    static std::mutex mutex;
+    return mutex;
+}
+}  // namespace DeathRegistries
+
 namespace VerticalCaps
 {
-inline std::unordered_map<uint32_t, VerticalCapRecord>& Registry()
-{
-    static std::unordered_map<uint32_t, VerticalCapRecord> registry;
-    return registry;
-}
-
 inline VerticalCapRecord Note(uint32_t botGuidLow, uint64_t corpseGhostTime)
 {
-    VerticalCapRecord const record = NoteVerticalCap(Registry()[botGuidLow], corpseGhostTime);
-    Registry()[botGuidLow] = record;
-    return record;
+    static std::unordered_map<uint32_t, VerticalCapRecord> registry;
+    std::lock_guard<std::mutex> lock(DeathRegistries::Mutex());
+    VerticalCapRecord& held = registry[botGuidLow];
+    held = NoteVerticalCap(held, corpseGhostTime);
+    return held;
 }
 }  // namespace VerticalCaps
 
 namespace RecentDeaths
 {
-inline std::unordered_map<uint32_t, RecentDeathRecord>& Registry()
+namespace detail
+{
+// Call only with DeathRegistries::Mutex() held.
+inline std::unordered_map<uint32_t, RecentDeathRecord>& RegistryLocked()
 {
     static std::unordered_map<uint32_t, RecentDeathRecord> registry;
     return registry;
 }
+}  // namespace detail
 
-inline RecentDeathRecord Note(uint32_t botGuidLow, uint32_t nowMs, int32_t killerLevelGap,
-                              bool environmental = false)
+inline RecentDeathRecord Note(uint32_t botGuidLow, uint32_t nowMs, int32_t killerLevelGap, bool environmental = false)
 {
-    RecentDeathRecord const record = NoteRecentDeath(Registry()[botGuidLow], nowMs, killerLevelGap, environmental);
-    Registry()[botGuidLow] = record;
-    return record;
+    std::lock_guard<std::mutex> lock(DeathRegistries::Mutex());
+    RecentDeathRecord& held = detail::RegistryLocked()[botGuidLow];
+    held = NoteRecentDeath(held, nowMs, killerLevelGap, environmental);
+    return held;
 }
 
 // The record of the bot's current chain, or an empty one once the window has passed.
 inline RecentDeathRecord Current(uint32_t botGuidLow, uint32_t nowMs)
 {
-    auto const it = Registry().find(botGuidLow);
-    if (it == Registry().end() || nowMs - it->second.lastDeathMs > RECENT_DEATH_WINDOW_MS)
+    std::lock_guard<std::mutex> lock(DeathRegistries::Mutex());
+    auto const& registry = detail::RegistryLocked();
+    auto const it = registry.find(botGuidLow);
+    if (it == registry.end() || nowMs - it->second.lastDeathMs > RECENT_DEATH_WINDOW_MS)
         return RecentDeathRecord{};
     return it->second;
 }

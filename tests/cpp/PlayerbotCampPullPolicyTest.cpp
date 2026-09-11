@@ -13,6 +13,7 @@
 #include <atomic>
 #include <thread>
 
+#include "Ai/Base/Actions/DeathRecoveryPolicy.h"
 #include "Ai/World/Rpg/DeathProbe.h"
 #include "gtest/gtest.h"
 
@@ -157,6 +158,39 @@ TEST(PlayerbotDeathProbeStateTest, ConcurrentMapWorkersKeepIndependentRecordsInt
                     if (!gap || *gap != static_cast<int32>(worker) || !engagement || engagement->entry != bot + 1u)
                         ++errors;
                     state.ClearEngagement(bot);
+                }
+            });
+    for (auto& worker : workers)
+        worker.join();
+    EXPECT_EQ(errors.load(), 0u);
+}
+
+TEST(PlayerbotDeathRegistriesTest, ConcurrentMapWorkersKeepDeathChainsAndVerticalCapsIntact)
+{
+    // The process wide death chain and vertical cap registries are written by the same combat hook
+    // that crashed on 2026-09-09 (DeathProbe's engagement map, erased from two map workers at once)
+    // and by the corpse revive action on other workers. Each worker owns disjoint bots and notes
+    // three deaths and two caps per bot, so every read has one right answer.
+    std::atomic<uint32> errors{0u};
+    std::array<std::thread, 4> workers;
+    for (uint32 worker = 0u; worker < workers.size(); ++worker)
+        workers[worker] = std::thread(
+            [&, worker]
+            {
+                for (uint32 iteration = 0u; iteration < 2000u; ++iteration)
+                {
+                    uint32 const bot = 1000000u + worker * 2000u + iteration;
+                    RecentDeaths::Note(bot, 10000u, 1);
+                    RecentDeaths::Note(bot, 20000u, 2);
+                    RecentDeathRecord const third = RecentDeaths::Note(bot, 30000u, 3, true);
+                    RecentDeathRecord const current = RecentDeaths::Current(bot, 40000u);
+                    VerticalCaps::Note(bot, 500u);
+                    VerticalCapRecord const cap = VerticalCaps::Note(bot, 500u);
+                    if (third.deathsInWindow != 3u || current.deathsInWindow != 3u || current.lastKillerLevelGap != 3 ||
+                        !current.lastDeathEnvironmental || cap.caps != 2u)
+                    {
+                        ++errors;
+                    }
                 }
             });
     for (auto& worker : workers)
