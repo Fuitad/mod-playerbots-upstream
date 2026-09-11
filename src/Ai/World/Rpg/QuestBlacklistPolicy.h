@@ -123,6 +123,10 @@
         case 6543:
         // Plundering the Plunderers: Pierre requested this blacklist on 2026-09-09.
         case 2381:
+        // Plagued Lands: use an item on a specific creature. Hamletmiller (2026-09-09) and Popoto
+        // (2026-09-11, 301 seconds, 105 ticks, eight nearby units, none matching) abandoned it at
+        // the poi with no matching entry in sight. Pierre requested this blacklist on 2026-09-11.
+        case 2118:
             return true;
         default:
             return false;

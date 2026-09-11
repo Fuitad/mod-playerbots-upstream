@@ -325,3 +325,11 @@ TEST(PlayerbotQuestDropPolicyTest, PlunderingThePlunderersIsBlacklisted)
     EXPECT_TRUE(QuestIsRpgBlacklisted(1920));
     EXPECT_TRUE(QuestIsRpgBlacklisted(6543));
 }
+
+TEST(PlayerbotQuestDropPolicyTest, PlaguedLandsIsBlacklisted)
+{
+    EXPECT_TRUE(QuestIsRpgBlacklisted(2118));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(2117));
+    EXPECT_FALSE(QuestIsRpgBlacklisted(2119));
+    EXPECT_TRUE(QuestIsRpgBlacklisted(2381));
+}
