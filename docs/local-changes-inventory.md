@@ -1088,7 +1088,7 @@ Content fingerprint: `3a3e52d84a12bb95`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDropPolicy.h`
-Content fingerprint: `b41d651faa8965d6`.
+Content fingerprint: `0d7428f43f13c341`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/QuestDropSweep.h`
@@ -1236,7 +1236,7 @@ Content fingerprint: `8e539e5e8aec1cde`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestDropPolicyTest.cpp`
-Content fingerprint: `9ea130b79d8790fc`.
+Content fingerprint: `d0585d49f9ad0d19`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotQuestGameObjectPolicyTest.cpp`
