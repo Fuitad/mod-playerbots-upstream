@@ -4,7 +4,7 @@
  * or (at your option) any later version.
  */
 
-// PLB-LOCAL UPSTREAM-FILE: this fork changes 38 region(s) of this upstream file.
+// PLB-LOCAL UPSTREAM-FILE: this fork changes 39 region(s) of this upstream file.
 
 #include "NewRpgBaseAction.h"
 
@@ -12,6 +12,8 @@
 #include "Ai/World/Rpg/QuestPoiPointPolicy.h"
 // PLB-LOCAL(movefar-stuck)
 #include "Ai/World/Rpg/MoveFarStuckPolicy.h"
+// PLB-LOCAL(taxi-fare): a random flight only among the rides the purse can pay.
+#include "Bot/Movement/PlayerbotTaxiFlight.h"
 // PLB-LOCAL(quest-hard-drop): permanently drop gray quests the bot gave up on or cannot reach.
 #include "Ai/World/Rpg/QuestDropSweep.h"
 #include "Ai/World/Rpg/QuestBlacklistPolicy.h"
@@ -1331,6 +1333,13 @@ bool NewRpgBaseAction::SelectRandomFlightTaxiNode(uint32& flightMasterEntry, Wor
         return false;
 
     std::vector<std::vector<uint32>> availablePaths = sTravelMgr.GetOptimalFlightDestinations(bot);
+    // PLB-LOCAL BEGIN(taxi-fare): only rides the purse can pay. The core refuses an unpaid ride at
+    // the flight master, after the walk there: 57 refusals in one 30 minute window at 280 bots on
+    // 2026-09-12 (Wilkin, 6c, on the 730c ride from node 32 to 39, five times). See
+    // Bot/Movement/PlayerbotTaxiFlight.h. Upstream: picked any path, whatever it cost.
+    std::erase_if(availablePaths, [this, info](std::vector<uint32> const& candidate)
+                  { return !PlayerbotCanAffordTaxi(bot, candidate, info->templateEntry); });
+    // PLB-LOCAL END(taxi-fare)
     if (availablePaths.empty())
         return false;
 

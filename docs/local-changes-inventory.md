@@ -6,9 +6,9 @@ The comparison includes the current index, working tree and nonignored new files
 The inventory excludes its own contents. File fingerprints detect stale manual exceptions.
 Manual exceptions are accounted for, not automatically modified or proof of merge compatibility.
 
-Local only files: **106**.
+Local only files: **107**.
 Upstream files changed: **75**.
-Regions: **581**. Covered inline: **554**. Missing markers: **0**.
+Regions: **582**. Covered inline: **555**. Missing markers: **0**.
 
 ## Upstream files
 
@@ -453,46 +453,47 @@ Content fingerprint: `3fb9d154158940e6`.
 1. current 1415-1422; base boundary after line 619: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp`
-Content fingerprint: `2d249bb4df93fa9a`.
-38 region(s). Header: current.
-1. current 10-31; base boundary after line 7: covered.
-1. current 48-49; base boundary after line 21: covered.
-1. current 72-130; base boundary after line 43: covered.
-1. current 284-289; base boundary after line 194: covered.
-1. current 331-335; base boundary after line 235: covered.
-1. current 652-655; base boundary after line 550: covered.
-1. current 877-935; base boundary after line 770: covered.
-1. current 952-958; base boundary after line 786: covered.
-1. current 1023-1026; base boundary after line 849: covered.
-1. current 1031-1037; base 853-860: covered.
-1. current 1041-1043; base 862-862: covered.
-1. current 1052-1057; base 870-871: covered.
-1. current 1092-1118; base boundary after line 904: covered.
-1. current 1139-1141; base boundary after line 922: covered.
-1. current 1145-1166; base 925-927: covered.
-1. current 1168-1180; base 929-931: covered.
-1. current 1188-1189; base 937-937: covered.
-1. current 1199-1199; base 945-945: covered.
-1. current 1214-1214; base boundary after line 958: covered.
-1. current 1242-1254; base boundary after line 985: covered.
-1. current 1349-1353; base boundary after line 1078: covered.
-1. current 1362-1371; base 1085-1085: covered.
-1. current 1411-1413; base boundary after line 1122: covered.
-1. current 1416-1416; base 1125-1125: covered.
-1. current 1426-1426; base 1135-1135: covered.
-1. current 1444-1448; base boundary after line 1150: covered.
-1. current 1459-1474; base 1160-1160: covered.
-1. current 1486-1486; base boundary after line 1169: covered.
-1. current 1489-1489; base 1172-1175: covered.
-1. current 1491-1492; base 1177-1177: covered.
-1. current 1526-1526; base 1208-1208: covered.
-1. current 1539-1539; base boundary after line 1219: covered.
-1. current 1543-1544; base boundary after line 1222: covered.
-1. current 1550-1551; base boundary after line 1227: covered.
-1. current 1563-1567; base boundary after line 1236: covered.
-1. current 1574-1579; base boundary after line 1241: covered.
-1. current 1591-1591; base boundary after line 1251: covered.
-1. current 1597-1606; base 1257-1257: covered.
+Content fingerprint: `08d3944ec2680c93`.
+39 region(s). Header: current.
+1. current 10-33; base boundary after line 7: covered.
+1. current 50-51; base boundary after line 21: covered.
+1. current 74-132; base boundary after line 43: covered.
+1. current 286-291; base boundary after line 194: covered.
+1. current 333-337; base boundary after line 235: covered.
+1. current 654-657; base boundary after line 550: covered.
+1. current 879-937; base boundary after line 770: covered.
+1. current 954-960; base boundary after line 786: covered.
+1. current 1025-1028; base boundary after line 849: covered.
+1. current 1033-1039; base 853-860: covered.
+1. current 1043-1045; base 862-862: covered.
+1. current 1054-1059; base 870-871: covered.
+1. current 1094-1120; base boundary after line 904: covered.
+1. current 1141-1143; base boundary after line 922: covered.
+1. current 1147-1168; base 925-927: covered.
+1. current 1170-1182; base 929-931: covered.
+1. current 1190-1191; base 937-937: covered.
+1. current 1201-1201; base 945-945: covered.
+1. current 1216-1216; base boundary after line 958: covered.
+1. current 1244-1256; base boundary after line 985: covered.
+1. current 1337-1341; base boundary after line 1064: covered.
+1. current 1358-1362; base boundary after line 1078: covered.
+1. current 1371-1380; base 1085-1085: covered.
+1. current 1420-1422; base boundary after line 1122: covered.
+1. current 1425-1425; base 1125-1125: covered.
+1. current 1435-1435; base 1135-1135: covered.
+1. current 1453-1457; base boundary after line 1150: covered.
+1. current 1468-1483; base 1160-1160: covered.
+1. current 1495-1495; base boundary after line 1169: covered.
+1. current 1498-1498; base 1172-1175: covered.
+1. current 1500-1501; base 1177-1177: covered.
+1. current 1535-1535; base 1208-1208: covered.
+1. current 1548-1548; base boundary after line 1219: covered.
+1. current 1552-1553; base boundary after line 1222: covered.
+1. current 1559-1560; base boundary after line 1227: covered.
+1. current 1572-1576; base boundary after line 1236: covered.
+1. current 1583-1588; base boundary after line 1241: covered.
+1. current 1600-1600; base boundary after line 1251: covered.
+1. current 1606-1615; base 1257-1257: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgBaseAction.h`
 Content fingerprint: `0510058b90b89bca`.
@@ -928,7 +929,7 @@ Content fingerprint: `0dcb721b3c5f86dd`.
 Banner: covered.
 
 ### `mod-playerbots.cmake`
-Content fingerprint: `81cf838d221efaa1`.
+Content fingerprint: `80eb553ba4cf181c`.
 Banner: covered.
 
 ### `patches/azerothcore-playerbot-test-harness.patch`
@@ -1172,11 +1173,11 @@ Content fingerprint: `81869f8900d3eb6d`.
 Banner: covered.
 
 ### `src/Bot/Movement/PlayerbotTaxiFlight.cpp`
-Content fingerprint: `f2f8b069e5acfb71`.
+Content fingerprint: `997940bfa491c979`.
 Banner: covered.
 
 ### `src/Bot/Movement/PlayerbotTaxiFlight.h`
-Content fingerprint: `aaf76123aa2adbd3`.
+Content fingerprint: `3c6c35fd356e7c19`.
 Banner: covered.
 
 ### `src/Bot/Population/RandomPlayerbotAdmission.cpp`
@@ -1281,6 +1282,10 @@ Banner: covered.
 
 ### `tests/cpp/PlayerbotSoulShardPolicyTest.cpp`
 Content fingerprint: `2f0d1af35dc2341b`.
+Banner: covered.
+
+### `tests/cpp/PlayerbotTaxiFarePolicyTest.cpp`
+Content fingerprint: `d4dac38f84ffbd6f`.
 Banner: covered.
 
 ### `tests/cpp/PlayerbotTravelTargetTest.cpp`
