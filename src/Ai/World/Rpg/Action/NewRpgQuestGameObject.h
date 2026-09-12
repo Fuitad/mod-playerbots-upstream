@@ -49,13 +49,15 @@ struct QuestGoSeekDiag
     uint32 matching = 0;
     uint32 usableMatching = 0;
     uint32 inRange = 0;
+    // The first predicate a matching candidate failed, or "none". Popoto stood at the Skeletal
+    // Sea Turtle (4681) for 116 ticks on 2026-09-11 with "matching 1 usable 0" and the line could
+    // not say which of the six gates refused it.
+    char const* unusable = "none";
 };
 
-[[nodiscard]] QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* quest,
-                                                                 int32 objectiveIdx,
-                                                                 GuidVector const& nearbyGameObjects,
-                                                                 float anchorX, float anchorY,
-                                                                 float anchorRadius,
+[[nodiscard]] QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* quest, int32 objectiveIdx,
+                                                                 GuidVector const& nearbyGameObjects, float anchorX,
+                                                                 float anchorY, float anchorRadius,
                                                                  QuestGoSeekDiag* diag = nullptr);
 
 [[nodiscard]] bool IsQuestGameObjectWithinInteraction(Player* bot, ObjectGuid guid);

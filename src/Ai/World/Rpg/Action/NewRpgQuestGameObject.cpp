@@ -11,9 +11,11 @@
 
 #include "NewRpgQuestGameObject.h"
 
+#include <cstring>
+
+#include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 #include "Ai/World/Rpg/QuestGameObjectPolicy.h"
 #include "Ai/World/Rpg/QuestSpellFocusPolicy.h"
-#include "Ai/World/Rpg/Action/QuestObjectiveSpawnPoints.h"
 #include "GameObject.h"
 #include "LootMgr.h"
 #include "LootObjectStack.h"
@@ -43,8 +45,8 @@ bool ChestCanDropQuestItem(GameObject const* go, Player* bot, uint32 neededItemI
 }  // namespace
 
 QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* quest, int32 objectiveIdx,
-                                                   GuidVector const& nearbyGameObjects, float anchorX,
-                                                   float anchorY, float anchorRadius, QuestGoSeekDiag* diag)
+                                                   GuidVector const& nearbyGameObjects, float anchorX, float anchorY,
+                                                   float anchorRadius, QuestGoSeekDiag* diag)
 {
     if (!bot || !quest)
         return {};
@@ -97,13 +99,38 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
         if (candidate.interaction == QuestGoInteraction::Skip)
             continue;
 
+        if (requiredGoEntry)
+            candidate.matchesObjective = go->GetEntry() == requiredGoEntry;
+        else if (isSpellFocus)
+            candidate.matchesObjective = go->GetGOInfo()->spellFocus.focusId == focusId;
+        else if (isChest)
+            candidate.matchesObjective = ChestCanDropQuestItem(go, bot, neededItemId);
+
+        // Each gate is named so the abandon probe can say which one refused a matching object.
+        // Only the first refusal of the first matching candidate is kept: one word answers the
+        // question the line exists for.
+        auto const refuse = [&](char const* reason)
+        {
+            if (diag && candidate.matchesObjective && std::strcmp(diag->unusable, "none") == 0)
+                diag->unusable = reason;
+            return false;
+        };
         // A focus is never activated to a quest and carries no state of its own: spawned is the
         // whole of usable, the same test Spell::CheckSpellFocus applies (GameObjectFocusCheck).
-        candidate.usable = candidate.interaction == QuestGoInteraction::CastAtFocus
-                               ? go->isSpawned()
-                               : go->isSpawned() && go->GetGoState() == GO_STATE_READY &&
-                                     !go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE) &&
-                                     !go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE) && go->ActivateToQuest(bot);
+        if (!go->isSpawned())
+            candidate.usable = refuse("notspawned");
+        else if (candidate.interaction == QuestGoInteraction::CastAtFocus)
+            candidate.usable = true;
+        else if (go->GetGoState() != GO_STATE_READY)
+            candidate.usable = refuse("notready");
+        else if (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE))
+            candidate.usable = refuse("notselectable");
+        else if (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE))
+            candidate.usable = refuse("inuse");
+        else if (!go->ActivateToQuest(bot))
+            candidate.usable = refuse("notactivated");
+        else
+            candidate.usable = true;
 
         // A chest is only a candidate when the loot pipeline itself would open it. Without this
         // agreement the seek and the pipeline can disagree forever: measured live 2026-08-29, a
@@ -117,17 +144,11 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
         if (candidate.usable && candidate.interaction == QuestGoInteraction::Loot)
         {
             LootObject lootProbe(bot, guid);
-            candidate.usable = !lootProbe.IsEmpty() &&
-                               (!go->IsWithinDistInMap(bot, go->GetInteractionDistance()) ||
-                                lootProbe.IsLootPossible(bot));
+            if (lootProbe.IsEmpty())
+                candidate.usable = refuse("lootempty");
+            else if (go->IsWithinDistInMap(bot, go->GetInteractionDistance()) && !lootProbe.IsLootPossible(bot))
+                candidate.usable = refuse("lootimpossible");
         }
-
-        if (requiredGoEntry)
-            candidate.matchesObjective = go->GetEntry() == requiredGoEntry;
-        else if (isSpellFocus)
-            candidate.matchesObjective = go->GetGOInfo()->spellFocus.focusId == focusId;
-        else if (isChest)
-            candidate.matchesObjective = ChestCanDropQuestItem(go, bot, neededItemId);
 
         candidate.distanceSq = bot->GetExactDistSq(go);
         candidate.anchorDistanceSq = go->GetExactDist2dSq(anchorX, anchorY);
@@ -142,8 +163,7 @@ QuestGameObjectTarget FindQuestObjectiveGameObject(Player* bot, Quest const* que
                 if (candidate.usable)
                 {
                     ++diag->usableMatching;
-                    if (QuestGoCandidateInRange(candidate,
-                                                anchorRadius > 0.0f ? anchorRadius * anchorRadius : 0.0f))
+                    if (QuestGoCandidateInRange(candidate, anchorRadius > 0.0f ? anchorRadius * anchorRadius : 0.0f))
                         ++diag->inRange;
                 }
             }

@@ -428,7 +428,7 @@ Content fingerprint: `7a1b7725e85faa59`.
 1. current 27-29; base boundary after line 21: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgAction.cpp`
-Content fingerprint: `3fb9d154158940e6`.
+Content fingerprint: `575a7b7fe90161f6`.
 21 region(s). Header: current.
 1. current 9-41; base boundary after line 7: covered.
 1. current 46-48; base boundary after line 11: covered.
@@ -1017,11 +1017,11 @@ Content fingerprint: `03f5536691067f0e`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestGameObject.cpp`
-Content fingerprint: `6a5c1d44993f45d7`.
+Content fingerprint: `d91b45226e5a5d8f`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestGameObject.h`
-Content fingerprint: `1bac20ff238e3413`.
+Content fingerprint: `8ca25b4b41dbb463`.
 Banner: covered.
 
 ### `src/Ai/World/Rpg/Action/NewRpgQuestUseTarget.cpp`

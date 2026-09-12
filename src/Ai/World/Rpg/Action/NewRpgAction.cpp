@@ -902,7 +902,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 "playerbots",
                 "[QuestProbe] {} ABANDON quest {} obj {} distFromPoi {:.0f}y stayed {}s counter {} lvl {} "
                 "kills {} targets {} grind {} curtgt {} usemode {} usecand {}/{}/{}/{} gocand {}/{}/{}/{} "
-                "ticks {}",
+                "unusable {} ticks {}",
                 bot->GetName(), questId, currentObjective, bot->GetExactDist(data.pos),
                 GetMSTimeDiffToNow(data.lastReachPOI) / 1000, probeCount, bot->GetLevel(),
                 QuestStayKillProbe::KillsSinceStayStart(bot), AI_VALUE(GuidVector, "possible targets").size(),
@@ -914,7 +914,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
                 }(),
                 static_cast<uint32>(useDiag.mode), useDiag.nearbyUnits, useDiag.matchingEntry, useDiag.aliveMatching,
                 useDiag.inRange, goDiag.nearbyGos, goDiag.matching, goDiag.usableMatching, goDiag.inRange,
-                QuestStayUseTracker::TicksThisStay(bot));
+                goDiag.unusable, QuestStayUseTracker::TicksThisStay(bot));
             // PLB-LOCAL(quest-abandon-probe): one SOURCE line per source creature spawn near the
             // anchor, with the facts the grind candidate filter gates on (alive, distance, z gap,
             // line of sight, attackers). Measured 2026-09-01: Damama stood 21y from an alive
