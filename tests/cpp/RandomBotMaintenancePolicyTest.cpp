@@ -279,6 +279,10 @@ TEST(RandomBotMaintenancePolicyTest, BrokenGearEarnsARepairTripWhateverThePurseH
     EXPECT_TRUE(RepairTripWorthPlanning(false, 300, 300));
     EXPECT_FALSE(RepairTripWorthPlanning(false, 300, 299));
     EXPECT_FALSE(RepairTripWorthPlanning(false, 0, 1000));
+    // Unless the floor stipend would pay at the counter: the grant is made during the visit, so
+    // a broke bot that never walks never gets it (2026-09-12: one grant all day).
+    EXPECT_TRUE(RepairTripWorthPlanning(false, 300, 0, /*stipendDue*/ true));
+    EXPECT_FALSE(RepairTripWorthPlanning(false, 300, 0, /*stipendDue*/ false));
 }
 
 TEST(RandomBotMaintenancePolicyTest, ARepairVisitIsJudgedByTheGearNotByTheActionsWord)
@@ -316,30 +320,28 @@ TEST(RandomBotMaintenancePolicyTest, TheFloorStipendCoversOnlyABrokeBotsShortfal
     using playerbots::maintenance::StipendAmount;
     using playerbots::maintenance::StipendFacts;
 
-    // Colina, 2026-09-05: 0c, four broken pieces, repair 350c. She gets exactly the shortfall.
+    using playerbots::maintenance::STIPEND_SUSTENANCE_FLOOR;
+
+    // Colina, 2026-09-05: 0c, four broken pieces, repair 350c. She gets the shortfall plus the
+    // floor for one bundle of food and one of drink (Pierre, 2026-09-13: the widened stipend).
     StipendFacts facts;
-    facts.hasBrokenEquipment = true;
     facts.cooldownElapsed = true;
     facts.purseCopper = 0;
     facts.repairCostCopper = 350;
-    EXPECT_EQ(StipendAmount(facts), 350u);
-    // A purse that covers part of it gets only the rest.
+    EXPECT_EQ(StipendAmount(facts), 350u + STIPEND_SUSTENANCE_FLOOR);
+    // A purse that covers part of it gets only the rest, plus the floor.
     facts.purseCopper = 100;
-    EXPECT_EQ(StipendAmount(facts), 250u);
-    // A purse that covers the repair gets nothing, however small.
+    EXPECT_EQ(StipendAmount(facts), 250u + STIPEND_SUSTENANCE_FLOOR);
+    // A purse that covers the repair gets nothing, however small: the gate is the current bill,
+    // and worn or broken makes no difference to it.
     facts.purseCopper = 350;
     EXPECT_EQ(StipendAmount(facts), 0u);
-    // Worn but not broken gear is not a floor case.
-    facts.purseCopper = 0;
-    facts.hasBrokenEquipment = false;
-    EXPECT_EQ(StipendAmount(facts), 0u);
-    facts.hasBrokenEquipment = true;
     // A bot with silver in its purse is not broke; it earns the rest.
     facts.purseCopper = STIPEND_PURSE_CEILING + 1;
     facts.repairCostCopper = STIPEND_PURSE_CEILING + 400;
     EXPECT_EQ(StipendAmount(facts), 0u);
     facts.purseCopper = STIPEND_PURSE_CEILING;
-    EXPECT_EQ(StipendAmount(facts), 400u);
+    EXPECT_EQ(StipendAmount(facts), 400u + STIPEND_SUSTENANCE_FLOOR);
     // The grant is capped: a huge bill is covered in part and the bot repairs item by item.
     facts.purseCopper = 0;
     facts.repairCostCopper = STIPEND_MAX_COPPER * 3;

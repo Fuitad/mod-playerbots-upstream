@@ -106,11 +106,16 @@ enum class RepairPlan : std::uint8_t
  * coins never arrive on their own. Measured live 2026-09-01: Vavapu, level 8 for 14.8 of her
  * 19.8 played hours, 40c, four items at zero durability, 300 s at a quest POI with 18 targets
  * and no kill. The repairer repairs item by item, so a small purse still buys a weapon back.
+ *
+ * A trip is also worth planning when the floor stipend would be granted at the counter
+ * (stipendDue): the stipend is paid during the visit, so a broke bot that never walked would
+ * never receive it. Measured 2026-09-12: the worn-gear affordability gate kept every broke bot
+ * away from the repairer, and the stipend fired once all day.
  */
 [[nodiscard]] inline bool RepairTripWorthPlanning(bool hasBrokenEquipment, std::uint32_t repairCost,
-                                                  std::uint32_t repairBudget)
+                                                  std::uint32_t repairBudget, bool stipendDue = false)
 {
-    if (hasBrokenEquipment)
+    if (hasBrokenEquipment || stipendDue)
         return true;
     return repairCost && repairCost <= repairBudget;
 }
@@ -157,8 +162,7 @@ enum class RepairVisitOutcome : std::uint8_t
  */
 inline constexpr std::uint32_t VENDOR_BAG_SPACE_URGENT_PERCENT = 80;
 
-[[nodiscard]] inline bool VendorTripWanted(std::uint32_t bagSpacePercent, bool hasVendorTrash,
-                                           bool forcedTripInFlight)
+[[nodiscard]] inline bool VendorTripWanted(std::uint32_t bagSpacePercent, bool hasVendorTrash, bool forcedTripInFlight)
 {
     if (bagSpacePercent > VENDOR_BAG_SPACE_URGENT_PERCENT)
         return true;
@@ -174,18 +178,26 @@ inline constexpr std::uint32_t VENDOR_BAG_SPACE_URGENT_PERCENT = 80;
  * visits in half an hour. Pierre: implement a floor stipend, and watch how often it triggers so the
  * bots do not stop earning because they rely on it.
  *
- * Deliberately stingy: only a bot with a broken item (not merely worn gear), only when its purse
- * is under STIPEND_PURSE_CEILING, only the shortfall up to STIPEND_MAX_COPPER, and at most once
- * per STIPEND_COOLDOWN_MS for that bot. Every grant is logged with the bot's running grant count
- * so the dashboard can count grants per window and repeat recipients since restart.
+ * Widened on 2026-09-13 (Pierre: "go"): the gate is a purse below the CURRENT repair bill, broken
+ * gear or merely worn. With food, drink and gear all budgeted above that bill (economy, 2026-09-11
+ * and 2026-09-12), a bot below it buys nothing, and it died 1.72 times a window against 0.73 for
+ * a bot with 300c to spare: 39 such bots at 13:55 on 2026-09-12, 25 of them dead twice or more in
+ * the half hour, money at death 6 to 94c. The broken-item gate let one grant through all day. The
+ * grant is the shortfall plus STIPEND_SUSTENANCE_FLOOR, so the visit leaves the bot repaired and
+ * able to buy one bundle of food and one of drink (25c each at an innkeeper) before its bill is
+ * zero again.
+ *
+ * Still stingy: only when the purse is under STIPEND_PURSE_CEILING, only up to STIPEND_MAX_COPPER,
+ * and at most once per STIPEND_COOLDOWN_MS for that bot. Every grant is logged with the bot's
+ * running grant count so the dashboard can count grants per window and repeat recipients.
  */
 inline constexpr std::uint32_t STIPEND_PURSE_CEILING = 500;
 inline constexpr std::uint32_t STIPEND_MAX_COPPER = 2000;
 inline constexpr std::uint32_t STIPEND_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+inline constexpr std::uint32_t STIPEND_SUSTENANCE_FLOOR = 50;
 
 struct StipendFacts
 {
-    bool hasBrokenEquipment = false;
     // STIPEND_COOLDOWN_MS has passed since this bot's last grant, or it never had one.
     bool cooldownElapsed = false;
     std::uint32_t purseCopper = 0;
@@ -195,11 +207,11 @@ struct StipendFacts
 // Copper to grant now; zero means no stipend.
 [[nodiscard]] inline std::uint32_t StipendAmount(StipendFacts const& facts)
 {
-    if (!facts.hasBrokenEquipment || !facts.cooldownElapsed || facts.purseCopper > STIPEND_PURSE_CEILING)
+    if (!facts.cooldownElapsed || facts.purseCopper > STIPEND_PURSE_CEILING)
         return 0;
     if (facts.repairCostCopper <= facts.purseCopper)
         return 0;
-    std::uint32_t const shortfall = facts.repairCostCopper - facts.purseCopper;
+    std::uint32_t const shortfall = facts.repairCostCopper - facts.purseCopper + STIPEND_SUSTENANCE_FLOOR;
     return shortfall < STIPEND_MAX_COPPER ? shortfall : STIPEND_MAX_COPPER;
 }
 
@@ -273,10 +285,7 @@ inline constexpr float HEARTH_MIN_TIME_SAVING_SECONDS = HEARTH_CAST_SECONDS;
 // And it must remove at least this share of the walk.
 inline constexpr float HEARTH_MIN_TRIP_SHARE_CUT = 0.5f;
 
-[[nodiscard]] inline float WalkSeconds(float yards)
-{
-    return yards / HEARTH_RUN_SPEED_YARDS_PER_SECOND;
-}
+[[nodiscard]] inline float WalkSeconds(float yards) { return yards / HEARTH_RUN_SPEED_YARDS_PER_SECOND; }
 
 [[nodiscard]] inline float HearthRouteSeconds(float homeYards)
 {

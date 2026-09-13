@@ -9,24 +9,22 @@
 
 #include "RandomBotMaintenanceActions.h"
 
-#include "Ai/World/Rpg/QuestStartItemPolicy.h"
-
-#include "MaintenanceErrand.h"
-
 #include <algorithm>
 #include <cmath>
 #include <functional>
 #include <limits>
-#include <unordered_map>
 #include <mutex>
+#include <unordered_map>
 #include <unordered_set>
 
+#include "Ai/World/Rpg/QuestStartItemPolicy.h"
 #include "Bag.h"
 #include "BudgetValues.h"
 #include "ChatHelper.h"
 #include "Event.h"
 #include "GameEventMgr.h"
 #include "ItemUsageValue.h"
+#include "MaintenanceErrand.h"
 #include "NPCPackets.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
@@ -36,6 +34,46 @@
 #include "TravelMgr.h"
 
 using namespace playerbots::maintenance;
+
+// The floor stipend's per-bot record: last grant time and count since the server started. Shared
+// between the repair trigger (which plans the trip when a grant is due) and the repair action
+// (which pays it), so it lives here rather than on the action object. Bots tick on map threads.
+namespace StipendLedger
+{
+struct Record
+{
+    uint32 lastGrantMs = 0;
+    uint32 grants = 0;
+};
+
+std::mutex& Mutex()
+{
+    static std::mutex mutex;
+    return mutex;
+}
+
+std::unordered_map<uint32, Record>& Map()
+{
+    static std::unordered_map<uint32, Record> map;
+    return map;
+}
+
+bool CooldownElapsed(uint32 botLow, uint32 nowMs)
+{
+    std::lock_guard<std::mutex> lock(Mutex());
+    auto const found = Map().find(botLow);
+    return found == Map().end() || nowMs - found->second.lastGrantMs >= STIPEND_COOLDOWN_MS;
+}
+
+// Records a grant and returns the bot's count since the server started.
+uint32 NoteGrant(uint32 botLow, uint32 nowMs)
+{
+    std::lock_guard<std::mutex> lock(Mutex());
+    Record& record = Map()[botLow];
+    record.lastGrantMs = nowMs;
+    return ++record.grants;
+}
+}  // namespace StipendLedger
 
 namespace
 {
@@ -127,15 +165,14 @@ std::unordered_map<uint32, std::vector<MaintenanceNpcSpawn>> const& MaintenanceN
             continue;
         if (creatureData.spawnMask == 0 || creatureData.movementType != IDLE_MOTION_TYPE)
             continue;
-        spawns[creatureData.mapid].push_back(
-            {creatureData.id,
-             WorldPosition(creatureData.mapid, creatureData.posX, creatureData.posY, creatureData.posZ)});
+        spawns[creatureData.mapid].push_back({creatureData.id, WorldPosition(creatureData.mapid, creatureData.posX,
+                                                                             creatureData.posY, creatureData.posZ)});
     }
     uint32 total = 0;
     for (auto const& [mapId, list] : spawns)
         total += list.size();
-    LOG_INFO("playerbots", "Random bot maintenance cached {} vendor, repair and trainer spawns across {} maps.",
-             total, spawns.size());
+    LOG_INFO("playerbots", "Random bot maintenance cached {} vendor, repair and trainer spawns across {} maps.", total,
+             spawns.size());
     return spawns;
 }
 
@@ -155,7 +192,8 @@ bool FindNearestDestination(PlayerbotAI* botAI, std::function<bool(uint32)> cons
         if (!acceptsEntry(spawn.entry))
             continue;
 
-        float const distance = bot->GetDistance(spawn.position.GetPositionX(), spawn.position.GetPositionY(), spawn.position.GetPositionZ());
+        float const distance = bot->GetDistance(spawn.position.GetPositionX(), spawn.position.GetPositionY(),
+                                                spawn.position.GetPositionZ());
         if (distance >= nearestDistance)
             continue;
 
@@ -163,9 +201,8 @@ bool FindNearestDestination(PlayerbotAI* botAI, std::function<bool(uint32)> cons
         if (friendly == friendlyByEntry.end())
         {
             CreatureTemplate const* creatureTemplate = sObjectMgr->GetCreatureTemplate(spawn.entry);
-            friendly = friendlyByEntry
-                           .emplace(spawn.entry, creatureTemplate && IsFriendlyNpc(botAI, creatureTemplate))
-                           .first;
+            friendly =
+                friendlyByEntry.emplace(spawn.entry, creatureTemplate && IsFriendlyNpc(botAI, creatureTemplate)).first;
         }
         if (!friendly->second)
             continue;
@@ -215,9 +252,8 @@ bool LearnedMountMeetsTier(Player* bot, MountTier tier)
         effects.mountAura = spellInfo->Effects[0].ApplyAuraName == SPELL_AURA_MOUNTED;
         effects.passive = spellInfo->IsPassive();
         effects.active = entry.second->State != PLAYERSPELL_REMOVED && entry.second->Active;
-        effects.flightSpeedAura =
-            spellInfo->Effects[1].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
-            spellInfo->Effects[2].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED;
+        effects.flightSpeedAura = spellInfo->Effects[1].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
+                                  spellInfo->Effects[2].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED;
         effects.alwaysFlying = spellInfo->Id == 54729;
         effects.speed1 = spellInfo->Effects[1].BasePoints;
         effects.speed2 = spellInfo->Effects[2].BasePoints;
@@ -376,8 +412,14 @@ bool playerbots::maintenance::NeedsRepair(PlayerbotAI* botAI)
         return false;
 
     uint32 const repairCost = AI_VALUE(uint32, "repair cost");
+    // A broke bot walks when the stipend would pay at the counter (RepairTripWorthPlanning).
+    StipendFacts stipendFacts;
+    stipendFacts.cooldownElapsed = StipendLedger::CooldownElapsed(bot->GetGUID().GetCounter(), getMSTime());
+    stipendFacts.purseCopper = bot->GetMoney();
+    stipendFacts.repairCostCopper = repairCost;
     return RepairTripWorthPlanning(HasBrokenEquipment(botAI), repairCost,
-                                   AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair)));
+                                   AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair)),
+                                   StipendAmount(stipendFacts) > 0);
 }
 
 /*
@@ -541,14 +583,14 @@ bool playerbots::maintenance::NeedsVendor(PlayerbotAI* botAI)
     if (VendorTripWanted(bagSpace, false, forcedTripInFlight))
         return true;
 
-    bool const hasVendorTrash = VisitBagItems(
-        botAI->GetBot(),
-        [botAI](Item* item)
-        {
-            ItemUsage const usage =
-                botAI->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get();
-            return IsVendorTrash(item->GetTemplate()->Quality, usage == ITEM_USAGE_VENDOR);
-        });
+    bool const hasVendorTrash =
+        VisitBagItems(botAI->GetBot(),
+                      [botAI](Item* item)
+                      {
+                          ItemUsage const usage =
+                              botAI->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get();
+                          return IsVendorTrash(item->GetTemplate()->Quality, usage == ITEM_USAGE_VENDOR);
+                      });
     return VendorTripWanted(bagSpace, hasVendorTrash, forcedTripInFlight);
 }
 
@@ -576,9 +618,8 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
         // stands aside while gear is broken, so nothing else turns Vavapu's ore and belts into
         // the coins her blunderbuss needs (RandomBotMaintenancePolicy.h, RepairTripWorthPlanning).
         AiObjectContext* context = botAI->GetAiObjectContext();
-        if (repairer->IsVendor() &&
-            AI_VALUE(uint32, "repair cost") >
-                AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair)))
+        if (repairer->IsVendor() && AI_VALUE(uint32, "repair cost") >
+                                        AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair)))
         {
             bool const soldGray = botAI->DoSpecificAction("sell", Event("random bot repair", "gray"), true);
             bool const soldVendor = botAI->DoSpecificAction("sell", Event("random bot repair", "vendor"), true);
@@ -586,22 +627,21 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
                       bot->GetName(), targetEntry, soldGray, soldVendor, bot->GetMoney());
         }
         // The floor stipend, after selling and before repairing, so the grant is spent in this
-        // same visit. See StipendAmount for the ceiling and cooldown.
+        // same visit. See StipendAmount for the ceiling, the floor and the cooldown.
         {
+            uint32 const guidLow = bot->GetGUID().GetCounter();
             StipendFacts facts;
-            facts.hasBrokenEquipment = HasBrokenEquipment(botAI);
-            facts.cooldownElapsed = !stipendAt || GetMSTimeDiffToNow(stipendAt) >= STIPEND_COOLDOWN_MS;
+            facts.cooldownElapsed = StipendLedger::CooldownElapsed(guidLow, getMSTime());
             facts.purseCopper = bot->GetMoney();
             facts.repairCostCopper = AI_VALUE(uint32, "repair cost");
             if (uint32 const grant = StipendAmount(facts))
             {
                 bot->ModifyMoney(static_cast<int32>(grant));
-                stipendAt = getMSTime();
-                ++stipendGrants;
+                uint32 const grants = StipendLedger::NoteGrant(guidLow, getMSTime());
                 LOG_INFO("playerbots",
                          "[Maintenance] {} stipend: granted {}c, purse was {}c, repair {}c, grant {} for this bot "
                          "since start",
-                         bot->GetName(), grant, facts.purseCopper, facts.repairCostCopper, stipendGrants);
+                         bot->GetName(), grant, facts.purseCopper, facts.repairCostCopper, grants);
             }
         }
         // The verdict reads the gear, not the repair action's return value, which is true whenever
@@ -615,8 +655,7 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
         // in RepairAllAction pass the bare slot and have never repaired a weapon; measured live
         // 2026-09-01 22:50, Vavapu at 368c with a 1c axe still "unaffordable".
         for (uint8 const slot : {EQUIPMENT_SLOT_MAINHAND, EQUIPMENT_SLOT_RANGED, EQUIPMENT_SLOT_OFFHAND})
-            (void)bot->DurabilityRepair(static_cast<uint16>((INVENTORY_SLOT_BAG_0 << 8) | slot), true, discount,
-                                        false);
+            (void)bot->DurabilityRepair(static_cast<uint16>((INVENTORY_SLOT_BAG_0 << 8) | slot), true, discount, false);
         bool const weaponStillBroken = HasBrokenWeapon(bot);
         if (!weaponStillBroken)
             (void)botAI->DoSpecificAction("repair", Event("random bot repair"), true);
@@ -658,7 +697,7 @@ bool RandomBotRepairAction::Execute(Event /*event*/)
     if (targetEntry)
     {
         RepairPlan const latched = ChooseRepairPlan(true, HasBrokenEquipment(botAI), true,
-                                                   bot->GetDistance(targetPosition), HearthstoneReady(bot));
+                                                    bot->GetDistance(targetPosition), HearthstoneReady(bot));
         if (latched != RepairPlan::Travel)
         {
             LOG_DEBUG("playerbots", "[Maintenance] {} repair: dropping stale target {} now {:.0f} yd away",
@@ -858,8 +897,8 @@ bool RandomBotVendorAction::Execute(Event /*event*/)
 
         targetEntry = destination.entry;
         targetPosition = destination.position;
-        LOG_DEBUG("playerbots", "[Maintenance] {} vendor: heading to npc {} at {:.0f} yd", bot->GetName(),
-                  targetEntry, bot->GetDistance(targetPosition));
+        LOG_DEBUG("playerbots", "[Maintenance] {} vendor: heading to npc {} at {:.0f} yd", bot->GetName(), targetEntry,
+                  bot->GetDistance(targetPosition));
     }
 
     playerbots::maintenance::ClaimErrand(bot, targetPosition);
