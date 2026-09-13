@@ -13,12 +13,14 @@
 
 // Routine maintenance yields to quest work: these triggers run at relevance 103 to 105 and own
 // the bot outright, so firing one mid-quest drags the bot off its objective (see
-// DeferRoutineMaintenanceDuringQuest). Broken gear and bags too full to loot stay urgent.
+// DeferRoutineMaintenanceDuringQuest). Broken gear, a due floor stipend and bags too full to loot
+// stay urgent: a bot below its repair bill buys no food and dies 1.72 times a window (2026-09-12).
 bool RandomBotRepairTrigger::IsActive()
 {
     return playerbots::maintenance::NeedsRepair(botAI) &&
            !playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(
-               playerbots::maintenance::DoingQuestNow(botAI), playerbots::maintenance::HasBrokenEquipment(botAI));
+               playerbots::maintenance::DoingQuestNow(botAI),
+               playerbots::maintenance::HasBrokenEquipment(botAI) || playerbots::maintenance::StipendDue(botAI));
 }
 
 bool RandomBotVendorTrigger::IsActive()
@@ -36,7 +38,6 @@ bool RandomBotQuestStartItemTrigger::IsActive()
 
 bool RandomBotMountTrigger::IsActive()
 {
-    return playerbots::maintenance::NeedsMount(botAI) &&
-           !playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(
-               playerbots::maintenance::DoingQuestNow(botAI), false);
+    return playerbots::maintenance::NeedsMount(botAI) && !playerbots::maintenance::DeferRoutineMaintenanceDuringQuest(
+                                                             playerbots::maintenance::DoingQuestNow(botAI), false);
 }

@@ -408,18 +408,30 @@ bool playerbots::maintenance::NeedsRepair(PlayerbotAI* botAI)
         }
     }
 
-    if (!worn)
+    // A broke bot walks when the stipend would pay at the counter, whatever the wear: 15 of the
+    // 19 bots below their bill at 14:35 on 2026-09-13 had every piece at 80 percent or better, so
+    // the worn gate alone never sent them (RepairTripWorthPlanning).
+    bool const stipendDue = StipendDue(botAI);
+    if (!worn && !stipendDue)
         return false;
 
     uint32 const repairCost = AI_VALUE(uint32, "repair cost");
-    // A broke bot walks when the stipend would pay at the counter (RepairTripWorthPlanning).
-    StipendFacts stipendFacts;
-    stipendFacts.cooldownElapsed = StipendLedger::CooldownElapsed(bot->GetGUID().GetCounter(), getMSTime());
-    stipendFacts.purseCopper = bot->GetMoney();
-    stipendFacts.repairCostCopper = repairCost;
     return RepairTripWorthPlanning(HasBrokenEquipment(botAI), repairCost,
                                    AI_VALUE2(uint32, "free money for", static_cast<uint32>(NeedMoneyFor::repair)),
-                                   StipendAmount(stipendFacts) > 0);
+                                   stipendDue);
+}
+
+bool playerbots::maintenance::StipendDue(PlayerbotAI* botAI)
+{
+    if (!IsEligible(botAI))
+        return false;
+    Player* bot = botAI->GetBot();
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    StipendFacts facts;
+    facts.cooldownElapsed = StipendLedger::CooldownElapsed(bot->GetGUID().GetCounter(), getMSTime());
+    facts.purseCopper = bot->GetMoney();
+    facts.repairCostCopper = AI_VALUE(uint32, "repair cost");
+    return StipendAmount(facts) > 0;
 }
 
 /*
